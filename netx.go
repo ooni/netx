@@ -179,6 +179,9 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		}
 		c.dialer.append(m)
 	}
+	if err != nil {
+		c.dialer.Logger.Debug(err.Error())
+	}
 	return
 }
 
@@ -206,6 +209,9 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		}
 		c.dialer.append(m)
 	}
+	if err != nil {
+		c.dialer.Logger.Debug(err.Error())
+	}
 	return
 }
 
@@ -224,6 +230,9 @@ func (c *measurableConn) Close() (err error) {
 			SessionID:   c.sessID,
 			StartTime:   start.Sub(c.dialer.Beginning),
 		})
+	}
+	if err != nil {
+		c.dialer.Logger.Debug(err.Error())
 	}
 	return
 }
