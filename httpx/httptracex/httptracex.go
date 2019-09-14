@@ -2,10 +2,9 @@
 package httptracex
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -266,6 +265,24 @@ type Tracer struct {
 	EventsContainer EventsContainer
 }
 
+type bodyWrapper struct {
+	io.ReadCloser
+	ec    *EventsContainer
+	reqid int64
+}
+
+func (bw *bodyWrapper) Close() (err error) {
+	err = bw.ReadCloser.Close()
+	bw.ec.append(Event{
+		Error:     err,
+		EventID:   HTTPResponseDone,
+		RequestID: bw.reqid,
+		Time:      time.Now().Sub(bw.ec.Beginning),
+	})
+	bw.ec.Logger.Debugf("<R#%d> response done", bw.reqid)
+	return
+}
+
 // RoundTrip peforms the HTTP round trip.
 func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	ec := &rt.EventsContainer
@@ -309,18 +326,13 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		RequestID: reqid,
 		Time:      time.Now().Sub(ec.Beginning),
 	})
-	body := resp.Body
-	defer body.Close()
-	data, err := ioutil.ReadAll(body)
-	if err == nil {
-		resp.Body = ioutil.NopCloser(bytes.NewReader(data)) // actionable body
+	// "The http Client and Transport guarantee that Body is always
+	//  non-nil, even on responses without a body or responses with
+	//  a zero-length body." (from the docs)
+	resp.Body = &bodyWrapper{
+		ReadCloser: resp.Body,
+		ec:         ec,
+		reqid:      reqid,
 	}
-	ec.append(Event{
-		Error:     err,
-		EventID:   HTTPResponseDone,
-		NumBytes:  len(data),
-		RequestID: reqid,
-		Time:      time.Now().Sub(ec.Beginning),
-	})
 	return
 }

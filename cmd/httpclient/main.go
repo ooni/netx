@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/apex/log"
@@ -19,7 +20,12 @@ func main() {
 	client.Dialer.EnableTiming = true
 	client.Tracer.EventsContainer.Logger = log.Log
 	for _, URL := range os.Args[1:] {
-		client.Get(URL)
+		resp, err := client.Get(URL)
+		if err != nil {
+			continue
+		}
+		ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 	}
 	data, err := json.Marshal(client.HTTPEvents())
 	if err != nil {
