@@ -21,6 +21,9 @@ const (
 	// ConnectOperation is a connect operation.
 	ConnectOperation = OperationID("connect")
 
+	// ReadFrom operation is a readFrom operation
+	ReadFromOperation = OperationID("readFrom")
+
 	// ReadOperation is a read operation.
 	ReadOperation = OperationID("read")
 
@@ -29,6 +32,9 @@ const (
 
 	// WriteOperation is a write operation.
 	WriteOperation = OperationID("write")
+
+	// WriteToOperation is a writeTo operation.
+	WriteToOperation = OperationID("writeTo")
 )
 
 // TimingMeasurement describes a timing measurement.
@@ -38,6 +44,13 @@ type TimingMeasurement struct {
 
 	// Addresses contains the addresses returned by a ResolveOperation.
 	Addresses []string `json:",omitempty"`
+
+	// Data is the data sent or received by this operation. In most cases we
+	// do not include the data that has been transferred.
+	Data []byte `json:",omitempty"`
+
+	// DestAddress is WriteToOperation's destination address.
+	DestAddress string `json:",omitempty"`
 
 	// Duration is the operation's duration.
 	Duration time.Duration
@@ -56,6 +69,9 @@ type TimingMeasurement struct {
 
 	// OperationID is the operation OperationID.
 	OperationID OperationID
+
+	// SrcAddress string is WriteToOperation's source address.
+	SrcAddress string `json:",omitempty"`
 
 	// SessionID is the ID of a network level session initiated by
 	// trying to dial and concluded by either a dial error or by closing
@@ -107,6 +123,14 @@ func NewMeasuringDialer(beginning time.Time) (d *MeasuringDialer) {
 	d.LookupHost = func(ctx context.Context, host string) (addrs []string, err error) {
 		return d.Dialer.Resolver.LookupHost(ctx, host)
 	}
+	d.Dialer = net.Dialer{
+		Resolver: &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				return d.dialContextEx(ctx, network, address, true)
+			},
+		},
+	}
 	return
 }
 
@@ -118,8 +142,9 @@ func (d *MeasuringDialer) append(m TimingMeasurement) {
 
 type measurableConn struct {
 	net.Conn
-	dialer *MeasuringDialer
-	sessID int64
+	dialer      *MeasuringDialer
+	includeData bool
+	sessID      int64
 }
 
 func (c *measurableConn) Read(b []byte) (n int, err error) {
@@ -132,14 +157,18 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesRead, int64(n))
 	}
 	if c.dialer.EnableTiming {
-		c.dialer.append(TimingMeasurement{
+		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
 			NumBytes:    int64(n),
 			OperationID: ReadOperation,
 			SessionID:   c.sessID,
 			StartTime:   start.Sub(c.dialer.Beginning),
-		})
+		}
+		if c.includeData && n > 0 {
+			m.Data = b[:n]
+		}
+		c.dialer.append(m)
 	}
 	return
 }
@@ -154,14 +183,18 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesWritten, int64(n))
 	}
 	if c.dialer.EnableTiming {
-		c.dialer.append(TimingMeasurement{
+		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
 			NumBytes:    int64(n),
 			OperationID: WriteOperation,
 			SessionID:   c.sessID,
 			StartTime:   start.Sub(c.dialer.Beginning),
-		})
+		}
+		if c.includeData && n > 0 {
+			m.Data = b[:n]
+		}
+		c.dialer.append(m)
 	}
 	return
 }
@@ -180,6 +213,70 @@ func (c *measurableConn) Close() (err error) {
 			SessionID:   c.sessID,
 			StartTime:   start.Sub(c.dialer.Beginning),
 		})
+	}
+	return
+}
+
+// measurablePacketConn is required by Go's dnsclient, which behaves
+// differently depending on the type of connection.
+type measurablePacketConn struct {
+	measurableConn
+}
+
+func (c *measurablePacketConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	packetConn := c.Conn.(net.PacketConn)
+	var start time.Time
+	if c.dialer.EnableTiming {
+		start = time.Now()
+	}
+	n, addr, err = packetConn.ReadFrom(p)
+	if n > 0 {
+		atomic.AddInt64(&c.dialer.BytesRead, int64(n))
+	}
+	if c.dialer.EnableTiming {
+		m := TimingMeasurement{
+			DestAddress: c.LocalAddr().String(),
+			Duration:    time.Now().Sub(start),
+			Error:       err,
+			NumBytes:    int64(n),
+			OperationID: ReadFromOperation,
+			SessionID:   c.sessID,
+			SrcAddress:  addr.String(),
+			StartTime:   start.Sub(c.dialer.Beginning),
+		}
+		if c.includeData && n > 0 {
+			m.Data = p[:n]
+		}
+		c.dialer.append(m)
+	}
+	return
+}
+
+func (c *measurablePacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	packetConn := c.Conn.(net.PacketConn)
+	var start time.Time
+	if c.dialer.EnableTiming {
+		start = time.Now()
+	}
+	n, err = packetConn.WriteTo(p, addr)
+	if n > 0 {
+		atomic.AddInt64(&c.dialer.BytesRead, int64(n))
+	}
+	if c.dialer.EnableTiming {
+		m := TimingMeasurement{
+			DestAddress: addr.String(),
+			Duration:    time.Now().Sub(start),
+			Error:       err,
+			NumBytes:    int64(n),
+			OperationID: WriteToOperation,
+			SessionID:   c.sessID,
+			SrcAddress:  c.Conn.LocalAddr().String(),
+			StartTime:   start.Sub(c.dialer.Beginning),
+		}
+		if c.includeData && n > 0 {
+			m.Data = p[:n]
+		}
+		c.dialer.append(m)
 	}
 	return
 }
@@ -220,12 +317,20 @@ func (d *MeasuringDialer) Dial(network, address string) (net.Conn, error) {
 
 // DialContext extends net.Dialer.DialContext to implement exponential backoff
 // between retries, and optionally measure network events.
-func (d *MeasuringDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+func (d *MeasuringDialer) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return d.dialContextEx(ctx, network, address, false)
+}
+
+func (d *MeasuringDialer) dialContextEx(
+	ctx context.Context, network, address string, includeData bool,
+) (net.Conn, error) {
 	var multierr ErrDialContextTimeout
 	sessID := atomic.AddInt64(&d.sessID, 1)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for mean := initialMean; mean <= finalMean; mean *= meanFactor {
-		conn, err := d.dialContextDNS(ctx, network, address, sessID)
+		conn, err := d.dialContextDNS(ctx, network, address, sessID, includeData)
 		if err == nil {
 			return conn, nil
 		}
@@ -267,14 +372,14 @@ func (ErrManyConnectFailed) Temporary() bool {
 }
 
 func (d *MeasuringDialer) dialContextDNS(
-	ctx context.Context, network, address string, id int64,
+	ctx context.Context, network, address string, id int64, includeData bool,
 ) (net.Conn, error) {
 	host, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
 	}
 	if net.ParseIP(host) != nil {
-		return d.dialContextAddrPort(ctx, network, host, port, id)
+		return d.dialContextAddrPort(ctx, network, host, port, id, includeData)
 	}
 	addrs, err := d.lookupHost(ctx, host, id)
 	if err != nil {
@@ -282,7 +387,7 @@ func (d *MeasuringDialer) dialContextDNS(
 	}
 	var multierr ErrManyConnectFailed
 	for _, addr := range addrs {
-		conn, err := d.dialContextAddrPort(ctx, network, addr, port, id)
+		conn, err := d.dialContextAddrPort(ctx, network, addr, port, id, includeData)
 		if err == nil {
 			return conn, nil
 		}
@@ -317,7 +422,7 @@ func (d *MeasuringDialer) lookupHost(
 }
 
 func (d *MeasuringDialer) dialContextAddrPort(
-	ctx context.Context, network, addr, port string, id int64,
+	ctx context.Context, network, addr, port string, id int64, includeData bool,
 ) (net.Conn, error) {
 	var start time.Time
 	if d.EnableTiming {
@@ -343,10 +448,24 @@ func (d *MeasuringDialer) dialContextAddrPort(
 	if err != nil {
 		return nil, err
 	}
-	conn = &measurableConn{
-		Conn:   conn,
-		dialer: d,
-		sessID: id,
+	if _, ok := conn.(net.PacketConn); ok {
+		// When a connection is a PacketConn, make sure we return a
+		// structure that matches the PacketConn interface.
+		conn = &measurablePacketConn{
+			measurableConn: measurableConn{
+				Conn:        conn,
+				dialer:      d,
+				includeData: includeData,
+				sessID:      id,
+			},
+		}
+		return conn, nil
 	}
-	return conn, err
+	conn = &measurableConn{
+		Conn:        conn,
+		dialer:      d,
+		includeData: includeData,
+		sessID:      id,
+	}
+	return conn, nil
 }

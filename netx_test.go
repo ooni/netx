@@ -91,7 +91,7 @@ func TestConnectSuccess(t *testing.T) {
 	if n != len(request) {
 		t.Fatal("Unexpected number of bytes written")
 	}
-	if  err != nil {
+	if err != nil {
 		t.Fatal(err)
 	}
 	buffer := make([]byte, 1<<20)

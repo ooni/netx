@@ -50,7 +50,7 @@ func request(
 	ts *httptest.Server, client *http.Client,
 	urlPath string, expectedBody []byte,
 ) (*EventsContainer, error) {
-	resp, err := client.Get(ts.URL+urlPath)
+	resp, err := client.Get(ts.URL + urlPath)
 	if err != nil {
 		return httptracex.RequestEventsContainer(req), err
 	}
