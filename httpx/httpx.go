@@ -2,6 +2,7 @@
 package httpx
 
 import (
+	"net"
 	"net/http"
 	"time"
 
@@ -33,6 +34,13 @@ func NewClient() (c *Client) {
 	c.Transport = &http.Transport{
 		Dial:        c.Dialer.Dial,
 		DialContext: c.Dialer.DialContext,
+		DialTLS: func(network string, addr string) (net.Conn, error) {
+			return c.Dialer.DialTLS(
+				c.Transport.TLSClientConfig,
+				c.Transport.TLSHandshakeTimeout,
+				network, addr,
+			)
+		},
 	}
 	c.Tracer = &httptracex.Tracer{
 		EventsContainer: httptracex.EventsContainer{

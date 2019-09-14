@@ -3,6 +3,7 @@ package netx
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"math/rand"
 	"net"
@@ -301,6 +302,23 @@ func (c *measurablePacketConn) WriteTo(p []byte, addr net.Addr) (n int, err erro
 	return
 }
 
+// GetConnID returns the connection's ID.
+func GetConnID(conn net.Conn, id *int64) bool {
+	if c, ok := conn.(*measurableConn); ok {
+		*id = c.sessID
+		return true
+	}
+	if c, ok := conn.(*measurablePacketConn); ok {
+		*id = c.sessID
+		return true
+	}
+	if c, ok := conn.(*tlsConnWrapper); ok {
+		*id = c.sessID
+		return true
+	}
+	return false
+}
+
 // ErrDialContextTimeout is an error indicating that the context timed out
 // while we were waiting for our dial attempts to complete.
 type ErrDialContextTimeout struct {
@@ -481,10 +499,14 @@ func (d *MeasuringDialer) dialContextAddrPort(
 		d.Logger.Debug(err.Error())
 		return nil, err
 	}
+	return d.wrapConn(conn, id, includeData), nil
+}
+
+func (d *MeasuringDialer) wrapConn(conn net.Conn, id int64, includeData bool) net.Conn {
 	if _, ok := conn.(net.PacketConn); ok {
 		// When a connection is a PacketConn, make sure we return a
 		// structure that matches the PacketConn interface.
-		conn = &measurablePacketConn{
+		return &measurablePacketConn{
 			measurableConn: measurableConn{
 				Conn:        conn,
 				dialer:      d,
@@ -492,13 +514,65 @@ func (d *MeasuringDialer) dialContextAddrPort(
 				sessID:      id,
 			},
 		}
-		return conn, nil
 	}
-	conn = &measurableConn{
+	return &measurableConn{
 		Conn:        conn,
 		dialer:      d,
 		includeData: includeData,
 		sessID:      id,
 	}
-	return conn, nil
+}
+
+type tlsConnWrapper struct {
+	net.Conn
+	sessID int64
+}
+
+// DialTLS dials a tls.Conn connection using the specified tls.Config,
+// handshake timeout, network, and address.
+func (d *MeasuringDialer) DialTLS(
+	config *tls.Config, handshakeTimeout time.Duration, network, addr string,
+) (conn net.Conn, err error) {
+	conn, err = d.Dial(network, addr)
+	if err != nil {
+		return
+	}
+	var connid int64
+	if GetConnID(conn, &connid) == false {
+		conn.Close()
+		return nil, errors.New("netx: unexpectedly missing connid")
+	}
+	if config == nil {
+		hostname, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		config = &tls.Config{ServerName: hostname}
+	}
+	if handshakeTimeout <= 0 {
+		handshakeTimeout = 10 * time.Second
+	}
+	tlsconn := tls.Client(conn, config)
+	ctx, cancel := context.WithTimeout(context.Background(), handshakeTimeout)
+	defer cancel()
+	ch := make(chan error)
+	d.Logger.Debugf("tls: handshake (#%d)", connid)
+	go func() {
+		ch <- tlsconn.Handshake()
+	}()
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case err = <-ch:
+		// FALLTHROUGH
+	}
+	if err != nil {
+		d.Logger.Debugf("tls: %s (#%d)", err.Error(), connid)
+		conn.Close()
+		return nil, err
+	}
+	d.Logger.Debugf("tls: ready (#%d)", connid)
+	conn = &tlsConnWrapper{Conn: tlsconn, sessID: connid}
+	return
 }

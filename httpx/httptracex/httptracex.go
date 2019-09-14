@@ -14,12 +14,16 @@ import (
 
 	"github.com/bassosimone/netx/internal"
 	"github.com/bassosimone/netx/log"
+	"github.com/bassosimone/netx"
 )
 
 // EventID is the identifier of an event.
 type EventID string
 
 const (
+	// GotConn is emitted when we know the connection we'll use.
+	GotConn = EventID("GotConn")
+
 	// HTTPRequestStart is emitted when we're starting the round trip.
 	HTTPRequestStart = EventID("HTTPRequestStart")
 
@@ -73,6 +77,9 @@ type Event struct {
 
 	// Addresses is the list of addresses returned by the DNS
 	Addresses []net.IPAddr `json:",omitempty"`
+
+	// ConnID is the identifier of the connection we'll use for this request.
+	ConnID int64 `json:",omitempty"`
 
 	// Error is the error that occurred
 	Error error `json:",omitempty"`
@@ -142,6 +149,18 @@ func withEventsContainer(
 	ctx context.Context, ec *EventsContainer, id int64,
 ) context.Context {
 	return context.WithValue(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		GotConn: func(info httptrace.GotConnInfo) {
+			var connid int64
+			if netx.GetConnID(info.Conn, &connid) == false {
+				return
+			}
+			ec.append(Event{
+				ConnID:    connid,
+				EventID:   GotConn,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
+			})
+		},
 		DNSStart: func(info httptrace.DNSStartInfo) {
 			ec.append(Event{
 				EventID:   DNSStart,
