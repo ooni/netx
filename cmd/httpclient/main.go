@@ -1,8 +1,8 @@
 package main
 
 import (
-	//"encoding/json"
-	//"fmt"
+	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/apex/log"
@@ -21,16 +21,14 @@ func main() {
 	for _, URL := range os.Args[1:] {
 		client.Get(URL)
 	}
-	/*
-		data, err := json.Marshal(client.HTTPEvents())
-		if err != nil {
-			log.WithError(err).Fatal("json.Marshal failed")
-		}
-		fmt.Printf("%s\n", string(data))
-		data, err = json.Marshal(client.NetEvents())
-		if err != nil {
-			log.WithError(err).Fatal("json.Marshal failed")
-		}
-		fmt.Printf("%s\n", string(data))
-	*/
+	data, err := json.Marshal(client.HTTPEvents())
+	if err != nil {
+		log.WithError(err).Fatal("json.Marshal failed")
+	}
+	fmt.Printf("%s\n", string(data))
+	data, err = json.Marshal(client.NetEvents())
+	if err != nil {
+		log.WithError(err).Fatal("json.Marshal failed")
+	}
+	fmt.Printf("%s\n", string(data))
 }

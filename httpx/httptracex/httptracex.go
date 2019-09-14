@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bassosimone/netx/internal"
@@ -98,6 +99,9 @@ type Event struct {
 	// NumBytes contains the number of transferred bytes
 	NumBytes int `json:",omitempty"`
 
+	// RequestID is the request ID
+	RequestID int64
+
 	// StatusCode contains the HTTP status code
 	StatusCode int `json:",omitempty"`
 
@@ -123,7 +127,8 @@ type EventsContainer struct {
 	// Logger is the logger to use.
 	Logger log.Logger
 
-	mutex sync.Mutex
+	mutex     sync.Mutex
+	requestID int64
 }
 
 func (ec *EventsContainer) append(ev Event) {
@@ -134,13 +139,16 @@ func (ec *EventsContainer) append(ev Event) {
 
 type ctxKey struct{} // same pattern as in net/http/httptrace
 
-func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Context {
+func withEventsContainer(
+	ctx context.Context, ec *EventsContainer, id int64,
+) context.Context {
 	return context.WithValue(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		DNSStart: func(info httptrace.DNSStartInfo) {
 			ec.append(Event{
-				EventID:  DNSStart,
-				Hostname: info.Host,
-				Time:     time.Now().Sub(ec.Beginning),
+				EventID:   DNSStart,
+				Hostname:  info.Host,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 		},
 		DNSDone: func(info httptrace.DNSDoneInfo) {
@@ -148,36 +156,41 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 				Addresses: info.Addrs,
 				Error:     info.Err,
 				EventID:   DNSDone,
+				RequestID: id,
 				Time:      time.Now().Sub(ec.Beginning),
 			})
 		},
 		ConnectStart: func(network, addr string) {
 			ec.append(Event{
-				Address: addr,
-				EventID: ConnectStart,
-				Network: network,
-				Time:    time.Now().Sub(ec.Beginning),
+				Address:   addr,
+				EventID:   ConnectStart,
+				Network:   network,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 		},
 		ConnectDone: func(network, addr string, err error) {
 			ec.append(Event{
-				Address: addr,
-				Error:   err,
-				EventID: ConnectDone,
-				Network: network,
-				Time:    time.Now().Sub(ec.Beginning),
+				Address:   addr,
+				Error:     err,
+				EventID:   ConnectDone,
+				Network:   network,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 		},
 		TLSHandshakeStart: func() {
 			ec.append(Event{
-				EventID: TLSHandshakeStart,
-				Time:    time.Now().Sub(ec.Beginning),
+				EventID:   TLSHandshakeStart,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 		},
 		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
 			ec.append(Event{
 				Error:              err,
 				EventID:            TLSHandshakeDone,
+				RequestID:          id,
 				TLSConnectionState: &state,
 				Time:               time.Now().Sub(ec.Beginning),
 			})
@@ -206,6 +219,7 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 				EventID:      HTTPRequestHeader,
 				HeaderKey:    key,
 				HeaderValues: values,
+				RequestID:    id,
 				Time:         time.Now().Sub(ec.Beginning),
 			})
 			for _, value := range values {
@@ -214,31 +228,34 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 		},
 		WroteHeaders: func() {
 			ec.append(Event{
-				EventID: HTTPRequestHeadersDone,
-				Time:    time.Now().Sub(ec.Beginning),
+				EventID:   HTTPRequestHeadersDone,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 			ec.Logger.Debug(">")
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			ec.append(Event{
-				Error:   info.Err,
-				EventID: HTTPRequestDone,
-				Time:    time.Now().Sub(ec.Beginning),
+				Error:     info.Err,
+				EventID:   HTTPRequestDone,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 			ec.Logger.Debugf("request sent; waiting for response")
 		},
 		GotFirstResponseByte: func() {
 			ec.append(Event{
-				EventID: HTTPFirstResponseByte,
-				Time:    time.Now().Sub(ec.Beginning),
+				EventID:   HTTPFirstResponseByte,
+				RequestID: id,
+				Time:      time.Now().Sub(ec.Beginning),
 			})
 			ec.Logger.Debugf("got first response byte")
 		},
 	}), ctxKey{}, ec)
 }
 
-func traceableRequest(req *http.Request, ec *EventsContainer) *http.Request {
-	return req.WithContext(withEventsContainer(req.Context(), ec))
+func traceableRequest(req *http.Request, ec *EventsContainer, id int64) *http.Request {
+	return req.WithContext(withEventsContainer(req.Context(), ec, id))
 }
 
 // Tracer performs an HTTP round trip and records events.
@@ -252,12 +269,14 @@ type Tracer struct {
 // RoundTrip peforms the HTTP round trip.
 func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	ec := &rt.EventsContainer
-	req = traceableRequest(req, ec)
+	reqid := atomic.AddInt64(&ec.requestID, 1)
+	req = traceableRequest(req, ec, reqid)
 	ec.append(Event{
-		EventID: HTTPRequestStart,
-		Method:  req.Method,
-		Time:    time.Now().Sub(ec.Beginning),
-		URL:     req.URL.String(),
+		EventID:   HTTPRequestStart,
+		Method:    req.Method,
+		Time:      time.Now().Sub(ec.Beginning),
+		RequestID: reqid,
+		URL:       req.URL.String(),
 	})
 	ec.Logger.Debugf("> %s %s HTTP/...", req.Method, req.URL.RequestURI())
 	resp, err = rt.RoundTripper.RoundTrip(req) // use child RoundTripper
@@ -266,6 +285,7 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 	}
 	ec.append(Event{
 		EventID:    HTTPResponseStatusCode,
+		RequestID:  reqid,
 		StatusCode: resp.StatusCode,
 		Time:       time.Now().Sub(ec.Beginning),
 	})
@@ -275,6 +295,7 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 			EventID:      HTTPResponseHeader,
 			HeaderKey:    key,
 			HeaderValues: values,
+			RequestID:    reqid,
 			Time:         time.Now().Sub(ec.Beginning),
 		})
 		for _, value := range values {
@@ -283,9 +304,10 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 	}
 	ec.Logger.Debug("<")
 	ec.append(Event{
-		Error:   err,
-		EventID: HTTPResponseHeadersDone,
-		Time:    time.Now().Sub(ec.Beginning),
+		Error:     err,
+		EventID:   HTTPResponseHeadersDone,
+		RequestID: reqid,
+		Time:      time.Now().Sub(ec.Beginning),
 	})
 	body := resp.Body
 	defer body.Close()
@@ -294,10 +316,11 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		resp.Body = ioutil.NopCloser(bytes.NewReader(data)) // actionable body
 	}
 	ec.append(Event{
-		Error:    err,
-		EventID:  HTTPResponseDone,
-		NumBytes: len(data),
-		Time:     time.Now().Sub(ec.Beginning),
+		Error:     err,
+		EventID:   HTTPResponseDone,
+		NumBytes:  len(data),
+		RequestID: reqid,
+		Time:      time.Now().Sub(ec.Beginning),
 	})
 	return
 }
