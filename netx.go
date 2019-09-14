@@ -21,7 +21,7 @@ const (
 	// ConnectOperation is a connect operation.
 	ConnectOperation = OperationID("connect")
 
-	// ReadFrom operation is a readFrom operation
+	// ReadFromOperation is a readFrom operation.
 	ReadFromOperation = OperationID("readFrom")
 
 	// ReadOperation is a read operation.
@@ -45,8 +45,7 @@ type TimingMeasurement struct {
 	// Addresses contains the addresses returned by a ResolveOperation.
 	Addresses []string `json:",omitempty"`
 
-	// Data is the data sent or received by this operation. In most cases we
-	// do not include the data that has been transferred.
+	// Data is the data sent or received by this operation.
 	Data []byte `json:",omitempty"`
 
 	// DestAddress is WriteToOperation's destination address.
@@ -67,15 +66,15 @@ type TimingMeasurement struct {
 	// NumBytes is the number of bytes transferred by the operation.
 	NumBytes int64 `json:",omitempty"`
 
-	// OperationID is the operation OperationID.
+	// OperationID is the operation's ID..
 	OperationID OperationID
 
 	// SrcAddress string is WriteToOperation's source address.
 	SrcAddress string `json:",omitempty"`
 
 	// SessionID is the ID of a network level session initiated by
-	// trying to dial and concluded by either a dial error or by closing
-	// a net.Conninstance returned by dial.
+	// dialing and concluded by a dial failure or the closing of an
+	// open net.Conn instance returned by dial.
 	SessionID int64
 
 	// StartTime is the time when the operaton started relative to the
@@ -105,10 +104,12 @@ type MeasuringDialer struct {
 	EnableTiming bool
 
 	// LookupHost is the function called to perform host lookups by this
-	// dialer. By default uses the embedded Dialer's resolver.
+	// dialer. By default uses the embedded Dialer's resolver. To implement
+	// e.g. DoT or DoH, override this function.
 	LookupHost func(ctx context.Context, host string) (addrs []string, err error)
 
-	// TimingMeasurements contains timing measurements.
+	// TimingMeasurements contains timing measurements. They are only saved
+	// when the EnableTiming setting is true.
 	TimingMeasurements []TimingMeasurement
 
 	sessID int64
@@ -428,7 +429,7 @@ func (d *MeasuringDialer) dialContextAddrPort(
 	if d.EnableTiming {
 		start = time.Now()
 	}
-	// Assumption: a dial using an IP address boils down to connect
+	// Assumption: dial using an IP address boils down to connect
 	if net.ParseIP(addr) == nil {
 		return nil, errors.New("dialContextAddrPort: expected an address")
 	}
