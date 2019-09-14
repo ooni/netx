@@ -9,6 +9,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/bassosimone/netx/internal"
+	"github.com/bassosimone/netx/log"
 )
 
 // OperationID is the ID of a network-level operation.
@@ -103,6 +106,9 @@ type MeasuringDialer struct {
 	// timing is enabled, then TimingMeasurements will be filled.
 	EnableTiming bool
 
+	// Logger is the interface used for logging.
+	Logger log.Logger
+
 	// LookupHost is the function called to perform host lookups by this
 	// dialer. By default uses the embedded Dialer's resolver. To implement
 	// e.g. DoT or DoH, override this function.
@@ -132,6 +138,7 @@ func NewMeasuringDialer(beginning time.Time) (d *MeasuringDialer) {
 			},
 		},
 	}
+	d.Logger = &internal.NoLogger{}
 	return
 }
 
@@ -158,6 +165,7 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesRead, int64(n))
 	}
 	if c.dialer.EnableTiming {
+		c.dialer.Logger.Debugf("read %d bytes (#%d)", n, c.sessID)
 		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -184,6 +192,7 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesWritten, int64(n))
 	}
 	if c.dialer.EnableTiming {
+		c.dialer.Logger.Debugf("written %d bytes (#%d)", n, c.sessID)
 		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -207,6 +216,7 @@ func (c *measurableConn) Close() (err error) {
 	}
 	err = c.Conn.Close()
 	if c.dialer.EnableTiming {
+		c.dialer.Logger.Debugf("close (#%d)", c.sessID)
 		c.dialer.append(TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -382,6 +392,7 @@ func (d *MeasuringDialer) dialContextDNS(
 	if net.ParseIP(host) != nil {
 		return d.dialContextAddrPort(ctx, network, host, port, id, includeData)
 	}
+	d.Logger.Debugf("resolve %s", host)
 	addrs, err := d.lookupHost(ctx, host, id)
 	if err != nil {
 		return nil, err
@@ -434,6 +445,7 @@ func (d *MeasuringDialer) dialContextAddrPort(
 		return nil, errors.New("dialContextAddrPort: expected an address")
 	}
 	endpoint := net.JoinHostPort(addr, port)
+	d.Logger.Debugf("connect %s/%s (#%d)", endpoint, network, id)
 	conn, err := d.Dialer.DialContext(ctx, network, endpoint)
 	if d.EnableTiming {
 		d.append(TimingMeasurement{

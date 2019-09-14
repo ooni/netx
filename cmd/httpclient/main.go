@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
+	//"encoding/json"
+	//"fmt"
 	"os"
 
+	"github.com/apex/log"
 	"github.com/bassosimone/netx/httpx"
 )
 
@@ -14,18 +14,22 @@ import (
 
 func main() {
 	client := httpx.NewClient()
+	log.SetLevel(log.DebugLevel)
+	client.Dialer.Logger = log.Log
 	client.Dialer.EnableTiming = true
 	for _, URL := range os.Args[1:] {
 		client.Get(URL)
 	}
-	data, err := json.Marshal(client.HTTPEvents())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", string(data))
-	data, err = json.Marshal(client.NetEvents())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", string(data))
+	/*
+		data, err := json.Marshal(client.HTTPEvents())
+		if err != nil {
+			log.WithError(err).Fatal("json.Marshal failed")
+		}
+		fmt.Printf("%s\n", string(data))
+		data, err = json.Marshal(client.NetEvents())
+		if err != nil {
+			log.WithError(err).Fatal("json.Marshal failed")
+		}
+		fmt.Printf("%s\n", string(data))
+	*/
 }
