@@ -7,6 +7,7 @@ import (
 
 	"github.com/bassosimone/netx"
 	"github.com/bassosimone/netx/httpx/httptracex"
+	"github.com/bassosimone/netx/internal"
 )
 
 // Client is OONI's HTTP client.
@@ -36,6 +37,7 @@ func NewClient() (c *Client) {
 	c.Tracer = &httptracex.Tracer{
 		EventsContainer: httptracex.EventsContainer{
 			Beginning: beginning,
+			Logger:    internal.NoLogger{},
 		},
 		RoundTripper: c.Transport,
 	}

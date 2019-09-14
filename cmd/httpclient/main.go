@@ -17,6 +17,7 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	client.Dialer.Logger = log.Log
 	client.Dialer.EnableTiming = true
+	client.Tracer.EventsContainer.Logger = log.Log
 	for _, URL := range os.Args[1:] {
 		client.Get(URL)
 	}

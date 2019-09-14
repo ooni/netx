@@ -11,6 +11,9 @@ import (
 	"net/http/httptrace"
 	"sync"
 	"time"
+
+	"github.com/bassosimone/netx/internal"
+	"github.com/bassosimone/netx/log"
 )
 
 // EventID is the identifier of an event.
@@ -117,6 +120,9 @@ type EventsContainer struct {
 	// Events contains the events that occurred.
 	Events []Event
 
+	// Logger is the logger to use.
+	Logger log.Logger
+
 	mutex sync.Mutex
 }
 
@@ -175,6 +181,25 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 				TLSConnectionState: &state,
 				Time:               time.Now().Sub(ec.Beginning),
 			})
+			if err != nil {
+				ec.Logger.Debug(err.Error())
+				return
+			}
+			ec.Logger.Debugf("SSL connection using %s / %s",
+				internal.TLSVersionAsString(state.Version),
+				internal.TLSCipherSuiteAsString(state.CipherSuite),
+			)
+			ec.Logger.Debugf("ALPN negotiated protocol: %s",
+				internal.TLSNegotiatedProtocol(state.NegotiatedProtocol),
+			)
+			for idx, cert := range state.PeerCertificates {
+				ec.Logger.Debugf("%d: Subject: %s", idx, cert.Subject.String())
+				ec.Logger.Debugf("%d: NotBefore: %s", idx, cert.NotBefore.String())
+				ec.Logger.Debugf("%d: NotAfter: %s", idx, cert.NotAfter.String())
+				ec.Logger.Debugf("%d: Issuer: %s", idx, cert.Issuer.String())
+				ec.Logger.Debugf("%d: AltDNSNames: %+v", idx, cert.DNSNames)
+				ec.Logger.Debugf("%d: AltIPAddresses: %+v", idx, cert.IPAddresses)
+			}
 		},
 		WroteHeaderField: func(key string, values []string) {
 			ec.append(Event{
@@ -183,12 +208,16 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 				HeaderValues: values,
 				Time:         time.Now().Sub(ec.Beginning),
 			})
+			for _, value := range values {
+				ec.Logger.Debugf("> %s: %s", key, value)
+			}
 		},
 		WroteHeaders: func() {
 			ec.append(Event{
 				EventID: HTTPRequestHeadersDone,
 				Time:    time.Now().Sub(ec.Beginning),
 			})
+			ec.Logger.Debug(">")
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			ec.append(Event{
@@ -196,12 +225,14 @@ func withEventsContainer(ctx context.Context, ec *EventsContainer) context.Conte
 				EventID: HTTPRequestDone,
 				Time:    time.Now().Sub(ec.Beginning),
 			})
+			ec.Logger.Debugf("request sent; waiting for response")
 		},
 		GotFirstResponseByte: func() {
 			ec.append(Event{
 				EventID: HTTPFirstResponseByte,
 				Time:    time.Now().Sub(ec.Beginning),
 			})
+			ec.Logger.Debugf("got first response byte")
 		},
 	}), ctxKey{}, ec)
 }
@@ -228,6 +259,7 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		Time:    time.Now().Sub(ec.Beginning),
 		URL:     req.URL.String(),
 	})
+	ec.Logger.Debugf("> %s %s HTTP/...", req.Method, req.URL.RequestURI())
 	resp, err = rt.RoundTripper.RoundTrip(req) // use child RoundTripper
 	if err != nil {
 		return
@@ -237,6 +269,7 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		StatusCode: resp.StatusCode,
 		Time:       time.Now().Sub(ec.Beginning),
 	})
+	ec.Logger.Debugf("< HTTP/... %d ...", resp.StatusCode)
 	for key, values := range resp.Header {
 		ec.append(Event{
 			EventID:      HTTPResponseHeader,
@@ -244,7 +277,11 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 			HeaderValues: values,
 			Time:         time.Now().Sub(ec.Beginning),
 		})
+		for _, value := range values {
+			ec.Logger.Debugf("< %s: %s", key, value)
+		}
 	}
+	ec.Logger.Debug("<")
 	ec.append(Event{
 		Error:   err,
 		EventID: HTTPResponseHeadersDone,
