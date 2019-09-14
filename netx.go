@@ -338,6 +338,11 @@ func (d *MeasuringDialer) dialContextEx(
 	ctx context.Context, network, address string, includeData bool,
 ) (net.Conn, error) {
 	var multierr ErrDialContextTimeout
+	onfailure := func() (net.Conn, error) {
+		err := net.Error(multierr)
+		d.Logger.Debug(err.Error())
+		return nil, err
+	}
 	sessID := atomic.AddInt64(&d.sessID, 1)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for mean := initialMean; mean <= finalMean; mean *= meanFactor {
@@ -349,17 +354,19 @@ func (d *MeasuringDialer) dialContextEx(
 		// Now backoff
 		stdev := stdevFactor * mean
 		seconds := rng.NormFloat64()*stdev + mean
-		timer := time.NewTimer(time.Duration(seconds * float64(time.Second)))
+		sleepTime := time.Duration(seconds * float64(time.Second))
+		d.Logger.Debugf("retrying in %s", sleepTime.String())
+		timer := time.NewTimer(sleepTime)
 		select {
 		case <-ctx.Done():
 			timer.Stop()
 			multierr.Errors = append(multierr.Errors, ctx.Err())
-			return nil, net.Error(multierr)
+			return onfailure()
 		case <-timer.C:
 			// FALLTHROUGH
 		}
 	}
-	return nil, net.Error(multierr)
+	return onfailure()
 }
 
 // ErrManyConnectFailed is returned when repeated attempts at connecting
@@ -430,6 +437,9 @@ func (d *MeasuringDialer) lookupHost(
 			StartTime:   start.Sub(d.Beginning),
 		})
 	}
+	if err != nil {
+		d.Logger.Debug(err.Error())
+	}
 	return
 }
 
@@ -459,6 +469,7 @@ func (d *MeasuringDialer) dialContextAddrPort(
 		})
 	}
 	if err != nil {
+		d.Logger.Debug(err.Error())
 		return nil, err
 	}
 	if _, ok := conn.(net.PacketConn); ok {
