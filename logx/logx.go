@@ -6,7 +6,7 @@
 package logx
 
 // Logger defines the common interface that a logger should have. It is
-// out of the box compatible with `log.Log` in `apex/log`.
+// compatible with `log.Log` in `apex/log`.
 type Logger interface {
 	// Debug emits a debug message.
 	Debug(msg string)

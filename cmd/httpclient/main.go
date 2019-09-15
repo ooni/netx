@@ -1,18 +1,23 @@
+// httpclient is a simple HTTP command line client. It will fetch all the
+// URLs passed to the command line. While doing that, it will log http and
+// network level events on the standard error. When done, it will print
+// on the standard output the observed events as JSON.
 package main
 
 import (
-	//"encoding/json"
-	//"fmt"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/bassosimone/netx/httpx"
 )
 
-type baseLogger struct{
-	begin time.Time
+type baseLogger struct {
+	beginning time.Time
 }
 
 func (bl baseLogger) Debug(msg string) {
@@ -37,36 +42,36 @@ func (bl baseLogger) logf(format string, v ...interface{}) {
 	bl.log(fmt.Sprintf(format, v...))
 }
 func (bl baseLogger) log(msg string) {
-	fmt.Printf("[%10d] %s\n", time.Now().Sub(bl.begin)/time.Microsecond, msg)
+	fmt.Fprintf(os.Stderr, "[%10d] %s\n",
+		time.Now().Sub(bl.beginning)/time.Microsecond, msg)
 }
 
-// XXX: better handling of HTTP bodies and request IDs
-// XXX: better handling of logging
+func mustDump(v interface{}) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s\n", string(data))
+}
+
+func fetch(client *http.Client, url string) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return
+	}
+	ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+}
 
 func main() {
 	client := httpx.NewClient()
 	client.SetLogger(baseLogger{
-		begin: time.Now(),
+		beginning: client.Beginning(),
 	})
-	client.EnableNetTracing()
-	for _, URL := range os.Args[1:] {
-		resp, err := client.HTTPClient.Get(URL)
-		if err != nil {
-			continue
-		}
-		ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
+	client.EnableFullTiming()
+	for _, url := range os.Args[1:] {
+		fetch(client.HTTPClient, url)
 	}
-	/*
-		data, err := json.Marshal(client.HTTPEvents())
-		if err != nil {
-			log.WithError(err).Fatal("json.Marshal failed")
-		}
-		fmt.Printf("%s\n", string(data))
-		data, err = json.Marshal(client.NetEvents())
-		if err != nil {
-			log.WithError(err).Fatal("json.Marshal failed")
-		}
-		fmt.Printf("%s\n", string(data))
-	*/
+	mustDump(client.PopNetMeasurements())
+	mustDump(client.PopHTTPMeasurements())
 }

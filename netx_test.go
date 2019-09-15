@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-func newFailingDialer() (dialer *MeasuringDialer) {
-	dialer = NewMeasuringDialer(time.Now())
-	dialer.EnableTiming = true
+func newFailingDialer() (dialer *Dialer) {
+	dialer = NewDialer(time.Now())
+	dialer.EnableFullTiming = true
 	dialer.LookupHost = func(ctx context.Context, host string) (addrs []string, err error) {
 		return []string{"127.0.0.2", "127.0.0.3"}, nil
 	}
@@ -75,8 +75,8 @@ func TestConnectInterruptContext(t *testing.T) {
 }
 
 func TestConnectSuccess(t *testing.T) {
-	dialer := NewMeasuringDialer(time.Now())
-	dialer.EnableTiming = true
+	dialer := NewDialer(time.Now())
+	dialer.EnableFullTiming = true
 	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	conn, err := dialer.DialContext(ctx, "tcp", "www.google.com:80")
