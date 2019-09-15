@@ -3,15 +3,17 @@ package httptracex
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptrace"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/bassosimone/netx/log"
 	"github.com/bassosimone/netx"
+	"github.com/bassosimone/netx/log"
 )
 
 // EventID is the identifier of an event.
@@ -107,11 +109,23 @@ func (ec *EventsContainer) append(ev Event) {
 	ec.mutex.Unlock()
 }
 
+// roundTripContext is the state private to a specific round trip
+type roundTripContext struct {
+	container *EventsContainer // where to save data
+	incoming  []string         // received headers
+	http2     bool             // using http2?
+	method    string           // request method
+	outgoing  []string         // sent headers
+	requestID int64            // request ID
+	url       *url.URL         // request URL
+}
+
 type ctxKey struct{} // same pattern as in net/http/httptrace
 
 func withEventsContainer(
-	ctx context.Context, ec *EventsContainer, id int64,
+	ctx context.Context, rtc *roundTripContext,
 ) context.Context {
+	ec, id := rtc.container, rtc.requestID
 	return context.WithValue(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
 			var connid int64
@@ -134,8 +148,13 @@ func withEventsContainer(
 				RequestID:    id,
 				Time:         time.Now().Sub(ec.Beginning),
 			})
+			if key == ":method" {
+				rtc.http2 = true
+			}
 			for _, value := range values {
-				ec.Logger.Debugf("(http #%d) > %s: %s", id, key, value)
+				rtc.outgoing = append(
+					rtc.outgoing, fmt.Sprintf("%s: %s", key, value),
+				)
 			}
 		},
 		WroteHeaders: func() {
@@ -144,6 +163,13 @@ func withEventsContainer(
 				RequestID: id,
 				Time:      time.Now().Sub(ec.Beginning),
 			})
+			if !rtc.http2 {
+				ec.Logger.Debugf("(http #%d) > %s %s HTTP/1.1", id, rtc.method,
+					rtc.url.RequestURI())
+			}
+			for _, s := range rtc.outgoing {
+				ec.Logger.Debugf("(http #%d) > %s", id, s)
+			}
 			ec.Logger.Debugf("(http #%d) >", id)
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
@@ -166,8 +192,8 @@ func withEventsContainer(
 	}), ctxKey{}, ec)
 }
 
-func traceableRequest(req *http.Request, ec *EventsContainer, id int64) *http.Request {
-	return req.WithContext(withEventsContainer(req.Context(), ec, id))
+func traceableRequest(req *http.Request, rtc *roundTripContext) *http.Request {
+	return req.WithContext(withEventsContainer(req.Context(), rtc))
 }
 
 // Tracer performs an HTTP round trip and records events.
@@ -200,7 +226,13 @@ func (bw *bodyWrapper) Close() (err error) {
 func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	ec := &rt.EventsContainer
 	reqid := atomic.AddInt64(&ec.requestID, 1)
-	req = traceableRequest(req, ec, reqid)
+	rtc := &roundTripContext{
+		container: ec,
+		method:    req.Method,
+		url:       req.URL,
+		requestID: reqid,
+	}
+	req = traceableRequest(req, rtc)
 	ec.append(Event{
 		EventID:   HTTPRequestStart,
 		Method:    req.Method,
@@ -208,7 +240,7 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		RequestID: reqid,
 		URL:       req.URL.String(),
 	})
-	ec.Logger.Debugf("(http #%d) > %s %s HTTP/...", reqid, req.Method, req.URL.RequestURI())
+	ec.Logger.Debugf("(http #%d) %s %s", reqid, req.Method, req.URL.String())
 	resp, err = rt.RoundTripper.RoundTrip(req) // use child RoundTripper
 	if err != nil {
 		return
@@ -219,7 +251,6 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 		StatusCode: resp.StatusCode,
 		Time:       time.Now().Sub(ec.Beginning),
 	})
-	ec.Logger.Debugf("(http #%d) < HTTP/... %d ...", reqid, resp.StatusCode)
 	for key, values := range resp.Header {
 		ec.append(Event{
 			EventID:      HTTPResponseHeader,
@@ -229,16 +260,25 @@ func (rt *Tracer) RoundTrip(req *http.Request) (resp *http.Response, err error) 
 			Time:         time.Now().Sub(ec.Beginning),
 		})
 		for _, value := range values {
-			ec.Logger.Debugf("(http #%d) < %s: %s", reqid, key, value)
+			rtc.incoming = append(
+				rtc.incoming, fmt.Sprintf("%s: %s", key, value),
+			)
 		}
 	}
-	ec.Logger.Debugf("(http #%d) <", reqid)
 	ec.append(Event{
 		Error:     err,
 		EventID:   HTTPResponseHeadersDone,
 		RequestID: reqid,
 		Time:      time.Now().Sub(ec.Beginning),
 	})
+	if rtc.http2 == false {
+		ec.Logger.Debugf("(http #%d) < HTTP/%d.%d %d %s", reqid,
+			resp.ProtoMajor, resp.ProtoMinor, resp.StatusCode, resp.Status)
+	}
+	for _, s := range rtc.incoming {
+		ec.Logger.Debugf("(http #%d) < %s", reqid, s)
+	}
+	ec.Logger.Debugf("(http #%d) <", reqid)
 	// "The http Client and Transport guarantee that Body is always
 	//  non-nil, even on responses without a body or responses with
 	//  a zero-length body." (from the docs)
