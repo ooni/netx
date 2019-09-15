@@ -34,6 +34,9 @@ const (
 	// ResolveOperation is a DNS-resolve operation.
 	ResolveOperation = OperationID("resolve")
 
+	// TLSHandsakeOperation is the TLS-handshake operation.
+	TLSHandshakeOperation = OperationID("tlsHandshake")
+
 	// WriteOperation is a write operation.
 	WriteOperation = OperationID("write")
 
@@ -73,6 +76,9 @@ type TimingMeasurement struct {
 	// OperationID is the operation's ID..
 	OperationID OperationID
 
+	// SNI is the TLS server name indication being used.
+	SNI string `json:",omitempty"`
+
 	// SrcAddress string is WriteToOperation's source address.
 	SrcAddress string `json:",omitempty"`
 
@@ -84,6 +90,9 @@ type TimingMeasurement struct {
 	// StartTime is the time when the operaton started relative to the
 	// moment stored in MeasuringDialer.Beginning.
 	StartTime time.Duration
+
+	// TLSConnectionState contains the TLS connection state.
+	TLSConnectionState *tls.ConnectionState `json:",omitempty"`
 }
 
 // MeasuringDialer creates connections and keeps track of stats.
@@ -166,7 +175,7 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesRead, int64(n))
 	}
 	if c.dialer.EnableTiming {
-		c.dialer.Logger.Debugf("read %d bytes (#%d)", n, c.sessID)
+		c.dialer.Logger.Debugf("(conn #%d) read %d bytes", c.sessID, n)
 		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -181,7 +190,7 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		c.dialer.append(m)
 	}
 	if err != nil {
-		c.dialer.Logger.Debug(err.Error())
+		c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
 	}
 	return
 }
@@ -196,7 +205,7 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		atomic.AddInt64(&c.dialer.BytesWritten, int64(n))
 	}
 	if c.dialer.EnableTiming {
-		c.dialer.Logger.Debugf("written %d bytes (#%d)", n, c.sessID)
+		c.dialer.Logger.Debugf("(conn #%d) written %d bytes", c.sessID, n)
 		m := TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -211,7 +220,7 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		c.dialer.append(m)
 	}
 	if err != nil {
-		c.dialer.Logger.Debug(err.Error())
+		c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
 	}
 	return
 }
@@ -223,7 +232,7 @@ func (c *measurableConn) Close() (err error) {
 	}
 	err = c.Conn.Close()
 	if c.dialer.EnableTiming {
-		c.dialer.Logger.Debugf("close (#%d)", c.sessID)
+		c.dialer.Logger.Debugf("(conn #%d) close", c.sessID)
 		c.dialer.append(TimingMeasurement{
 			Duration:    time.Now().Sub(start),
 			Error:       err,
@@ -233,7 +242,7 @@ func (c *measurableConn) Close() (err error) {
 		})
 	}
 	if err != nil {
-		c.dialer.Logger.Debug(err.Error())
+		c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
 	}
 	return
 }
@@ -365,12 +374,12 @@ func (d *MeasuringDialer) dialContextEx(
 	ctx context.Context, network, address string, includeData bool,
 ) (net.Conn, error) {
 	var multierr ErrDialContextTimeout
+	sessID := atomic.AddInt64(&d.sessID, 1)
 	onfailure := func() (net.Conn, error) {
 		err := net.Error(multierr)
-		d.Logger.Debug(err.Error())
+		d.Logger.Debugf("(conn #%d) %s", sessID, err.Error())
 		return nil, err
 	}
-	sessID := atomic.AddInt64(&d.sessID, 1)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for mean := initialMean; mean <= finalMean; mean *= meanFactor {
 		conn, err := d.dialContextDNS(ctx, network, address, sessID, includeData)
@@ -382,7 +391,7 @@ func (d *MeasuringDialer) dialContextEx(
 		stdev := stdevFactor * mean
 		seconds := rng.NormFloat64()*stdev + mean
 		sleepTime := time.Duration(seconds * float64(time.Second))
-		d.Logger.Debugf("retrying in %s", sleepTime.String())
+		d.Logger.Debugf("(conn #%d) retrying in %s", sessID, sleepTime.String())
 		timer := time.NewTimer(sleepTime)
 		select {
 		case <-ctx.Done():
@@ -426,7 +435,6 @@ func (d *MeasuringDialer) dialContextDNS(
 	if net.ParseIP(host) != nil {
 		return d.dialContextAddrPort(ctx, network, host, port, id, includeData)
 	}
-	d.Logger.Debugf("resolve %s", host)
 	addrs, err := d.lookupHost(ctx, host, id)
 	if err != nil {
 		return nil, err
@@ -482,7 +490,7 @@ func (d *MeasuringDialer) dialContextAddrPort(
 		return nil, errors.New("dialContextAddrPort: expected an address")
 	}
 	endpoint := net.JoinHostPort(addr, port)
-	d.Logger.Debugf("connect %s/%s (#%d)", endpoint, network, id)
+	d.Logger.Debugf("(conn #%d) connect %s/%s", id, endpoint, network)
 	conn, err := d.Dialer.DialContext(ctx, network, endpoint)
 	if d.EnableTiming {
 		d.append(TimingMeasurement{
@@ -557,7 +565,11 @@ func (d *MeasuringDialer) DialTLS(
 	ctx, cancel := context.WithTimeout(context.Background(), handshakeTimeout)
 	defer cancel()
 	ch := make(chan error)
-	d.Logger.Debugf("tls: handshake (#%d)", connid)
+	d.Logger.Debugf("(conn #%d) tls: start handshake", connid)
+	var start time.Time
+	if d.EnableTiming {
+		start = time.Now()
+	}
 	go func() {
 		ch <- tlsconn.Handshake()
 	}()
@@ -567,12 +579,39 @@ func (d *MeasuringDialer) DialTLS(
 	case err = <-ch:
 		// FALLTHROUGH
 	}
+	d.Logger.Debugf("(conn #%d) tls: handshake done", connid)
+	connstate := tlsconn.ConnectionState()
+	if d.EnableTiming {
+		d.append(TimingMeasurement{
+			Duration:           time.Now().Sub(start),
+			Error:              err,
+			OperationID:        TLSHandshakeOperation,
+			SNI:                config.ServerName,
+			SessionID:          connid,
+			StartTime:          start.Sub(d.Beginning),
+			TLSConnectionState: &connstate,
+		})
+	}
 	if err != nil {
-		d.Logger.Debugf("tls: %s (#%d)", err.Error(), connid)
+		d.Logger.Debugf("(conn #%d) tls: %s", connid, err.Error())
 		conn.Close()
 		return nil, err
 	}
-	d.Logger.Debugf("tls: ready (#%d)", connid)
+	d.Logger.Debugf("(conn #%d) SSL connection using %s / %s",
+		connid, internal.TLSVersionAsString(connstate.Version),
+		internal.TLSCipherSuiteAsString(connstate.CipherSuite),
+	)
+	d.Logger.Debugf("(conn #%d) ALPN negotiated protocol: %s",
+		connid, internal.TLSNegotiatedProtocol(connstate.NegotiatedProtocol),
+	)
+	for idx, cert := range connstate.PeerCertificates {
+		d.Logger.Debugf("(conn #%d) %d: Subject: %s", connid, idx, cert.Subject.String())
+		d.Logger.Debugf("(conn #%d) %d: NotBefore: %s", connid, idx, cert.NotBefore.String())
+		d.Logger.Debugf("(conn #%d) %d: NotAfter: %s", connid, idx, cert.NotAfter.String())
+		d.Logger.Debugf("(conn #%d) %d: Issuer: %s", connid, idx, cert.Issuer.String())
+		d.Logger.Debugf("(conn #%d) %d: AltDNSNames: %+v", connid, idx, cert.DNSNames)
+		d.Logger.Debugf("(conn #%d) %d: AltIPAddresses: %+v", connid, idx, cert.IPAddresses)
+	}
 	conn = &tlsConnWrapper{Conn: tlsconn, sessID: connid}
 	return
 }
