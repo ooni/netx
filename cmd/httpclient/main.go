@@ -45,14 +45,12 @@ func (bl baseLogger) log(msg string) {
 
 func main() {
 	client := httpx.NewClient()
-	log := baseLogger{
+	client.SetLogger(baseLogger{
 		begin: time.Now(),
-	}
-	client.Dialer.Logger = log
-	client.Dialer.EnableTiming = true
-	client.Tracer.EventsContainer.Logger = log
+	})
+	client.EnableNetTracing()
 	for _, URL := range os.Args[1:] {
-		resp, err := client.Get(URL)
+		resp, err := client.HTTPClient.Get(URL)
 		if err != nil {
 			continue
 		}

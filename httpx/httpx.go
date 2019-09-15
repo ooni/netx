@@ -9,12 +9,13 @@ import (
 	"github.com/bassosimone/netx"
 	"github.com/bassosimone/netx/httpx/httptracex"
 	"github.com/bassosimone/netx/internal"
+	"github.com/bassosimone/netx/log"
 )
 
 // Client is OONI's HTTP client.
 type Client struct {
 	// http.Client is the base structure.
-	http.Client
+	HTTPClient *http.Client
 
 	// Dialer controls how we dial network connections.
 	Dialer *netx.MeasuringDialer
@@ -49,8 +50,19 @@ func NewClient() (c *Client) {
 		},
 		RoundTripper: c.Transport,
 	}
-	c.Client = http.Client{Transport: c.Tracer}
+	c.HTTPClient = &http.Client{Transport: c.Tracer}
 	return
+}
+
+// SetLogger sets the logger.
+func (c *Client) SetLogger(logger log.Logger) {
+	c.Dialer.Logger = logger
+	c.Tracer.EventsContainer.Logger = logger
+}
+
+// EnableNetTracing enables tracing net events.
+func (c *Client) EnableNetTracing() {
+	c.Dialer.EnableTiming = true
 }
 
 // HTTPEvents returns the gathered HTTP events.
