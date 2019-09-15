@@ -1,9 +1,9 @@
-// Package log defines the logging interface used in this library. This
-// logging interface is compatible with github.com/apex/log. However, we
+// Package logx defines the logging interface used in this library. This
+// logging interface is compatible with github.com/apex/log. However we
 // only use the interface in this library. Therefore, it's possible in
 // principle for you to use this library with another logger, as long as
 // you make such logger implement this interface.
-package log
+package logx
 
 // Logger defines the common interface that a logger should have. It is
 // out of the box compatible with `log.Log` in `apex/log`.

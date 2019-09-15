@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal"
-	"github.com/bassosimone/netx/log"
+	"github.com/bassosimone/netx/logx"
 )
 
 // OperationID is the ID of a network-level operation.
@@ -117,7 +117,7 @@ type MeasuringDialer struct {
 	EnableTiming bool
 
 	// Logger is the interface used for logging.
-	Logger log.Logger
+	Logger logx.Logger
 
 	// LookupHost is the function called to perform host lookups by this
 	// dialer. By default uses the embedded Dialer's resolver. To implement

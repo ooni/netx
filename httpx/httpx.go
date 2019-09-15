@@ -1,4 +1,4 @@
-// Package httpx contains OONI's net/http extensions
+// Package httpx contains OONI's net/http extensions.
 package httpx
 
 import (
@@ -9,12 +9,12 @@ import (
 	"github.com/bassosimone/netx"
 	"github.com/bassosimone/netx/httpx/httptracex"
 	"github.com/bassosimone/netx/internal"
-	"github.com/bassosimone/netx/log"
+	"github.com/bassosimone/netx/logx"
 )
 
 // Client is OONI's HTTP client.
 type Client struct {
-	// http.Client is the base structure.
+	// HTTPClient is the real HTTP client.
 	HTTPClient *http.Client
 
 	// Dialer controls how we dial network connections.
@@ -55,7 +55,7 @@ func NewClient() (c *Client) {
 }
 
 // SetLogger sets the logger.
-func (c *Client) SetLogger(logger log.Logger) {
+func (c *Client) SetLogger(logger logx.Logger) {
 	c.Dialer.Logger = logger
 	c.Tracer.EventsContainer.Logger = logger
 }

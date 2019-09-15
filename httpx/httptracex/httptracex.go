@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx"
-	"github.com/bassosimone/netx/log"
+	"github.com/bassosimone/netx/logx"
 )
 
 // EventID is the identifier of an event.
@@ -97,7 +97,7 @@ type EventsContainer struct {
 	Events []Event
 
 	// Logger is the logger to use.
-	Logger log.Logger
+	Logger logx.Logger
 
 	mutex     sync.Mutex
 	requestID int64
