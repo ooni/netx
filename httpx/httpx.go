@@ -91,13 +91,13 @@ const (
 // always present, others are optional. The optional fields are
 // also marked with `json:",omitempty"`.
 type Measurement struct {
-	// ConnID is the identifier of the connection we're using. This allows
-	// you to cross link to the the related net events. This field is present
-	// when the EventID is GotConnEvent only.
-	ConnID int64 `json:",omitempty"`
-
 	// EventID is the event ID.
 	EventID EventID
+
+	// ExternalConnID is the identifier of the connection we're using. This allows
+	// you to cross link to the the related net events. This field is present
+	// when the EventID is GotConnEvent only.
+	ExternalConnID string `json:",omitempty"`
 
 	// Headers contains headers for {Request,Response}HeadersDoneEvent.
 	Headers []string `json:",omitempty"`
@@ -196,18 +196,15 @@ type ctxKey struct{} // same pattern as in net/http/httptrace
 func withRoundTripContext(ctx context.Context, rtc *roundTripContext) context.Context {
 	return context.WithValue(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
-			var connid int64
-			if netx.GetConnID(info.Conn, &connid) != nil {
-				return
-			}
+			connid := netx.GetExternalConnID(info.Conn)
 			rtc.roundTripper.append(Measurement{
-				ConnID:        connid,
-				EventID:       GotConnEvent,
-				TransactionID: rtc.transactionID,
-				Time:          time.Now().Sub(rtc.roundTripper.Beginning),
+				EventID:        GotConnEvent,
+				ExternalConnID: connid, // cross reference
+				TransactionID:  rtc.transactionID,
+				Time:           time.Now().Sub(rtc.roundTripper.Beginning),
 			})
 			rtc.roundTripper.Logger.Debugf(
-				"(http #%d) got conn #%d", rtc.transactionID, connid,
+				"(http #%d) got conn <%s>", rtc.transactionID, connid,
 			)
 		},
 		WroteHeaderField: func(key string, values []string) {

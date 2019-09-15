@@ -5,13 +5,15 @@
 // will observe network level events and collect Measurements.
 //
 // Each net.Conn created using this modified Dialer has an unique
-// int64 network connection identifier, which is used to correlate
-// network level events with, e.g., http level events. The identifier
-// is assigned when Dial-ing the connection. Therefore, if multiple
-// connection attempts are made to a specific endpoint (e.g. because
-// it is down), you will see multiple ConnectOperation events that
-// are using the same identifier. We never reuse IDs, but in theory the
-// internal int64 counter we use could wrap around.
+// int64 network connection identifier. This identifier is assigned
+// when dialing and, once a connection is established, it is used
+// in the measurements to uniquely identify a connection. We'll
+// never reuse an identifier, unless the int64 counter we use for
+// assigning such IDs wraps around. When we establish a connection,
+// we will also include into the measurements an ExternalConnID that
+// derives from the five tuple. This is the identifier that other
+// measurements (e.g. HTTP measurements) should use to match their
+// events with network level events measured here.
 //
 // Measurement is the data structure used by all the network
 // level events we collect. The OperationID field of a specific
@@ -26,6 +28,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -72,7 +75,10 @@ type Measurement struct {
 
 	// ConnID is the ID of the connection. Note that the ID is assigned
 	// when we start dialing, therefore, all connection attempts part
-	// of a single dial operation will have the same ID.
+	// of a single dial operation will have the same ID. Once a connection
+	// is established, this will be unique to the connection for its life
+	// time. Outside of this package, use the ExternalConnID to identify a
+	// specific connection and join with these measurements.
 	ConnID int64
 
 	// Data is the data transferred by {Read,Write}Operation. Note that this
@@ -85,11 +91,23 @@ type Measurement struct {
 	// Error is the error that occurred, or nil.
 	Error error
 
+	// ExternalConnID is the identifier used by, e.g., HTTP code to refer to
+	// this connection. We cannot wrap the tls.Conn for passing around the
+	// ConnID, because net/http casts the net.Conn to (*tls.Conn) to decide
+	// whether to upgrade to http2. Specifically, it needs to access the state
+	// of the *tls.Conn to check the results of the ALPN. ExternalConnID is
+	// only set in the ConnectOperation measurement message.
+	ExternalConnID string `json:",omitempty"`
+
 	// Hostname is the hostname passed to a ResolveOperation.
 	Hostname string `json:",omitempty"`
 
 	// Network is the network used by a ConnectOperation.
 	Network string `json:",omitempty"`
+
+	// NextProtos contains the protos for ALPN. It is only included
+	// as part of the results of the TLSHandshakeOperation.
+	NextProtos []string `json:",omitempty"`
 
 	// NumBytes is the number of bytes transferred by {Read,Write}Operation.
 	NumBytes int64 `json:",omitempty"`
@@ -177,7 +195,7 @@ func NewDialer(beginning time.Time) (d *Dialer) {
 }
 
 // PopMeasurements extracts the measurements collected by this dialer and
-// returns them in a goroutine safe way.
+// returns them in a goroutine-safe way.
 func (d *Dialer) PopMeasurements() (measurements []Measurement) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
@@ -316,8 +334,7 @@ func (c *asPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 	return
 }
 
-// GetConnID returns the conn's unique ID.
-func GetConnID(conn net.Conn, id *int64) error {
+func getConnID(conn net.Conn, id *int64) error {
 	if c, ok := conn.(*measurableConn); ok {
 		*id = c.sessID
 		return nil
@@ -326,20 +343,26 @@ func GetConnID(conn net.Conn, id *int64) error {
 		*id = c.sessID
 		return nil
 	}
-	if c, ok := conn.(*tlsConnWrapper); ok {
-		*id = c.sessID
-		return nil
-	}
 	return errors.New("netx: not a connection we know of")
 }
 
-// Dial creates a TCP or UDP connection.
+// GetExternalConnID returns the connection's ExternalConnID.
+func GetExternalConnID(conn net.Conn) (eid string) {
+	if conn != nil {
+		remote, local := conn.RemoteAddr(), conn.LocalAddr()
+		eid = fmt.Sprintf("%s/%s<=>%s/%s", local.String(), local.Network(),
+			remote.String(), remote.Network())
+	}
+	return
+}
+
+// Dial creates a TCP or UDP connection. See net.Dial docs.
 func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 	return d.DialContext(context.Background(), network, address)
 }
 
 // DialContext is like Dial but the context allows to interrupt a
-// pending connection attempt.
+// pending connection attempt at any time.
 func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	return d.newDialerEx(network, address, false).dial(ctx)
 }
@@ -366,6 +389,8 @@ type dialerEx struct {
 	id          int64   // conn ID
 }
 
+// TODO(bassosimone): errManyConnectFailed can be net.OpError instead
+
 type errManyConnectFailed struct {
 	Errors []error
 }
@@ -389,7 +414,7 @@ func (de *dialerEx) dial(ctx context.Context) (net.Conn, error) {
 		return nil, err
 	}
 	if net.ParseIP(host) != nil {
-		return de.connect(ctx, host, port)
+		return de.connect(ctx, host, port) // got IP? connect directly
 	}
 	addrs, err := de.lookup(ctx, host)
 	if err != nil {
@@ -437,26 +462,30 @@ func (de *dialerEx) connect(ctx context.Context, addr, port string) (net.Conn, e
 	de.dialer.Logger.Debugf("(conn #%d) connect %s/%s", de.id, addrport, de.network)
 	start := time.Now()
 	conn, err := de.dialer.Dialer.DialContext(ctx, de.network, addrport)
+	connid := GetExternalConnID(conn)
 	de.dialer.append(Measurement{
-		Address:     addrport,
-		Duration:    time.Now().Sub(start),
-		Error:       err,
-		Network:     de.network,
-		OperationID: ConnectOperation,
-		ConnID:      de.id,
-		StartTime:   start.Sub(de.dialer.Beginning),
+		Address:        addrport,
+		Duration:       time.Now().Sub(start),
+		ExternalConnID: connid,
+		Error:          err,
+		Network:        de.network,
+		OperationID:    ConnectOperation,
+		ConnID:         de.id,
+		StartTime:      start.Sub(de.dialer.Beginning),
 	})
 	if err != nil {
 		de.dialer.Logger.Debug(err.Error())
 		return nil, err
 	}
+	de.dialer.Logger.Debugf("(conn #%d) ExternalConnID: %s", de.id, connid)
 	return de.wrapConn(conn), nil
 }
 
 func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
 	if _, ok := conn.(net.PacketConn); ok {
 		// When a connection is a PacketConn, make sure we return a
-		// structure that matches the PacketConn interface.
+		// structure that matches the PacketConn interface. This makes
+		// the pure Go DNS resolver work correctly.
 		return &asPacketConn{
 			measurableConn: measurableConn{
 				Conn:        conn,
@@ -474,11 +503,6 @@ func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
 	}
 }
 
-type tlsConnWrapper struct {
-	net.Conn
-	sessID int64
-}
-
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 	defer func() {
@@ -487,7 +511,7 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 			conn = nil
 		}
 	}()
-	hostname, _, err := net.SplitHostPort(addr)
+	hostname, _, err := net.SplitHostPort(addr) // for the SNI
 	if err != nil {
 		return
 	}
@@ -496,7 +520,7 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 		return
 	}
 	var connid int64
-	err = GetConnID(conn, &connid)
+	err = getConnID(conn, &connid)
 	if err != nil {
 		return
 	}
@@ -515,6 +539,8 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), handshakeTimeout)
 	defer cancel()
 	ch := make(chan error)
+	d.Logger.Debugf("(conn #%d) tls: SNI: %+v", connid, config.ServerName)
+	d.Logger.Debugf("(conn #%d) tls: ALPN: %+v", connid, config.NextProtos)
 	d.Logger.Debugf("(conn #%d) tls: start handshake", connid)
 	start := time.Now()
 	go func() {
@@ -531,6 +557,7 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 	d.append(Measurement{
 		Duration:           time.Now().Sub(start),
 		Error:              err,
+		NextProtos:         config.NextProtos,
 		OperationID:        TLSHandshakeOperation,
 		SNI:                config.ServerName,
 		ConnID:             connid,
@@ -556,6 +583,8 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 		d.Logger.Debugf("(conn #%d) %d: AltDNSNames: %+v", connid, idx, cert.DNSNames)
 		d.Logger.Debugf("(conn #%d) %d: AltIPAddresses: %+v", connid, idx, cert.IPAddresses)
 	}
-	conn = &tlsConnWrapper{Conn: tlsconn, sessID: connid}
+	// As mentioned above, we cannot wrap *tls.Conn when using ALPN because
+	// that prevents the net/http layer from using the ALPN result.
+	conn = tlsconn
 	return
 }
