@@ -219,7 +219,7 @@ func (d *Dialer) SetResolverDoT(address, sni string) {
 			Conn:        conn,
 			dialer:      d,
 			includeData: true,
-			sessID:      connid, // TODO(bassosimone): sessID => connID
+			connID:      connid,
 		}, nil
 	}
 }
@@ -244,7 +244,7 @@ type measurableConn struct {
 	net.Conn
 	dialer      *Dialer
 	includeData bool
-	sessID      int64
+	connID      int64
 }
 
 func (c *measurableConn) Read(b []byte) (n int, err error) {
@@ -262,16 +262,16 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 			Error:       err,
 			NumBytes:    int64(n),
 			OperationID: ReadOperation,
-			ConnID:      c.sessID,
+			ConnID:      c.connID,
 			StartTime:   start.Sub(c.dialer.Beginning),
 		}
 		if c.includeData && n > 0 {
 			m.Data = b[:n]
 		}
 		c.dialer.appendMeasurement(m)
-		c.dialer.Logger.Debugf("(conn #%d) read %d bytes", c.sessID, n)
+		c.dialer.Logger.Debugf("(conn #%d) read %d bytes", c.connID, n)
 		if err != nil {
-			c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
+			c.dialer.Logger.Debugf("(conn #%d) %s", c.connID, err.Error())
 		}
 	}
 	return
@@ -292,16 +292,16 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 			Error:       err,
 			NumBytes:    int64(n),
 			OperationID: WriteOperation,
-			ConnID:      c.sessID,
+			ConnID:      c.connID,
 			StartTime:   start.Sub(c.dialer.Beginning),
 		}
 		if c.includeData && n > 0 {
 			m.Data = b[:n]
 		}
 		c.dialer.appendMeasurement(m)
-		c.dialer.Logger.Debugf("(conn #%d) written %d bytes", c.sessID, n)
+		c.dialer.Logger.Debugf("(conn #%d) written %d bytes", c.connID, n)
 		if err != nil {
-			c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
+			c.dialer.Logger.Debugf("(conn #%d) %s", c.connID, err.Error())
 		}
 	}
 	return
@@ -314,12 +314,12 @@ func (c *measurableConn) Close() (err error) {
 		Duration:    time.Now().Sub(start),
 		Error:       err,
 		OperationID: CloseOperation,
-		ConnID:      c.sessID,
+		ConnID:      c.connID,
 		StartTime:   start.Sub(c.dialer.Beginning),
 	})
-	c.dialer.Logger.Debugf("(conn #%d) close", c.sessID)
+	c.dialer.Logger.Debugf("(conn #%d) close", c.connID)
 	if err != nil {
-		c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
+		c.dialer.Logger.Debugf("(conn #%d) %s", c.connID, err.Error())
 	}
 	return
 }
@@ -366,11 +366,11 @@ func (c *asPacketConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
 
 func getConnID(conn net.Conn, id *int64) error {
 	if c, ok := conn.(*measurableConn); ok {
-		*id = c.sessID
+		*id = c.connID
 		return nil
 	}
 	if c, ok := conn.(*asPacketConn); ok {
-		*id = c.sessID
+		*id = c.connID
 		return nil
 	}
 	return errors.New("netx: not a connection we know of")
@@ -521,7 +521,7 @@ func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
 				Conn:        conn,
 				dialer:      de.dialer,
 				includeData: de.includeData,
-				sessID:      de.id,
+				connID:      de.id,
 			},
 		}
 	}
@@ -529,7 +529,7 @@ func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
 		Conn:        conn,
 		dialer:      de.dialer,
 		includeData: de.includeData,
-		sessID:      de.id,
+		connID:      de.id,
 	}
 }
 
