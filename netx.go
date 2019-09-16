@@ -194,6 +194,36 @@ func NewDialer(beginning time.Time) (d *Dialer) {
 	return
 }
 
+// SetResolver configures the dialer to use the specified resolver endpoint
+// rather than using the default resolver.
+func (d *Dialer) SetResolver(network, address string) {
+	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
+		return d.dialForDNS(ctx, network, address)
+	}
+}
+
+// SetResolverDoT is like SetResolver except that it uses DNS over TLS. The
+// |sni| is the hostname for TLS validation, while |address| is the TCP address
+// to use. For example, `SetResolverDoT("9.9.9.9:853", "dns.quad9.net")`.
+func (d *Dialer) SetResolverDoT(address, sni string) {
+	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
+		config := d.clonedTLSConfig()
+		config.ServerName, config.NextProtos = sni, nil
+		conn, connid, err := d.dialTLSWithConfig(ctx, "tcp", address, config)
+		if err != nil {
+			return nil, err
+		}
+		// The DNS code does not use duck typing to distinguish between
+		// a *net.TCPConn and a *tls.Conn. So, wrapping is OK here.
+		return &measurableConn{
+			Conn:        conn,
+			dialer:      d,
+			includeData: true,
+			sessID:      connid, // TODO(bassosimone): sessID => connID
+		}, nil
+	}
+}
+
 // PopMeasurements extracts the measurements collected by this dialer and
 // returns them in a goroutine-safe way.
 func (d *Dialer) PopMeasurements() (measurements []Measurement) {
@@ -504,39 +534,49 @@ func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
 }
 
 // DialTLS is like Dial, but creates TLS connections.
-func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
+func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
+	sni, _, err := net.SplitHostPort(address) // for the SNI
+	if err != nil {
+		return
+	}
+	config := d.clonedTLSConfig()
+	config.ServerName = sni
+	conn, _, err = d.dialTLSWithConfig(context.Background(), network, address, config)
+	return conn, err
+}
+
+func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
+	if d.TLSConfig != nil {
+		config = d.TLSConfig.Clone()
+	} else {
+		config = &tls.Config{}
+	}
+	return
+}
+
+func (d *Dialer) dialTLSWithConfig(
+	ctx context.Context, network, address string, config *tls.Config,
+) (conn net.Conn, connid int64, err error) {
 	defer func() {
 		if err != nil && conn != nil {
 			conn.Close()
 			conn = nil
 		}
 	}()
-	hostname, _, err := net.SplitHostPort(addr) // for the SNI
+	conn, err = d.Dial(network, address)
 	if err != nil {
 		return
 	}
-	conn, err = d.Dial(network, addr)
-	if err != nil {
-		return
-	}
-	var connid int64
 	err = getConnID(conn, &connid)
 	if err != nil {
 		return
 	}
-	var config *tls.Config
-	if d.TLSConfig != nil {
-		config = d.TLSConfig.Clone()
-	} else {
-		config = &tls.Config{}
-	}
-	config.ServerName = hostname
 	handshakeTimeout := d.TLSHandshakeTimeout
 	if handshakeTimeout <= 0 {
 		handshakeTimeout = 10 * time.Second
 	}
 	tlsconn := tls.Client(conn, config)
-	ctx, cancel := context.WithTimeout(context.Background(), handshakeTimeout)
+	ctx, cancel := context.WithTimeout(ctx, handshakeTimeout)
 	defer cancel()
 	ch := make(chan error)
 	d.Logger.Debugf("(conn #%d) tls: SNI: %+v", connid, config.ServerName)
