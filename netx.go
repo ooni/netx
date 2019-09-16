@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal"
+	"github.com/bassosimone/netx/internal/doh"
 	"github.com/bassosimone/netx/logx"
 )
 
@@ -158,8 +159,7 @@ type Dialer struct {
 	Logger logx.Logger
 
 	// LookupHost is the function called to perform host lookups by this
-	// dialer. By default uses the embedded Dialer's resolver. To implement
-	// e.g. DoT or DoH, override this function.
+	// dialer. By default uses the embedded Dialer's resolver.
 	LookupHost func(ctx context.Context, host string) (addrs []string, err error)
 
 	// TLSConfig is the configuration used by TLS. If this field is nil, we
@@ -221,6 +221,25 @@ func (d *Dialer) SetResolverDoT(address, sni string) {
 			includeData: true,
 			connID:      connid,
 		}, nil
+	}
+}
+
+// SetResolverDoH is like SetResolverDoT except that it uses DNS over
+// HTTPS. The |url| is the URL to make requests to.
+func (d *Dialer) SetResolverDoH(url string) {
+	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
+		conn, err := doh.NewConn(url)
+		if err == nil {
+			conn = &asPacketConn{
+				measurableConn: measurableConn{
+					Conn:        conn,
+					dialer:      d,
+					includeData: true,
+					connID:      atomic.AddInt64(&d.connID, 1),
+				},
+			}
+		}
+		return conn, err
 	}
 }
 
