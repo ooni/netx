@@ -318,6 +318,11 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 	if err != nil {
 		return
 	}
+	if rtc.http2 {
+		rtc.incoming = append(
+			rtc.incoming, fmt.Sprintf(":status: %d", resp.StatusCode),
+		)
+	}
 	for key, values := range resp.Header {
 		for _, value := range values {
 			rtc.incoming = append(
@@ -335,9 +340,6 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 	if rtc.http2 == false {
 		rt.Logger.Debugf("(http #%d) < HTTP/%d.%d %d %s", rtc.transactionID,
 			resp.ProtoMajor, resp.ProtoMinor, resp.StatusCode, resp.Status)
-	} else {
-		rt.Logger.Debugf("(http #%d) < :status: %d",
-			rtc.transactionID, resp.StatusCode)
 	}
 	for _, s := range rtc.incoming {
 		rt.Logger.Debugf("(http #%d) < %s", rtc.transactionID, s)
