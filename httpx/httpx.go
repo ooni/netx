@@ -185,7 +185,7 @@ func (rt *Transport) PopMeasurements() (measurements []Measurement) {
 	return
 }
 
-func (rt *Transport) append(ev Measurement) {
+func (rt *Transport) appendMeasurement(ev Measurement) {
 	rt.mutex.Lock()
 	defer rt.mutex.Unlock()
 	rt.measurements = append(rt.measurements, ev)
@@ -208,7 +208,7 @@ func withRoundTripContext(ctx context.Context, rtc *roundTripContext) context.Co
 	return context.WithValue(httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
 			connid := netx.GetExternalConnID(info.Conn)
-			rtc.roundTripper.append(Measurement{
+			rtc.roundTripper.appendMeasurement(Measurement{
 				EventID:        GotConnEvent,
 				ExternalConnID: connid, // cross reference
 				TransactionID:  rtc.transactionID,
@@ -229,7 +229,7 @@ func withRoundTripContext(ctx context.Context, rtc *roundTripContext) context.Co
 			}
 		},
 		WroteHeaders: func() {
-			rtc.roundTripper.append(Measurement{
+			rtc.roundTripper.appendMeasurement(Measurement{
 				EventID:       RequestHeadersDoneEvent,
 				Headers:       rtc.outgoing,
 				Method:        rtc.method,
@@ -251,7 +251,7 @@ func withRoundTripContext(ctx context.Context, rtc *roundTripContext) context.Co
 			rtc.roundTripper.Logger.Debugf("(http #%d) >", rtc.transactionID)
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
-			rtc.roundTripper.append(Measurement{
+			rtc.roundTripper.appendMeasurement(Measurement{
 				EventID:       RequestDoneEvent,
 				TransactionID: rtc.transactionID,
 				Time:          time.Now().Sub(rtc.roundTripper.Beginning),
@@ -261,7 +261,7 @@ func withRoundTripContext(ctx context.Context, rtc *roundTripContext) context.Co
 			)
 		},
 		GotFirstResponseByte: func() {
-			rtc.roundTripper.append(Measurement{
+			rtc.roundTripper.appendMeasurement(Measurement{
 				EventID:       ResponseStartEvent,
 				TransactionID: rtc.transactionID,
 				Time:          time.Now().Sub(rtc.roundTripper.Beginning),
@@ -285,7 +285,7 @@ type bodyWrapper struct {
 
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
-	bw.roundTripper.append(Measurement{
+	bw.roundTripper.appendMeasurement(Measurement{
 		EventID:       ResponseDoneEvent,
 		TransactionID: bw.transactionID,
 		Time:          time.Now().Sub(bw.roundTripper.Beginning),
@@ -304,7 +304,7 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 		url:           req.URL,
 	}
 	req = traceableRequest(req, rtc)
-	rt.append(Measurement{
+	rt.appendMeasurement(Measurement{
 		EventID:       RequestStartEvent,
 		Method:        req.Method,
 		Time:          time.Now().Sub(rt.Beginning),
@@ -330,7 +330,7 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 			)
 		}
 	}
-	rt.append(Measurement{
+	rt.appendMeasurement(Measurement{
 		EventID:       ResponseHeadersDoneEvent,
 		Headers:       rtc.incoming,
 		StatusCode:    resp.StatusCode,

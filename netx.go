@@ -204,7 +204,7 @@ func (d *Dialer) PopMeasurements() (measurements []Measurement) {
 	return
 }
 
-func (d *Dialer) append(m Measurement) {
+func (d *Dialer) appendMeasurement(m Measurement) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	d.measurements = append(d.measurements, m)
@@ -238,7 +238,7 @@ func (c *measurableConn) Read(b []byte) (n int, err error) {
 		if c.includeData && n > 0 {
 			m.Data = b[:n]
 		}
-		c.dialer.append(m)
+		c.dialer.appendMeasurement(m)
 		c.dialer.Logger.Debugf("(conn #%d) read %d bytes", c.sessID, n)
 		if err != nil {
 			c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
@@ -268,7 +268,7 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 		if c.includeData && n > 0 {
 			m.Data = b[:n]
 		}
-		c.dialer.append(m)
+		c.dialer.appendMeasurement(m)
 		c.dialer.Logger.Debugf("(conn #%d) written %d bytes", c.sessID, n)
 		if err != nil {
 			c.dialer.Logger.Debugf("(conn #%d) %s", c.sessID, err.Error())
@@ -280,7 +280,7 @@ func (c *measurableConn) Write(b []byte) (n int, err error) {
 func (c *measurableConn) Close() (err error) {
 	start := time.Now()
 	err = c.Conn.Close()
-	c.dialer.append(Measurement{
+	c.dialer.appendMeasurement(Measurement{
 		Duration:    time.Now().Sub(start),
 		Error:       err,
 		OperationID: CloseOperation,
@@ -438,7 +438,7 @@ func (de *dialerEx) lookup(ctx context.Context, host string) ([]string, error) {
 	de.dialer.Logger.Debugf("(conn #%d) lookup %s", de.id, host)
 	start := time.Now()
 	addrs, err := de.dialer.LookupHost(ctx, host)
-	de.dialer.append(Measurement{
+	de.dialer.appendMeasurement(Measurement{
 		Addresses:   addrs,
 		Duration:    time.Now().Sub(start),
 		Error:       err,
@@ -463,7 +463,7 @@ func (de *dialerEx) connect(ctx context.Context, addr, port string) (net.Conn, e
 	start := time.Now()
 	conn, err := de.dialer.Dialer.DialContext(ctx, de.network, addrport)
 	connid := GetExternalConnID(conn)
-	de.dialer.append(Measurement{
+	de.dialer.appendMeasurement(Measurement{
 		Address:        addrport,
 		Duration:       time.Now().Sub(start),
 		ExternalConnID: connid,
@@ -554,7 +554,7 @@ func (d *Dialer) DialTLS(network, addr string) (conn net.Conn, err error) {
 	}
 	d.Logger.Debugf("(conn #%d) tls: handshake done", connid)
 	connstate := tlsconn.ConnectionState()
-	d.append(Measurement{
+	d.appendMeasurement(Measurement{
 		Duration:           time.Now().Sub(start),
 		Error:              err,
 		NextProtos:         config.NextProtos,
