@@ -64,7 +64,10 @@ func fetch(client *http.Client, url string) {
 }
 
 func main() {
-	client := httpx.NewClient()
+	client, err := httpx.NewClient()
+	if err != nil {
+		log.Fatal(err)
+	}
 	client.SetLogger(baseLogger{
 		beginning: client.Beginning(),
 	})

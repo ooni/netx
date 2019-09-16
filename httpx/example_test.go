@@ -19,8 +19,11 @@ func Example() {
 		_, err = ioutil.ReadAll(resp.Body)
 		return err
 	}
-	client := httpx.NewClient()
-	err := getfunc(client.HTTPClient, "http://facebook.com")
+	client, err := httpx.NewClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = getfunc(client.HTTPClient, "http://facebook.com")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -56,6 +56,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/bassosimone/netx"
 	"github.com/bassosimone/netx/internal"
 	"github.com/bassosimone/netx/logx"
@@ -137,7 +139,7 @@ type Transport struct {
 	// Transport is the child Transport. It is initialized
 	// by the NewTransport constructor. In particular we will
 	// configure it to use Dialer for dialing.
-	Transport *http.Transport
+	HTTPTransport *http.Transport
 
 	measurements  []Measurement
 	mutex         sync.Mutex
@@ -145,13 +147,13 @@ type Transport struct {
 }
 
 // NewTransport creates a new Transport.
-func NewTransport(beginning time.Time) *Transport {
+func NewTransport(beginning time.Time) (transport *Transport, err error) {
 	dialer := netx.NewDialer(beginning)
-	return &Transport{
+	transport = &Transport{
 		Beginning: beginning,
 		Dialer:    dialer,
 		Logger:    internal.NoLogger{},
-		Transport: &http.Transport{
+		HTTPTransport: &http.Transport{
 			Dial:                  dialer.Dial,
 			DialContext:           dialer.DialContext,
 			DialTLS:               dialer.DialTLS,
@@ -162,6 +164,15 @@ func NewTransport(beginning time.Time) *Transport {
 			TLSHandshakeTimeout:   10 * time.Second,
 		},
 	}
+	// Configure h2 and make sure that the custom TLSConfig we use for dialing
+	// is actually compatible with upgrading to h2. (This mainly means we
+	// need to make sure we include "h2" in the NextProtos array.)
+	if err = http2.ConfigureTransport(transport.HTTPTransport); err != nil {
+		transport = nil
+		return
+	}
+	transport.Dialer.TLSConfig = transport.HTTPTransport.TLSClientConfig.Clone()
+	return
 }
 
 // PopMeasurements extracts the measurements collected by this Transport
@@ -303,7 +314,7 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 	rt.Logger.Debugf(
 		"(http #%d) %s %s", rtc.transactionID, req.Method, req.URL.String(),
 	)
-	resp, err = rt.Transport.RoundTrip(req)
+	resp, err = rt.HTTPTransport.RoundTrip(req)
 	if err != nil {
 		return
 	}
@@ -347,7 +358,7 @@ func (rt *Transport) RoundTrip(req *http.Request) (resp *http.Response, err erro
 // from previous requests but are now sitting idle in a "keep-alive" state. It
 // does not interrupt any connections currently in use.
 func (rt *Transport) CloseIdleConnections() {
-	rt.Transport.CloseIdleConnections()
+	rt.HTTPTransport.CloseIdleConnections()
 }
 
 // Client is a replacement for http.Client.
@@ -362,14 +373,17 @@ type Client struct {
 }
 
 // NewClient creates a new client instance.
-func NewClient() *Client {
-	transport := NewTransport(time.Now())
+func NewClient() (*Client, error) {
+	transport, err := NewTransport(time.Now())
+	if err != nil {
+		return nil, err
+	}
 	return &Client{
 		HTTPClient: &http.Client{
 			Transport: transport,
 		},
 		Transport: transport,
-	}
+	}, nil
 }
 
 // Dialer returns the Dialer configured for c.Transport.
