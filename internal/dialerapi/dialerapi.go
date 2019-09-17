@@ -20,10 +20,6 @@ var nextConnID int64
 
 type lookupHostFunc func(context.Context, string) ([]string, error)
 
-func lookupHost(ctx context.Context, address string) ([]string, error) {
-	return (&net.Resolver{}).LookupHost(ctx, address)
-}
-
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
@@ -35,16 +31,25 @@ type Dialer struct {
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(beginning time.Time, ch chan model.Measurement) *Dialer {
-	return &Dialer{
+func NewDialer(beginning time.Time, ch chan model.Measurement) (d *Dialer) {
+	d = &Dialer{
 		Dialer: dialerbase.Dialer{
 			Beginning: beginning,
 			C:         ch,
 			Dialer:    net.Dialer{},
 		},
-		C:          ch,
-		LookupHost: lookupHost,
+		C: ch,
 	}
+	r := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			conn, _, _, err := d.DialContextEx(ctx, network, address, false)
+			// convince Go this is really a net.PacketConn
+			return &connx.DNSMeasuringConn{MeasuringConn: *conn}, err
+		},
+	}
+	d.LookupHost = r.LookupHost
+	return
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
