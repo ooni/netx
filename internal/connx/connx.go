@@ -1,0 +1,103 @@
+// Package connx contains net.Conn extensions
+package connx
+
+import (
+	"net"
+	"syscall"
+	"time"
+
+	"github.com/bassosimone/netx/model"
+)
+
+// MeasuringConn is a net.Conn used to perform measurements
+type MeasuringConn struct {
+	net.Conn
+	Beginning time.Time
+	C         chan model.Measurement
+	ID        int64
+}
+
+// Read reads data from the connection.
+func (c *MeasuringConn) Read(b []byte) (n int, err error) {
+	start := time.Now()
+	n, err = c.Conn.Read(b)
+	stop := time.Now()
+	c.safesend(model.Measurement{
+		Read: &model.ReadEvent{
+			Duration: stop.Sub(start),
+			Error:    err,
+			NumBytes: int64(n),
+			ConnID:   c.ID,
+			Time:     stop.Sub(c.Beginning),
+		},
+	})
+	return
+}
+
+// Write writes data to the connection
+func (c *MeasuringConn) Write(b []byte) (n int, err error) {
+	start := time.Now()
+	n, err = c.Conn.Write(b)
+	stop := time.Now()
+	c.safesend(model.Measurement{
+		Write: &model.WriteEvent{
+			Duration: stop.Sub(start),
+			Error:    err,
+			NumBytes: int64(n),
+			ConnID:   c.ID,
+			Time:     stop.Sub(c.Beginning),
+		},
+	})
+	return
+}
+
+// Close closes the connection
+func (c *MeasuringConn) Close() (err error) {
+	start := time.Now()
+	err = c.Conn.Close()
+	stop := time.Now()
+	c.safesend(model.Measurement{
+		Close: &model.CloseEvent{
+			Duration: stop.Sub(start),
+			Error:    err,
+			ConnID:   c.ID,
+			Time:     stop.Sub(c.Beginning),
+		},
+	})
+	return
+}
+
+func (c *MeasuringConn) safesend(m model.Measurement) {
+	if c.C != nil {
+		c.C <- m
+	}
+}
+
+// DNSMeasuringConn is like MeasuringConn except that it also
+// implements the net.PacketConn interface. This is required
+// to convince the Go resolver that this is an UDP connection.
+type DNSMeasuringConn struct {
+	MeasuringConn
+}
+
+// ReadFrom reads from the PacketConn.
+func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	err = net.Error(&net.OpError{
+		Op:     "ReadFrom",
+		Source: c.Conn.LocalAddr(),
+		Addr:   c.Conn.RemoteAddr(),
+		Err:    syscall.ENOTCONN,
+	})
+	return
+}
+
+// WriteTo writes to the PacketConn.
+func (c *DNSMeasuringConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	err = net.Error(&net.OpError{
+		Op:     "WriteTo",
+		Source: c.Conn.LocalAddr(),
+		Addr:   c.Conn.RemoteAddr(),
+		Err:    syscall.ENOTCONN,
+	})
+	return
+}

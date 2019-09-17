@@ -2,19 +2,30 @@
 package dopot
 
 import (
+	"context"
 	"errors"
 	"net"
 	"time"
 
+	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dot"
 	"github.com/bassosimone/netx/internal/dox"
 )
 
-// NewConn creates a new net.PacketConn compatible connection that
-// will forward DNS queries to the specified DNS server.
-func NewConn(address string) (net.Conn, error) {
+// NewResolver creates a new resolver that uses the specified
+// server address to resolve domain names over TCP.
+func NewResolver(dialer *dialerapi.Dialer, address string) *net.Resolver {
+	return &net.Resolver{
+		PreferGo: true,
+		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
+			return newConn(dialer, address)
+		},
+	}
+}
+
+func newConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
 	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
-		return do(address, b)
+		return do(dialer, address, b)
 	})), nil
 }
 
@@ -23,12 +34,14 @@ type plainResult struct {
 	err  error
 }
 
-func do(address string, b []byte) (out dox.Result) {
+func do(dialer *dialerapi.Dialer, address string, b []byte) (out dox.Result) {
 	var conn net.Conn
 	ch := make(chan plainResult, 1)
 	go func() {
 		var r plainResult
-		r.conn, r.err = net.Dial("tcp", address)
+		r.conn, _, _, r.err = dialer.DialContextEx(
+			context.Background(), "tcp", address, true,
+		)
 		ch <- r
 	}()
 	select {

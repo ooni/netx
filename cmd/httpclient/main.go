@@ -5,54 +5,14 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/bassosimone/netx/httpx"
+	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/model"
 )
-
-type baseLogger struct {
-	beginning time.Time
-}
-
-func (bl baseLogger) Debug(msg string) {
-	bl.log(msg)
-}
-func (bl baseLogger) Debugf(format string, v ...interface{}) {
-	bl.logf(format, v...)
-}
-func (bl baseLogger) Info(msg string) {
-	bl.log(msg)
-}
-func (bl baseLogger) Infof(format string, v ...interface{}) {
-	bl.logf(format, v...)
-}
-func (bl baseLogger) Warn(msg string) {
-	bl.log(msg)
-}
-func (bl baseLogger) Warnf(format string, v ...interface{}) {
-	bl.logf(format, v...)
-}
-func (bl baseLogger) logf(format string, v ...interface{}) {
-	bl.log(fmt.Sprintf(format, v...))
-}
-func (bl baseLogger) log(msg string) {
-	fmt.Fprintf(os.Stderr, "[%10d] %s\n",
-		time.Now().Sub(bl.beginning)/time.Microsecond, msg)
-}
-
-func mustDump(v interface{}) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%s\n", string(data))
-}
 
 func fetch(client *http.Client, url string) {
 	resp, err := client.Get(url)
@@ -64,21 +24,18 @@ func fetch(client *http.Client, url string) {
 }
 
 func main() {
-	client, err := httpx.NewClient()
+	ch := make(chan model.Measurement)
+	cancel := testingx.SpawnLogger(ch)
+	defer cancel()
+	client := httpx.NewClient(ch)
+	//err := client.ConfigureDNS("udp", "1.1.1.1:53")
+	//err := client.ConfigureDNS("tcp", "8.8.8.8:53")
+	//err := client.ConfigureDNS("dot", "dns.quad9.net")
+	err := client.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	client.SetLogger(baseLogger{
-		beginning: client.Beginning(),
-	})
-	client.EnableFullTiming()
-	//client.Dialer().ConfigureDNS("udp", "1.1.1.1:53")
-	//client.Dialer().ConfigureDNS("tcp", "8.8.8.8:53")
-	//client.Dialer().ConfigureDNS("dot", "dns.quad9.net")
-	//client.Dialer().ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 	for _, url := range os.Args[1:] {
 		fetch(client.HTTPClient, url)
 	}
-	mustDump(client.PopNetMeasurements())
-	mustDump(client.PopHTTPMeasurements())
 }

@@ -3,20 +3,29 @@ package dot
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
-	"errors"
 	"io"
 	"net"
-	"time"
 
+	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dox"
 )
 
-// NewConn creates a new net.PacketConn compatible connection that
-// will forward DNS queries to the specified DoT server.
-func NewConn(config *tls.Config, domain string) (net.Conn, error) {
+// NewResolver creates a new resolver that uses the specified server
+// address, and SNI, to resolve domain names over TLS.
+func NewResolver(dialer *dialerapi.Dialer, address, sni string) *net.Resolver {
+	return &net.Resolver{
+		PreferGo: true,
+		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
+			return newConn(dialer, address, sni)
+		},
+	}
+}
+
+func newConn(dialer *dialerapi.Dialer, address, sni string) (net.Conn, error) {
 	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
-		return do(config, domain, b)
+		return do(dialer, address, sni, b)
 	})), nil
 }
 
@@ -25,21 +34,11 @@ type tlsResult struct {
 	err  error
 }
 
-func do(config *tls.Config, domain string, b []byte) (out dox.Result) {
-	config.ServerName, config.NextProtos = domain, nil
-	var conn *tls.Conn
-	ch := make(chan tlsResult, 1)
-	go func() {
-		var r tlsResult
-		r.conn, r.err = tls.Dial("tcp", net.JoinHostPort(domain, "853"), config)
-		ch <- r
-	}()
-	select {
-	case <-time.After(10 * time.Second):
-		out.Err = errors.New("dot: connect deadline expired")
-	case r := <-ch:
-		conn, out.Err = r.conn, r.err
-	}
+func do(dialer *dialerapi.Dialer, address, sni string, b []byte) (out dox.Result) {
+	var conn net.Conn
+	conn, out.Err = dialer.DialTLSWithSNI(
+		"tcp", net.JoinHostPort(address, "853"), sni,
+	)
 	if out.Err != nil {
 		return
 	}

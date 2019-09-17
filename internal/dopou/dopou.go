@@ -1,24 +1,37 @@
-// Package dopot implements DNS over plain old UDP
+// Package dopou implements DNS over plain old UDP
 package dopou
 
 import (
+	"context"
 	"net"
 	"time"
 
+	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dox"
 )
 
-// NewConn creates a new net.PacketConn compatible connection that
-// will forward DNS queries to the specified DNS server.
-func NewConn(address string) (net.Conn, error) {
+// NewResolver creates a new resolver that uses the specified
+// server address to resolve domain names over UDP.
+func NewResolver(dialer *dialerapi.Dialer, address string) *net.Resolver {
+	return &net.Resolver{
+		PreferGo: true,
+		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
+			return newConn(dialer, address)
+		},
+	}
+}
+
+func newConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
 	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
-		return do(address, b)
+		return do(dialer, address, b)
 	})), nil
 }
 
-func do(address string, b []byte) (out dox.Result) {
+func do(dialer *dialerapi.Dialer, address string, b []byte) (out dox.Result) {
 	var conn net.Conn
-	conn, out.Err = net.Dial("udp", address)
+	conn, _, _, out.Err = dialer.DialContextEx(
+		context.Background(), "udp", address, true,
+	)
 	if out.Err != nil {
 		return
 	}
