@@ -597,7 +597,7 @@ func (d *Dialer) dialTLSWithConfig(
 	tlsconn := tls.Client(conn, config)
 	ctx, cancel := context.WithTimeout(ctx, handshakeTimeout)
 	defer cancel()
-	ch := make(chan error)
+	ch := make(chan error, 1)
 	d.Logger.Debugf("(conn #%d) tls: SNI: %+v", connid, config.ServerName)
 	d.Logger.Debugf("(conn #%d) tls: ALPN: %+v", connid, config.NextProtos)
 	d.Logger.Debugf("(conn #%d) tls: start handshake", connid)
