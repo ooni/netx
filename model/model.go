@@ -1,4 +1,21 @@
-// Package model contains our data model
+// Package model contains the data model. Network events are tagged
+// using a unique int64 ConnID. HTTP events also have a unique int64
+// ID, TransactionID. These IDs are never reused.
+//
+// To join network events and HTTP events, use the LocalAddress and
+// RemoteAddress that are included both in the ConnectEvent and in
+// the HTTPConnectionReadyEvent.
+//
+// All events also have a Time. This is always the time in which
+// an event has been emitted. We use a monotonic clock. Hence, the
+// Time is relative to a predefined zero in time.
+//
+// Duration, where present, indicates for how long the code
+// has been waiting for an event to happen. For example,
+// ReadEvent.Duration indicates for how long the code has
+// been blocked inside Read().
+//
+// When an operation may fail, we also include the Error.
 package model
 
 import (
@@ -6,7 +23,7 @@ import (
 	"time"
 )
 
-// CloseEvent is emitted when a connection is closed.
+// CloseEvent is emitted when conn.Close returns.
 type CloseEvent struct {
 	ConnID   int64
 	Duration time.Duration
@@ -14,7 +31,7 @@ type CloseEvent struct {
 	Time     time.Duration
 }
 
-// ConnectEvent is emitted when a connection is established.
+// ConnectEvent is emitted when connect() returns.
 type ConnectEvent struct {
 	ConnID        int64
 	Duration      time.Duration
@@ -75,7 +92,7 @@ type HTTPResponseDoneEvent struct {
 	TransactionID int64
 }
 
-// ReadEvent is emitted when data is read.
+// ReadEvent is emitted when conn.Read returns.
 type ReadEvent struct {
 	ConnID   int64
 	Duration time.Duration
@@ -84,7 +101,7 @@ type ReadEvent struct {
 	Time     time.Duration
 }
 
-// ResolveEvent is emitted when a domain name is resolved.
+// ResolveEvent is emitted when resolver.LookupHost returns.
 type ResolveEvent struct {
 	Addresses []string
 	ConnID    int64
@@ -114,7 +131,7 @@ type TLSConnectionState struct {
 	Version                    uint16
 }
 
-// TLSHandshakeEvent is emitted when a TLS handshake completes.
+// TLSHandshakeEvent is emitted when conn.Handshake returns.
 type TLSHandshakeEvent struct {
 	Config          TLSConfig
 	ConnectionState TLSConnectionState
@@ -124,7 +141,7 @@ type TLSHandshakeEvent struct {
 	Time            time.Duration
 }
 
-// WriteEvent is emitted when data is written.
+// WriteEvent is emitted when conn.Write returns.
 type WriteEvent struct {
 	ConnID   int64
 	Duration time.Duration
@@ -133,7 +150,9 @@ type WriteEvent struct {
 	Time     time.Duration
 }
 
-// Measurement is a measurement.
+// Measurement contains zero or more events. Do not assume that at any
+// time a Measurement will only contain a single event. When a Measurement
+// contains an event, the corresponding pointer is non nil.
 type Measurement struct {
 	Close                   *CloseEvent                   `json:",omitempty"`
 	Connect                 *ConnectEvent                 `json:",omitempty"`

@@ -2,7 +2,7 @@
 //
 // This package provides a replacement for net.Dialer that can Dial,
 // DialContext, and DialTLS. During its lifecycle this modified Dialer
-// will observe network level events and collect Measurements.
+// will emit network level events on a channel.
 package netx
 
 import (

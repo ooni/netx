@@ -19,7 +19,9 @@ type Transport struct {
 	transport *httptransport.Transport
 }
 
-// NewTransport creates a new Transport.
+// NewTransport creates a new Transport. The beginning argument is
+// the time to use as zero for computing the elapsed time. The ch
+// channel is where we'll emit Measurements.
 func NewTransport(beginning time.Time, ch chan model.Measurement) *Transport {
 	t := new(Transport)
 	t.dialer = dialerapi.NewDialer(beginning, ch)
@@ -57,8 +59,7 @@ type Client struct {
 	// that expects an *http.HTTPClient. For this reason we can't embed it.
 	HTTPClient *http.Client
 
-	// Transport is the transport configured for HTTPClient by NewClient.
-	Transport *Transport
+	transport *Transport
 }
 
 // NewClient creates a new client instance.
@@ -68,11 +69,11 @@ func NewClient(ch chan model.Measurement) *Client {
 		HTTPClient: &http.Client{
 			Transport: transport,
 		},
-		Transport: transport,
+		transport: transport,
 	}
 }
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (c *Client) ConfigureDNS(network, address string) error {
-	return c.Transport.ConfigureDNS(network, address)
+	return c.transport.ConfigureDNS(network, address)
 }

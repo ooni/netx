@@ -88,6 +88,8 @@ func (d *Dialer) DialTLSWithSNI(network, address, SNI string) (net.Conn, error) 
 		conn.Close()
 		return nil, err
 	}
+	// Note that we cannot wrap `tc` because the HTTP code assumes
+	// a `*tls.Conn` when implementing ALPN.
 	return tc, nil
 }
 
