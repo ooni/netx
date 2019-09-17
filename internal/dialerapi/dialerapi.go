@@ -109,6 +109,7 @@ func (d *Dialer) DialContextEx(
 	}
 	if requireIP == true {
 		err = errors.New("dialerapi: you passed me a domain name")
+		return
 	}
 	start := time.Now()
 	var addrs []string

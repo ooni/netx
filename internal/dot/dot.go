@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
+	"time"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dox"
@@ -50,6 +51,10 @@ func do(dialer *dialerapi.Dialer, address, sni string, b []byte) (out dox.Result
 // keep this function public because dopot/dopot.go uses it.
 func OwnConnAndRoundTrip(conn net.Conn, b []byte) (out dox.Result) {
 	defer conn.Close()
+	out.Err = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if out.Err != nil {
+		return
+	}
 	// Write request
 	writer := bufio.NewWriter(conn)
 	out.Err = writer.WriteByte(byte(len(b) >> 8))

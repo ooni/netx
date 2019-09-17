@@ -82,6 +82,7 @@ type DNSMeasuringConn struct {
 
 // ReadFrom reads from the PacketConn.
 func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
+	// This is just a not implemented stub.
 	err = net.Error(&net.OpError{
 		Op:     "ReadFrom",
 		Source: c.Conn.LocalAddr(),
@@ -93,6 +94,7 @@ func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) 
 
 // WriteTo writes to the PacketConn.
 func (c *DNSMeasuringConn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
+	// This is just a not implemented stub.
 	err = net.Error(&net.OpError{
 		Op:     "WriteTo",
 		Source: c.Conn.LocalAddr(),
