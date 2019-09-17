@@ -48,9 +48,21 @@ func (c *Conn) Close() (err error) {
 	return
 }
 
+type doxAddr struct {
+	id string
+}
+
+func (doxAddr) Network() string {
+	return "dns-over-x"
+}
+
+func (d doxAddr) String() string {
+	return d.id
+}
+
 // LocalAddr returns the local address.
-func (c *Conn) LocalAddr() (addr net.Addr) {
-	return
+func (c *Conn) LocalAddr() net.Addr {
+	return &doxAddr{"local"}
 }
 
 // Read reads the next DNS response.
@@ -90,8 +102,8 @@ func (c *Conn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 }
 
 // RemoteAddr is a non implemented stub.
-func (c *Conn) RemoteAddr() (addr net.Addr) {
-	return
+func (c *Conn) RemoteAddr() net.Addr {
+	return &doxAddr{"remote"}
 }
 
 // SetDeadline sets the read and the write deadlines.
