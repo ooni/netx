@@ -72,6 +72,10 @@ func main() {
 		beginning: client.Beginning(),
 	})
 	client.EnableFullTiming()
+	//client.Dialer().ConfigureDNS("udp", "1.1.1.1:53")
+	//client.Dialer().ConfigureDNS("tcp", "8.8.8.8:53")
+	//client.Dialer().ConfigureDNS("dot", "dns.quad9.net")
+	//client.Dialer().ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 	for _, url := range os.Args[1:] {
 		fetch(client.HTTPClient, url)
 	}

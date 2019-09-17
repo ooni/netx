@@ -38,6 +38,7 @@ import (
 	"github.com/bassosimone/netx/internal"
 	"github.com/bassosimone/netx/internal/doh"
 	"github.com/bassosimone/netx/internal/dopot"
+	"github.com/bassosimone/netx/internal/dopou"
 	"github.com/bassosimone/netx/internal/dot"
 	"github.com/bassosimone/netx/logx"
 )
@@ -196,63 +197,40 @@ func NewDialer(beginning time.Time) (d *Dialer) {
 	return
 }
 
-// SetResolver configures the dialer to use the specified resolver endpoint
-// rather than using the default resolver.
-func (d *Dialer) SetResolver(network, address string) {
+// ConfigureDNS configures the DNS resolver. The |network| argument
+// selects the type of resolver. The |address| argument indicates the
+// resolver address and depends on the |network|. The following is a
+// list of all the possible |network| values:
+//
+// - "udp": indicates that we should send queries using UDP. In this
+// case the |address| is a host, port UDP endpoint.
+//
+// - "tcp": like UDP but we use DNS over TCP.
+//
+// - "dot": like TCP but we use DNS over TLS (DoT). In this case the
+// |address| is the domain name of the DoT server.
+//
+// - "doh": we use DNS over HTTPS. In this case the |address| is
+// the full URL to be used as the resolver.
+//
+// Examples
+//
+//   d.SetResolver("udp", "8.8.8.8:53")
+//   d.SetResolver("tcp", "8.8.8.8:53")
+//   d.SetResolver("dot", "dns.quad9.net")
+//   d.SetResolver("doh", "https://cloudflare-dns.com/dns-query")
+//
+// Bugs
+//
+// This modified DNS code is currently only executed when Go chooses
+// to use the pure Go implementation of the DNS. This means that it
+// should not be working on Windows, where the C library is preferred.
+func (d *Dialer) ConfigureDNS(network, address string) {
+	// Implementation note: because we ovverride the original Dial
+	// function, we disregard the network and address selected by Go
+	// code, here represented by |n| and |a|.
 	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
-		if network == "tcp" {
-			conn, err := dopot.NewConn(address)
-			if err == nil {
-				conn = &asPacketConn{
-					measurableConn: measurableConn{
-						Conn:        conn,
-						dialer:      d,
-						includeData: true,
-						connID:      atomic.AddInt64(&d.connID, 1),
-					},
-				}
-			}
-			return conn, err
-		}
 		return d.dialForDNS(ctx, network, address)
-	}
-}
-
-// SetResolverDoT is like SetResolver except that it uses DNS over TLS. The
-// |domain| is the domain of the DoT server.
-func (d *Dialer) SetResolverDoT(domain string) {
-	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
-		conn, err := dot.NewConn(d.clonedTLSConfig(), domain)
-		if err == nil {
-			conn = &asPacketConn{
-				measurableConn: measurableConn{
-					Conn:        conn,
-					dialer:      d,
-					includeData: true,
-					connID:      atomic.AddInt64(&d.connID, 1),
-				},
-			}
-		}
-		return conn, err
-	}
-}
-
-// SetResolverDoH is like SetResolverDoT except that it uses DNS over
-// HTTPS. The |url| is the URL to make requests to.
-func (d *Dialer) SetResolverDoH(url string) {
-	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
-		conn, err := doh.NewConn(url)
-		if err == nil {
-			conn = &asPacketConn{
-				measurableConn: measurableConn{
-					Conn:        conn,
-					dialer:      d,
-					includeData: true,
-					connID:      atomic.AddInt64(&d.connID, 1),
-				},
-			}
-		}
-		return conn, err
 	}
 }
 
@@ -430,7 +408,44 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 }
 
 func (d *Dialer) dialForDNS(ctx context.Context, network, address string) (net.Conn, error) {
-	return d.newDialerEx(network, address, true).dial(ctx)
+	var (
+		conn net.Conn
+		err  error
+	)
+	start := time.Now()
+	wrap := func(conn net.Conn, err error) (net.Conn, error) {
+		connid := atomic.AddInt64(&d.connID, 1)
+		d.Logger.Debugf(
+			"(conn #%d) dns-dialing for %s using %s: %+v",
+			connid, address, network, err,
+		)
+		if err == nil {
+			conn = d.wrapConn(conn, true, connid)
+		}
+		d.appendMeasurement(Measurement{
+			Address:        address,
+			Duration:       time.Now().Sub(start),
+			ExternalConnID: GetExternalConnID(conn),
+			Error:          err,
+			Network:        network,
+			OperationID:    ConnectOperation,
+			ConnID:         connid,
+			StartTime:      start.Sub(d.Beginning),
+		})
+		return conn, err
+	}
+	if network == "tcp" {
+		conn, err = dopot.NewConn(address)
+	} else if network == "dot" {
+		conn, err = dot.NewConn(d.clonedTLSConfig(), address)
+	} else if network == "doh" {
+		conn, err = doh.NewConn(address)
+	} else if network == "udp" {
+		conn, err = dopou.NewConn(address)
+	} else {
+		err = errors.New("dns: invalid address")
+	}
+	return wrap(conn, err)
 }
 
 func (d *Dialer) newDialerEx(network, address string, includeData bool) *dialerEx {
@@ -544,25 +559,23 @@ func (de *dialerEx) connect(ctx context.Context, addr, port string) (net.Conn, e
 }
 
 func (de *dialerEx) wrapConn(conn net.Conn) net.Conn {
+	return de.dialer.wrapConn(conn, de.includeData, de.id)
+}
+
+func (d *Dialer) wrapConn(conn net.Conn, includeData bool, id int64) net.Conn {
+	measurable := measurableConn{
+		Conn:        conn,
+		dialer:      d,
+		includeData: includeData,
+		connID:      id,
+	}
 	if _, ok := conn.(net.PacketConn); ok {
 		// When a connection is a PacketConn, make sure we return a
 		// structure that matches the PacketConn interface. This makes
 		// the pure Go DNS resolver work correctly.
-		return &asPacketConn{
-			measurableConn: measurableConn{
-				Conn:        conn,
-				dialer:      de.dialer,
-				includeData: de.includeData,
-				connID:      de.id,
-			},
-		}
+		return &asPacketConn{measurableConn: measurable}
 	}
-	return &measurableConn{
-		Conn:        conn,
-		dialer:      de.dialer,
-		includeData: de.includeData,
-		connID:      de.id,
-	}
+	return &measurable
 }
 
 // DialTLS is like Dial, but creates TLS connections.
