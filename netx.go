@@ -37,6 +37,8 @@ import (
 
 	"github.com/bassosimone/netx/internal"
 	"github.com/bassosimone/netx/internal/doh"
+	"github.com/bassosimone/netx/internal/dopot"
+	"github.com/bassosimone/netx/internal/dot"
 	"github.com/bassosimone/netx/logx"
 )
 
@@ -198,29 +200,40 @@ func NewDialer(beginning time.Time) (d *Dialer) {
 // rather than using the default resolver.
 func (d *Dialer) SetResolver(network, address string) {
 	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
+		if network == "tcp" {
+			conn, err := dopot.NewConn(address)
+			if err == nil {
+				conn = &asPacketConn{
+					measurableConn: measurableConn{
+						Conn:        conn,
+						dialer:      d,
+						includeData: true,
+						connID:      atomic.AddInt64(&d.connID, 1),
+					},
+				}
+			}
+			return conn, err
+		}
 		return d.dialForDNS(ctx, network, address)
 	}
 }
 
 // SetResolverDoT is like SetResolver except that it uses DNS over TLS. The
-// |sni| is the hostname for TLS validation, while |address| is the TCP address
-// to use. For example, `SetResolverDoT("9.9.9.9:853", "dns.quad9.net")`.
-func (d *Dialer) SetResolverDoT(address, sni string) {
+// |domain| is the domain of the DoT server.
+func (d *Dialer) SetResolverDoT(domain string) {
 	d.Dialer.Resolver.Dial = func(ctx context.Context, n, a string) (net.Conn, error) {
-		config := d.clonedTLSConfig()
-		config.ServerName, config.NextProtos = sni, nil
-		conn, connid, err := d.dialTLSWithConfig(ctx, "tcp", address, config)
-		if err != nil {
-			return nil, err
+		conn, err := dot.NewConn(d.clonedTLSConfig(), domain)
+		if err == nil {
+			conn = &asPacketConn{
+				measurableConn: measurableConn{
+					Conn:        conn,
+					dialer:      d,
+					includeData: true,
+					connID:      atomic.AddInt64(&d.connID, 1),
+				},
+			}
 		}
-		// The DNS code does not use duck typing to distinguish between
-		// a *net.TCPConn and a *tls.Conn. So, wrapping is OK here.
-		return &measurableConn{
-			Conn:        conn,
-			dialer:      d,
-			includeData: true,
-			connID:      connid,
-		}, nil
+		return conn, err
 	}
 }
 
