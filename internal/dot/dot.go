@@ -75,7 +75,7 @@ func OwnConnAndRoundTrip(conn net.Conn, b []byte) (out dox.Result) {
 	if out.Err != nil {
 		return
 	}
-	length := int(header[0]) << 8 | int(header[1])
+	length := int(header[0])<<8 | int(header[1])
 	out.Data = make([]byte, length)
 	_, out.Err = io.ReadFull(conn, out.Data)
 	return
