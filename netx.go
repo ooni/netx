@@ -27,32 +27,30 @@ func NewDialer(ch chan model.Measurement) *Dialer {
 	}
 }
 
-// ConfigureDNS configures the DNS resolver. The |network| argument
-// selects the type of resolver. The |address| argument indicates the
-// resolver address and depends on the |network|. The following is a
-// list of all the possible |network| values:
+// ConfigureDNS configures the DNS resolver. The network argument
+// selects the type of resolver. The address argument indicates the
+// resolver address and depends on the network. The following is a
+// list of all the possible network values:
 //
 // - "udp": indicates that we should send queries using UDP. In this
-// case the |address| is a host, port UDP endpoint.
+// case the address is a host, port UDP endpoint.
 //
-// - "tcp": like UDP but we use DNS over TCP.
+// - "tcp": like "udp" but we use TCP.
 //
-// - "dot": like TCP but we use DNS over TLS (DoT). In this case the
-// |address| is the domain name of the DoT server.
+// - "dot": we use DNS over TLS (DoT). In this case the address is
+// the domain name of the DoT server.
 //
-// - "doh": we use DNS over HTTPS. In this case the |address| is
-// the full URL to be used as the resolver.
+// - "doh": we use DNS over HTTPS (DoH). In this case the address is
+// the URL of the DoH server.
 //
-// Examples
+// For example:
 //
 //   d.SetResolver("udp", "8.8.8.8:53")
 //   d.SetResolver("tcp", "8.8.8.8:53")
 //   d.SetResolver("dot", "dns.quad9.net")
 //   d.SetResolver("doh", "https://cloudflare-dns.com/dns-query")
 //
-// Bugs
-//
-// This modified DNS code is currently only executed when Go chooses
+// ConfigureDNS is currently only executed when Go chooses
 // to use the pure Go implementation of the DNS. This means that it
 // should not be working on Windows, where the C library is preferred.
 func (d *Dialer) ConfigureDNS(network, address string) error {

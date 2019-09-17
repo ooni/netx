@@ -1,7 +1,6 @@
 // httpclient is a simple HTTP command line client. It will fetch all the
 // URLs passed to the command line. While doing that, it will log http and
-// network level events on the standard error. When done, it will print
-// on the standard output the observed events as JSON.
+// network level events on the standard output in JSONL format.
 package main
 
 import (
