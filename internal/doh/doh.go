@@ -15,9 +15,19 @@ import (
 	"github.com/bassosimone/netx/internal/httptransport"
 )
 
-// NewResolver creates a new resolver that uses the specified server
-// URL, and SNI, to resolve domain names using DoH.
-func NewResolver(dialer *dialerapi.Dialer, URL *url.URL) *net.Resolver {
+// Client is a DoH client
+type Client struct {
+	client *http.Client
+	dialer *dialerapi.Dialer
+	url    *url.URL
+}
+
+// NewClient creates a new client.
+func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
+	URL, err := url.Parse(address)
+	if err != nil {
+		return nil, err
+	}
 	child := dialerapi.NewDialer(dialer.Beginning, dialer.C)
 	transport := httptransport.NewTransport(dialer.Beginning, dialer.C)
 	// this duplicates some logic from httpx/httpx.go
@@ -27,17 +37,28 @@ func NewResolver(dialer *dialerapi.Dialer, URL *url.URL) *net.Resolver {
 	transport.DialTLS = child.DialTLS
 	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare
 	client := &http.Client{Transport: transport}
+	return &Client{
+		dialer: dialer,
+		client: client,
+		url:    URL,
+	}, nil
+}
+
+// NewResolver creates a new resolver that uses the specified server
+// URL, and SNI, to resolve domain names using DoH.
+func (clnt *Client) NewResolver() *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
 		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
-			return newConn(dialer, client, URL)
+			return clnt.NewConn()
 		},
 	}
 }
 
-func newConn(dialer *dialerapi.Dialer, client *http.Client, URL *url.URL) (net.Conn, error) {
-	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
-		return do(client, URL, b)
+// NewConn creates a new doh pseudo-conn.
+func (clnt *Client) NewConn() (net.Conn, error) {
+	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.C, func(b []byte) dox.Result {
+		return do(clnt.client, clnt.url, b)
 	}), nil
 }
 

@@ -3,8 +3,6 @@ package dnsconf
 
 import (
 	"errors"
-	"net"
-	"net/url"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/doh"
@@ -16,21 +14,18 @@ import (
 // Do implements netx.Dialer.ConfigureDNS.
 func Do(dialer *dialerapi.Dialer, network, address string) error {
 	if network == "doh" {
-		URL, err := url.Parse(address)
-		if err != nil {
-			return err
+		clnt, err := doh.NewClient(dialer, address)
+		if err == nil {
+			dialer.LookupHost = clnt.NewResolver().LookupHost
 		}
-		resolver := doh.NewResolver(dialer, URL)
-		dialer.LookupHost = resolver.LookupHost
-		return nil
+		return err
 	}
 	if network == "dot" {
-		first, err := lookupFirstHost(address)
+		clnt, err := dot.NewClient(dialer, address)
 		if err != nil {
 			return err
 		}
-		resolver := dot.NewResolver(dialer, first, address)
-		dialer.LookupHost = resolver.LookupHost
+		dialer.LookupHost = clnt.NewResolver().LookupHost
 		return nil
 	}
 	if network == "tcp" {
@@ -44,15 +39,4 @@ func Do(dialer *dialerapi.Dialer, network, address string) error {
 		return nil
 	}
 	return errors.New("dnsconf: unsupported network value")
-}
-
-func lookupFirstHost(address string) (string, error) {
-	addrs, err := net.LookupHost(address)
-	if err != nil {
-		return "", err
-	}
-	if len(addrs) < 1 {
-		return "", errors.New("dnsconf: net.LookupHost returned an empty slice")
-	}
-	return addrs[0], nil
 }

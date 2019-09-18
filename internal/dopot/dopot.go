@@ -18,12 +18,13 @@ func NewResolver(dialer *dialerapi.Dialer, address string) *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
 		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
-			return newConn(dialer, address)
+			return NewConn(dialer, address)
 		},
 	}
 }
 
-func newConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
+// NewConn returns a new dopot pseudo-conn.
+func NewConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
 	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
 		return do(dialer, address, b)
 	}), nil

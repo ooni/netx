@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"io"
 	"net"
 	"time"
@@ -13,20 +14,44 @@ import (
 	"github.com/bassosimone/netx/internal/dox"
 )
 
+// Client is a DoT client.
+type Client struct {
+	address string
+	dialer  *dialerapi.Dialer
+	sni     string
+}
+
+// NewClient creates a new client.
+func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
+	addrs, err := net.LookupHost(address)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) < 1 {
+		return nil, errors.New("dot: net.LookupHost returned an empty slice")
+	}
+	return &Client{
+		address: addrs[0],
+		dialer:  dialer,
+		sni:     address,
+	}, nil
+}
+
 // NewResolver creates a new resolver that uses the specified server
 // address, and SNI, to resolve domain names over TLS.
-func NewResolver(dialer *dialerapi.Dialer, address, sni string) *net.Resolver {
+func (clnt *Client) NewResolver() *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
 		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
-			return newConn(dialer, address, sni)
+			return clnt.NewConn()
 		},
 	}
 }
 
-func newConn(dialer *dialerapi.Dialer, address, sni string) (net.Conn, error) {
-	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
-		return do(dialer, address, sni, b)
+// NewConn creates a new DoT pseudo-conn
+func (clnt *Client) NewConn() (net.Conn, error) {
+	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.C, func(b []byte) dox.Result {
+		return do(clnt.dialer, clnt.address, clnt.sni, b)
 	}), nil
 }
 
