@@ -30,11 +30,14 @@ func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
 	if len(addrs) < 1 {
 		return nil, errors.New("dot: net.LookupHost returned an empty slice")
 	}
-	return &Client{
+	client := &Client{
 		address: addrs[0],
 		dialer:  dialer,
-		sni:     address,
-	}, nil
+	}
+	client.dialer.TLSConfig = &tls.Config{
+		ServerName: address,
+	}
+	return client, nil
 }
 
 // NewResolver creates a new resolver that uses the specified server
@@ -70,8 +73,8 @@ func (clnt *Client) RoundTrip(query []byte) (reply []byte, err error) {
 
 func (clnt *Client) do(b []byte) (out dox.Result) {
 	var conn net.Conn
-	conn, out.Err = clnt.dialer.DialTLSWithSNI(
-		"tcp", net.JoinHostPort(clnt.address, "853"), clnt.sni,
+	conn, out.Err = clnt.dialer.DialTLS(
+		"tcp", net.JoinHostPort(clnt.address, "853"),
 	)
 	if out.Err != nil {
 		return

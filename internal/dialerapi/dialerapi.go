@@ -81,22 +81,15 @@ func (d *Dialer) DialContext(
 
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
-	return d.DialTLSWithSNI(network, address, "")
-}
-
-// DialTLSWithSNI is like DialTLS, but using a different SNI. If the SNI
-// is empty, this function is equivalent to DialTLS.
-func (d *Dialer) DialTLSWithSNI(network, address, SNI string) (net.Conn, error) {
 	ctx := context.Background()
 	conn, onlyhost, _, err := d.DialContextEx(ctx, network, address, false)
 	if err != nil {
 		return nil, err
 	}
 	config := d.clonedTLSConfig()
-	if SNI == "" {
-		SNI = onlyhost
+	if config.ServerName == "" {
+		config.ServerName = onlyhost
 	}
-	config.ServerName = SNI
 	timeout := d.TLSHandshakeTimeout
 	if timeout <= 0 {
 		timeout = 10 * time.Second
