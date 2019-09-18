@@ -51,7 +51,7 @@ func (clnt *Client) NewResolver() *net.Resolver {
 // NewConn creates a new DoT pseudo-conn
 func (clnt *Client) NewConn() (net.Conn, error) {
 	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.Handler, func(b []byte) dox.Result {
-		return do(clnt.dialer, clnt.address, clnt.sni, b)
+		return clnt.do(b)
 	}), nil
 }
 
@@ -60,10 +60,18 @@ type tlsResult struct {
 	err  error
 }
 
-func do(dialer *dialerapi.Dialer, address, sni string, b []byte) (out dox.Result) {
+// RoundTrip implements the dnsx.RoundTripper interface
+func (clnt *Client) RoundTrip(query []byte) (reply []byte, err error) {
+	out := clnt.do(query)
+	reply = out.Data
+	err = out.Err
+	return
+}
+
+func (clnt *Client) do(b []byte) (out dox.Result) {
 	var conn net.Conn
-	conn, out.Err = dialer.DialTLSWithSNI(
-		"tcp", net.JoinHostPort(address, "853"), sni,
+	conn, out.Err = clnt.dialer.DialTLSWithSNI(
+		"tcp", net.JoinHostPort(clnt.address, "853"), clnt.sni,
 	)
 	if out.Err != nil {
 		return

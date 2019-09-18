@@ -23,3 +23,9 @@ type Resolver interface {
 	// LookupNS resolves the DNS NS records for a given domain name.
 	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
 }
+
+// RoundTripper represent an abstract DNS transport.
+type RoundTripper interface {
+	// RoundTrip sends a DNS query and receives the reply.
+	RoundTrip(query []byte) (reply []byte, err error)
+}

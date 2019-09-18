@@ -58,21 +58,29 @@ func (clnt *Client) NewResolver() *net.Resolver {
 // NewConn creates a new doh pseudo-conn.
 func (clnt *Client) NewConn() (net.Conn, error) {
 	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.Handler, func(b []byte) dox.Result {
-		return do(clnt.client, clnt.url, b)
+		return clnt.do(b)
 	}), nil
 }
 
-func do(client *http.Client, URL *url.URL, b []byte) (out dox.Result) {
+// RoundTrip implements the dnsx.RoundTripper interface
+func (clnt *Client) RoundTrip(query []byte) (reply []byte, err error) {
+	out := clnt.do(query)
+	reply = out.Data
+	err = out.Err
+	return
+}
+
+func (clnt *Client) do(b []byte) (out dox.Result) {
 	req := &http.Request{
 		Method:        "POST",
-		URL:           URL,
+		URL:           clnt.url,
 		Header:        http.Header{},
 		Body:          ioutil.NopCloser(bytes.NewReader(b)),
 		ContentLength: int64(len(b)),
 	}
 	req.Header.Set("content-type", "application/dns-message")
 	var resp *http.Response
-	resp, out.Err = client.Do(req)
+	resp, out.Err = clnt.client.Do(req)
 	if out.Err != nil {
 		return
 	}

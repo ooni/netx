@@ -41,10 +41,20 @@ func NewResolver(dialer *dialerapi.Dialer, network, address string) (r dnsx.Reso
 		return
 	}
 	if network == "tcp" {
-		return dopot.NewResolver(dialer, address), nil
+		var clnt *dopot.Client
+		clnt, err = dopot.NewClient(dialer, address)
+		if err == nil {
+			r = clnt.NewResolver()
+		}
+		return
 	}
 	if network == "udp" {
-		return dopou.NewResolver(dialer, address), nil
+		var clnt *dopou.Client
+		clnt, err = dopou.NewClient(dialer, address)
+		if err == nil {
+			r = clnt.NewResolver()
+		}
+		return
 	}
 	return nil, errors.New("dnsconf: unsupported network value")
 }
