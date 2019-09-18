@@ -49,8 +49,11 @@ func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 		PreferGo: true,
 		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 			conn, _, _, err := d.DialContextEx(ctx, network, address, false)
+			if err != nil {
+				return nil, err
+			}
 			// convince Go this is really a net.PacketConn
-			return &connx.DNSMeasuringConn{MeasuringConn: *conn}, err
+			return &connx.DNSMeasuringConn{MeasuringConn: *conn}, nil
 		},
 	}
 	d.LookupHost = r.LookupHost
@@ -68,7 +71,12 @@ func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
 	conn, _, _, err = d.DialContextEx(ctx, network, address, false)
-	return
+	if err != nil {
+		// This is necessary because we're converting from
+		// *measurement.Conn to net.Conn.
+		return nil, err
+	}
+	return net.Conn(conn), nil
 }
 
 // DialTLS is like Dial, but creates TLS connections.
