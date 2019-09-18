@@ -59,7 +59,9 @@ type Client struct {
 	// that expects an *http.HTTPClient. For this reason we can't embed it.
 	HTTPClient *http.Client
 
-	transport *Transport
+	// Transport is the transport configured by NewClient to be used
+	// by the HTTPClient field.
+	Transport *Transport
 }
 
 // NewClient creates a new client instance.
@@ -69,11 +71,11 @@ func NewClient(handler model.Handler) *Client {
 		HTTPClient: &http.Client{
 			Transport: transport,
 		},
-		transport: transport,
+		Transport: transport,
 	}
 }
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (c *Client) ConfigureDNS(network, address string) error {
-	return c.transport.ConfigureDNS(network, address)
+	return c.Transport.ConfigureDNS(network, address)
 }
