@@ -124,3 +124,15 @@ func TestIntegrationDialInvalidSNI(t *testing.T) {
 		t.Fatal("expected a nil conn here")
 	}
 }
+
+func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
+	dialer.TLSHandshakeTimeout = 1 // very small timeout
+	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
+}

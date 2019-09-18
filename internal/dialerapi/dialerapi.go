@@ -5,6 +5,7 @@ package dialerapi
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"net"
 	"sync/atomic"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/bassosimone/netx/internal/connx"
 	"github.com/bassosimone/netx/internal/dialerbase"
-	"github.com/bassosimone/netx/internal/tlsx"
 	"github.com/bassosimone/netx/model"
 )
 
@@ -94,7 +94,7 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
-	tc, err := tlsx.Handshake(ctx, config, timeout, conn, d.Handler)
+	tc, err := d.tlsHandshake(config, timeout, conn)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -158,6 +158,60 @@ func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
 		config = d.TLSConfig.Clone()
 	} else {
 		config = &tls.Config{}
+	}
+	return
+}
+
+func (d *Dialer) tlsHandshake(
+	config *tls.Config, timeout time.Duration, conn *connx.MeasuringConn,
+) (tc *tls.Conn, err error) {
+	tc = tls.Client(net.Conn(conn), config)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	ech := make(chan error, 1)
+	start := time.Now()
+	go func() {
+		ech <- tc.Handshake()
+	}()
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case err = <-ech:
+		// FALLTHROUGH
+	}
+	stop := time.Now()
+	state := tc.ConnectionState()
+	d.Handler.OnMeasurement(model.Measurement{
+		TLSHandshake: &model.TLSHandshakeEvent{
+			Config: model.TLSConfig{
+				NextProtos: config.NextProtos,
+				ServerName: config.ServerName,
+			},
+			ConnectionState: model.TLSConnectionState{
+				CipherSuite:                state.CipherSuite,
+				NegotiatedProtocol:         state.NegotiatedProtocol,
+				NegotiatedProtocolIsMutual: state.NegotiatedProtocolIsMutual,
+				PeerCertificates:           simplifyCerts(state.PeerCertificates),
+				Version:                    state.Version,
+			},
+			Duration: stop.Sub(start),
+			Error:    err,
+			ConnID:   conn.ID,
+			Time:     stop.Sub(conn.Beginning),
+		},
+	})
+	if err != nil {
+		tc.Close()
+		tc = nil
+	}
+	return
+}
+
+func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
+	for _, cert := range in {
+		out = append(out, model.X509Certificate{
+			Data: cert.Raw,
+		})
 	}
 	return
 }
