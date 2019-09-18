@@ -41,10 +41,8 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	// is actually compatible with upgrading to h2. (This mainly means we
 	// need to make sure we include "h2" in the NextProtos array.) Because
 	// http2.ConfigureTransport only returns error when we have already
-	// configured http2, it is safe to assume it won't happen.
-	if err := http2.ConfigureTransport(&transport.Transport); err != nil {
-		panic("cannot configure http2")
-	}
+	// configured http2, it is safe to ignore the return value.
+	http2.ConfigureTransport(&transport.Transport)
 	return transport
 }
 
