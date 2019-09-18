@@ -43,12 +43,15 @@ func (d *Dialer) DialHostPort(
 			Time:          stop.Sub(d.Beginning),
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 	return &connx.MeasuringConn{
 		Conn:      conn,
 		Beginning: d.Beginning,
 		Handler:   d.Handler,
 		ID:        connid,
-	}, err
+	}, nil
 }
 
 func safeLocalAddress(conn net.Conn) (s string) {
