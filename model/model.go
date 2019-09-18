@@ -138,7 +138,8 @@ type TLSConfig struct {
 
 // X509Certificate is an x.509 certificate.
 type X509Certificate struct {
-	DERContext []byte
+	// Data contains the certificate bytes in DER format.
+	Data []byte
 }
 
 // TLSConnectionState contains the TLS connection state.

@@ -62,7 +62,7 @@ func Handshake(
 func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
 	for _, cert := range in {
 		out = append(out, model.X509Certificate{
-			DERContext: cert.Raw,
+			Data: cert.Raw,
 		})
 	}
 	return
