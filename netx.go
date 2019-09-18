@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dnsconf"
 	"github.com/bassosimone/netx/model"
@@ -83,6 +84,6 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // The Resolver returned by NewResolver shares the same limitation of
 // ConfigureDNS. Under Windows the C library resolver is always used and
 // therefore it is not possible for us to see DNS events.
-func (d *Dialer) NewResolver(network, address string) (*net.Resolver, error) {
+func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
 	return dnsconf.NewResolver(d.dialer, network, address)
 }
