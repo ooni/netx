@@ -7,16 +7,11 @@ package netx
 
 import (
 	"context"
-	"errors"
 	"net"
 	"time"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dnsconf"
-	"github.com/bassosimone/netx/internal/doh"
-	"github.com/bassosimone/netx/internal/dopot"
-	"github.com/bassosimone/netx/internal/dopou"
-	"github.com/bassosimone/netx/internal/dot"
 	"github.com/bassosimone/netx/model"
 )
 
@@ -76,34 +71,4 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 	return d.dialer.DialTLS(network, address)
-}
-
-// DialDoX returns a datagram pseudo-socket suitable for sending DNS queries and
-// receiving replies using the transport specified with network and using the
-// transport-specific address. You can pass to this function the same arguments
-// that you would otherwise pass to ConfigureDNS. Because the returned pseudo
-// socket has datagram semantics, each Read or Write cause a single message to
-// be transferred. DoX means DNS over X.
-func (d *Dialer) DialDoX(network, address string) (conn net.Conn, err error) {
-	if network == "doh" {
-		clnt, err := doh.NewClient(d.dialer, address)
-		if err != nil {
-			return nil, err
-		}
-		return clnt.NewConn()
-	}
-	if network == "dot" {
-		clnt, err := dot.NewClient(d.dialer, address)
-		if err != nil {
-			return nil, err
-		}
-		return clnt.NewConn()
-	}
-	if network == "tcp" {
-		return dopot.NewConn(d.dialer, address)
-	}
-	if network == "udp" {
-		return dopou.NewConn(d.dialer, address)
-	}
-	return nil, errors.New("DialDoX: unsupported network value")
 }
