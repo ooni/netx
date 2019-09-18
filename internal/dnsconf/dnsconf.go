@@ -4,6 +4,7 @@ package dnsconf
 import (
 	"errors"
 
+	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/doh"
 	"github.com/bassosimone/netx/internal/dopot"
@@ -13,30 +14,37 @@ import (
 
 // Do implements netx.Dialer.ConfigureDNS.
 func Do(dialer *dialerapi.Dialer, network, address string) error {
+	r, err := NewResolver(dialer, network, address)
+	if err == nil {
+		dialer.LookupHost = r.LookupHost
+	}
+	return err
+}
+
+// NewResolver returns a new resolver using this Dialer as dialer for
+// creating new network connections used for resolving.
+func NewResolver(dialer *dialerapi.Dialer, network, address string) (r dnsx.Resolver, err error) {
 	if network == "doh" {
-		clnt, err := doh.NewClient(dialer, address)
+		var clnt *doh.Client
+		clnt, err = doh.NewClient(dialer, address)
 		if err == nil {
-			dialer.LookupHost = clnt.NewResolver().LookupHost
+			r = clnt.NewResolver()
 		}
-		return err
+		return
 	}
 	if network == "dot" {
-		clnt, err := dot.NewClient(dialer, address)
-		if err != nil {
-			return err
+		var clnt *dot.Client
+		clnt, err = dot.NewClient(dialer, address)
+		if err == nil {
+			r = clnt.NewResolver()
 		}
-		dialer.LookupHost = clnt.NewResolver().LookupHost
-		return nil
+		return
 	}
 	if network == "tcp" {
-		resolver := dopot.NewResolver(dialer, address)
-		dialer.LookupHost = resolver.LookupHost
-		return nil
+		return dopot.NewResolver(dialer, address), nil
 	}
 	if network == "udp" {
-		resolver := dopou.NewResolver(dialer, address)
-		dialer.LookupHost = resolver.LookupHost
-		return nil
+		return dopou.NewResolver(dialer, address), nil
 	}
-	return errors.New("dnsconf: unsupported network value")
+	return nil, errors.New("dnsconf: unsupported network value")
 }

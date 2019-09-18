@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dnsconf"
 	"github.com/bassosimone/netx/model"
@@ -71,4 +72,14 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 	return d.dialer.DialTLS(network, address)
+}
+
+// NewResolver returns a new resolver using this Dialer as dialer for
+// creating new network connections used for resolving. The arguments have
+// the same meaning of ConfigureDNS. The returned resolver will not be
+// used by this Dialer, however the network operations that it performs
+// (e.g. creating a new connection) will use this Dialer. This is why
+// NewResolver is a method rather than being just a free function.
+func (d *Dialer) NewResolver(network, address string) (dnsx.Resolver, error) {
+	return dnsconf.NewResolver(d.dialer, network, address)
 }
