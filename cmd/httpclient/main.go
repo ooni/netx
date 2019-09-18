@@ -27,7 +27,7 @@ func main() {
 	//err = client.ConfigureDNS("udp", "1.1.1.1:53")
 	//err = client.ConfigureDNS("tcp", "8.8.8.8:53")
 	//err = client.ConfigureDNS("dot", "dns.quad9.net")
-	//err = client.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
+	err = client.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 	if err != nil {
 		panic(err)
 	}
