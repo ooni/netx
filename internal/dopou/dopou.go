@@ -22,9 +22,9 @@ func NewResolver(dialer *dialerapi.Dialer, address string) *net.Resolver {
 }
 
 func newConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
-	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
+	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
 		return do(dialer, address, b)
-	})), nil
+	}), nil
 }
 
 func do(dialer *dialerapi.Dialer, address string, b []byte) (out dox.Result) {

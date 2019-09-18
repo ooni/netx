@@ -42,6 +42,25 @@ type ConnectEvent struct {
 	Time          time.Duration
 }
 
+// DNSMessage is a DNS message.
+type DNSMessage struct {
+	Data []byte
+}
+
+// DNSQueryEvent is emitted when we send a DNS query
+type DNSQueryEvent struct {
+	ConnID  int64
+	Message DNSMessage
+	Time    time.Duration
+}
+
+// DNSReplyEvent is emitted when we receive a DNS reply
+type DNSReplyEvent struct {
+	ConnID  int64
+	Message DNSMessage
+	Time    time.Duration
+}
+
 // HTTPConnectionReadyEvent is emitted when a connection is ready for HTTP.
 type HTTPConnectionReadyEvent struct {
 	LocalAddress  string
@@ -156,6 +175,8 @@ type WriteEvent struct {
 type Measurement struct {
 	Close                   *CloseEvent                   `json:",omitempty"`
 	Connect                 *ConnectEvent                 `json:",omitempty"`
+	DNSQuery                *DNSQueryEvent                `json:",omitempty"`
+	DNSReply                *DNSReplyEvent                `json:",omitempty"`
 	HTTPConnectionReady     *HTTPConnectionReadyEvent     `json:",omitempty"`
 	HTTPRequestStart        *HTTPRequestStartEvent        `json:",omitempty"`
 	HTTPRequestHeadersDone  *HTTPRequestHeadersDoneEvent  `json:",omitempty"`

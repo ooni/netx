@@ -18,6 +18,11 @@ import (
 
 var nextConnID int64
 
+// NextConnID returns the next connection ID.
+func NextConnID() int64 {
+	return atomic.AddInt64(&nextConnID, 1)
+}
+
 type lookupHostFunc func(context.Context, string) ([]string, error)
 
 // Dialer defines the dialer API. We implement the most basic form
@@ -107,7 +112,7 @@ func (d *Dialer) DialContextEx(
 	if err != nil {
 		return
 	}
-	connid := atomic.AddInt64(&nextConnID, 1)
+	connid := NextConnID()
 	if net.ParseIP(onlyhost) != nil {
 		conn, err = d.Dialer.DialHostPort(ctx, network, onlyhost, onlyport, connid)
 		return

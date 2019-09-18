@@ -80,6 +80,23 @@ type DNSMeasuringConn struct {
 	MeasuringConn
 }
 
+// Read reads data from the connection.
+func (c *DNSMeasuringConn) Read(b []byte) (n int, err error) {
+	n, err = c.MeasuringConn.Read(b)
+	if err == nil {
+		c.MeasuringConn.safesend(model.Measurement{
+			DNSReply: &model.DNSReplyEvent{
+				ConnID: c.MeasuringConn.ID,
+				Message: model.DNSMessage{
+					Data: b[:n],
+				},
+				Time: time.Now().Sub(c.MeasuringConn.Beginning),
+			},
+		})
+	}
+	return
+}
+
 // ReadFrom reads from the PacketConn.
 func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
 	// This is just a not implemented stub.
@@ -89,6 +106,23 @@ func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) 
 		Addr:   c.Conn.RemoteAddr(),
 		Err:    syscall.ENOTCONN,
 	})
+	return
+}
+
+// Write writes data to the connection
+func (c *DNSMeasuringConn) Write(b []byte) (n int, err error) {
+	n, err = c.MeasuringConn.Write(b)
+	if err == nil {
+		c.MeasuringConn.safesend(model.Measurement{
+			DNSQuery: &model.DNSQueryEvent{
+				ConnID: c.MeasuringConn.ID,
+				Message: model.DNSMessage{
+					Data: b,
+				},
+				Time: time.Now().Sub(c.MeasuringConn.Beginning),
+			},
+		})
+	}
 	return
 }
 

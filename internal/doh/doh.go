@@ -30,15 +30,15 @@ func NewResolver(dialer *dialerapi.Dialer, URL *url.URL) *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
 		Dial: func(c context.Context, n string, a string) (net.Conn, error) {
-			return newConn(client, URL)
+			return newConn(dialer, client, URL)
 		},
 	}
 }
 
-func newConn(client *http.Client, URL *url.URL) (net.Conn, error) {
-	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
+func newConn(dialer *dialerapi.Dialer, client *http.Client, URL *url.URL) (net.Conn, error) {
+	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
 		return do(client, URL, b)
-	})), nil
+	}), nil
 }
 
 func do(client *http.Client, URL *url.URL, b []byte) (out dox.Result) {

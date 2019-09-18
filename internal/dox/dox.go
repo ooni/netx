@@ -3,10 +3,14 @@ package dox
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
-	"syscall"
 	"time"
+
+	"github.com/bassosimone/netx/internal/connx"
+	"github.com/bassosimone/netx/internal/dialerapi"
+	"github.com/bassosimone/netx/model"
 )
 
 // Result is the response to a DNS request.
@@ -25,6 +29,7 @@ type RoundTripFunc func([]byte) Result
 type Conn struct {
 	ch    chan Result
 	f     RoundTripFunc
+	id    int64
 	mutex sync.Mutex
 	rd    time.Time
 	wd    time.Time
@@ -36,11 +41,32 @@ type Conn struct {
 // DoH depending on |f|. Nevertheless, as far as the Go client is
 // concerned, this code will always receive an entire DNS query
 // in Write and will return back a full response in Read.
-func NewConn(f RoundTripFunc) net.Conn {
-	return net.Conn(&Conn{
-		ch: make(chan Result),
-		f:  f,
+func NewConn(beginning time.Time, ch chan model.Measurement, f RoundTripFunc) net.Conn {
+	connid := dialerapi.NextConnID()
+	conn := net.Conn(&connx.DNSMeasuringConn{
+		MeasuringConn: connx.MeasuringConn{
+			Conn: &Conn{
+				ch: make(chan Result),
+				f:  f,
+				id: connid,
+			},
+			Beginning: beginning,
+			C:         ch,
+			ID:        connid,
+		},
 	})
+	safesend(ch, model.Measurement{
+		Connect: &model.ConnectEvent{
+			ConnID:        connid,
+			Duration:      0,
+			Error:         nil,
+			LocalAddress:  conn.LocalAddr().String(),
+			Network:       conn.LocalAddr().Network(),
+			RemoteAddress: conn.RemoteAddr().String(),
+			Time:          time.Now().Sub(beginning),
+		},
+	})
+	return conn
 }
 
 // Close closes the connection.
@@ -49,7 +75,7 @@ func (c *Conn) Close() (err error) {
 }
 
 type doxAddr struct {
-	id string
+	id int64
 }
 
 func (doxAddr) Network() string {
@@ -57,12 +83,12 @@ func (doxAddr) Network() string {
 }
 
 func (d doxAddr) String() string {
-	return d.id
+	return fmt.Sprintf("%d", d.id)
 }
 
 // LocalAddr returns the local address.
 func (c *Conn) LocalAddr() net.Addr {
-	return &doxAddr{"local"}
+	return &doxAddr{c.id}
 }
 
 // Read reads the next DNS response.
@@ -90,20 +116,9 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 	return
 }
 
-// ReadFrom is a non-implemented stub.
-func (c *Conn) ReadFrom(p []byte) (n int, addr net.Addr, err error) {
-	err = net.Error(&net.OpError{
-		Op:     "ReadFrom",
-		Source: c.LocalAddr(),
-		Addr:   c.RemoteAddr(),
-		Err:    syscall.ENOTCONN,
-	})
-	return
-}
-
 // RemoteAddr is a non implemented stub.
 func (c *Conn) RemoteAddr() net.Addr {
-	return &doxAddr{"remote"}
+	return &doxAddr{c.id}
 }
 
 // SetDeadline sets the read and the write deadlines.
@@ -140,17 +155,6 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	return len(b), nil
 }
 
-// WriteTo is a non implemented stub.
-func (c *Conn) WriteTo(p []byte, addr net.Addr) (n int, err error) {
-	err = net.Error(&net.OpError{
-		Op:     "WriteTo",
-		Source: c.LocalAddr(),
-		Addr:   c.RemoteAddr(),
-		Err:    syscall.ENOTCONN,
-	})
-	return
-}
-
 func (c *Conn) lookup(b []byte) {
 	// If no-one shows up for reading what we have for them for some time
 	// then simply give up sending to the channel.
@@ -161,5 +165,11 @@ func (c *Conn) lookup(b []byte) {
 		// NOTHING
 	case <-timer.C:
 		// NOTHING
+	}
+}
+
+func safesend(ch chan model.Measurement, m model.Measurement) {
+	if ch != nil {
+		ch <- m
 	}
 }

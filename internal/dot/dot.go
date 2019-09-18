@@ -25,9 +25,9 @@ func NewResolver(dialer *dialerapi.Dialer, address, sni string) *net.Resolver {
 }
 
 func newConn(dialer *dialerapi.Dialer, address, sni string) (net.Conn, error) {
-	return net.Conn(dox.NewConn(func(b []byte) dox.Result {
+	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
 		return do(dialer, address, sni, b)
-	})), nil
+	}), nil
 }
 
 type tlsResult struct {
