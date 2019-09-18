@@ -6,8 +6,9 @@ import (
 	"net"
 )
 
-// Resolver is a DNS resolver.
-type Resolver interface {
+// Client is a DNS client. The *net.Resolver used by Go implements
+// this interface, but other implementations are possible.
+type Client interface {
 	// LookupAddr performs a reverse lookup of an address.
 	LookupAddr(ctx context.Context, addr string) (names []string, err error)
 

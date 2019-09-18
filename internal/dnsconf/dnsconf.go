@@ -3,8 +3,8 @@ package dnsconf
 
 import (
 	"errors"
+	"net"
 
-	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/doh"
 	"github.com/bassosimone/netx/internal/dopot"
@@ -23,7 +23,7 @@ func Do(dialer *dialerapi.Dialer, network, address string) error {
 
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
-func NewResolver(dialer *dialerapi.Dialer, network, address string) (r dnsx.Resolver, err error) {
+func NewResolver(dialer *dialerapi.Dialer, network, address string) (r *net.Resolver, err error) {
 	if network == "doh" {
 		var clnt *doh.Client
 		clnt, err = doh.NewClient(dialer, address)

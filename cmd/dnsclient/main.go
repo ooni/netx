@@ -26,10 +26,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 
 	"github.com/bassosimone/netx"
-	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/testingx"
 )
 
@@ -42,7 +42,7 @@ func main() {
 		flagTransport = flag.String("transport", "udp", "Transport to use")
 		flagType      = flag.String("type", "Host", "Query type")
 		err           error
-		resolver      dnsx.Resolver
+		resolver      *net.Resolver
 	)
 	flag.Parse()
 	if *flagHelp {

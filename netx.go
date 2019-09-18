@@ -10,7 +10,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dnsconf"
 	"github.com/bassosimone/netx/model"
@@ -51,9 +50,9 @@ func NewDialer(handler model.Handler) *Dialer {
 //   d.SetResolver("dot", "dns.quad9.net")
 //   d.SetResolver("doh", "https://cloudflare-dns.com/dns-query")
 //
-// ConfigureDNS is currently only executed when Go chooses
-// to use the pure Go implementation of the DNS. This means that it
-// should not be working on Windows, where the C library is preferred.
+// ConfigureDNS is currently only executed when Go chooses to
+// use the pure Go implementation of the DNS. This means that it
+// does not work on Windows, where the C library is preferred.
 func (d *Dialer) ConfigureDNS(network, address string) error {
 	return dnsconf.Do(d.dialer, network, address)
 }
@@ -80,6 +79,10 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // used by this Dialer, however the network operations that it performs
 // (e.g. creating a new connection) will use this Dialer. This is why
 // NewResolver is a method rather than being just a free function.
-func (d *Dialer) NewResolver(network, address string) (dnsx.Resolver, error) {
+//
+// The Resolver returned by NewResolver shares the same limitation of
+// ConfigureDNS. Under Windows the C library resolver is always used and
+// therefore it is not possible for us to see DNS events.
+func (d *Dialer) NewResolver(network, address string) (*net.Resolver, error) {
 	return dnsconf.NewResolver(d.dialer, network, address)
 }
