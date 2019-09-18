@@ -189,3 +189,12 @@ type Measurement struct {
 	TLSHandshake            *TLSHandshakeEvent            `json:",omitempty"`
 	Write                   *WriteEvent                   `json:",omitempty"`
 }
+
+// Handler handles measurement events.
+type Handler interface {
+	// OnMeasurement is called when an event occurs. There will be no
+	// events after the code that is using the modified Dialer, Transport,
+	// or Client is returned. OnMeasurement may be called by background
+	// goroutines and OnMeasurement calls may happen concurrently.
+	OnMeasurement(Measurement)
+}

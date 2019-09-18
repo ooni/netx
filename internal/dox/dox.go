@@ -41,7 +41,7 @@ type Conn struct {
 // DoH depending on |f|. Nevertheless, as far as the Go client is
 // concerned, this code will always receive an entire DNS query
 // in Write and will return back a full response in Read.
-func NewConn(beginning time.Time, ch chan model.Measurement, f RoundTripFunc) net.Conn {
+func NewConn(beginning time.Time, handler model.Handler, f RoundTripFunc) net.Conn {
 	connid := dialerapi.NextConnID()
 	conn := net.Conn(&connx.DNSMeasuringConn{
 		MeasuringConn: connx.MeasuringConn{
@@ -51,11 +51,11 @@ func NewConn(beginning time.Time, ch chan model.Measurement, f RoundTripFunc) ne
 				id: connid,
 			},
 			Beginning: beginning,
-			C:         ch,
+			Handler:   handler,
 			ID:        connid,
 		},
 	})
-	safesend(ch, model.Measurement{
+	handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
 			ConnID:        connid,
 			Duration:      0,
@@ -165,11 +165,5 @@ func (c *Conn) lookup(b []byte) {
 		// NOTHING
 	case <-timer.C:
 		// NOTHING
-	}
-}
-
-func safesend(ch chan model.Measurement, m model.Measurement) {
-	if ch != nil {
-		ch <- m
 	}
 }

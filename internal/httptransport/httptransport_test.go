@@ -7,16 +7,12 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal/testingx"
-	"github.com/bassosimone/netx/model"
 )
 
 func TestIntegration(t *testing.T) {
-	ch := make(chan model.Measurement)
 	client := &http.Client{
-		Transport: NewTransport(time.Now(), ch),
+		Transport: NewTransport(time.Now(), testingx.StdoutHandler),
 	}
-	cancel := testingx.SpawnLogger(ch)
-	defer cancel()
 	resp, err := client.Get("https://www.google.com")
 	if err != nil {
 		t.Fatal(err)

@@ -22,10 +22,10 @@ type Transport struct {
 // NewTransport creates a new Transport. The beginning argument is
 // the time to use as zero for computing the elapsed time. The ch
 // channel is where we'll emit Measurements.
-func NewTransport(beginning time.Time, ch chan model.Measurement) *Transport {
+func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
-	t.dialer = dialerapi.NewDialer(beginning, ch)
-	t.transport = httptransport.NewTransport(beginning, ch)
+	t.dialer = dialerapi.NewDialer(beginning, handler)
+	t.transport = httptransport.NewTransport(beginning, handler)
 	// make sure we use an http2 ready TLS config
 	t.dialer.TLSConfig = t.transport.TLSClientConfig
 	// make sure HTTP uses our dialer
@@ -63,8 +63,8 @@ type Client struct {
 }
 
 // NewClient creates a new client instance.
-func NewClient(ch chan model.Measurement) *Client {
-	transport := NewTransport(time.Now(), ch)
+func NewClient(handler model.Handler) *Client {
+	transport := NewTransport(time.Now(), handler)
 	return &Client{
 		HTTPClient: &http.Client{
 			Transport: transport,

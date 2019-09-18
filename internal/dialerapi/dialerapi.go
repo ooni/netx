@@ -29,21 +29,21 @@ type lookupHostFunc func(context.Context, string) ([]string, error)
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	dialerbase.Dialer
-	C                   chan model.Measurement
+	Handler             model.Handler
 	LookupHost          lookupHostFunc
 	TLSConfig           *tls.Config
 	TLSHandshakeTimeout time.Duration
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(beginning time.Time, ch chan model.Measurement) (d *Dialer) {
+func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 	d = &Dialer{
 		Dialer: dialerbase.Dialer{
 			Beginning: beginning,
-			C:         ch,
 			Dialer:    net.Dialer{},
+			Handler:   handler,
 		},
-		C: ch,
+		Handler: handler,
 	}
 	r := &net.Resolver{
 		PreferGo: true,
@@ -93,7 +93,7 @@ func (d *Dialer) DialTLSWithSNI(network, address, SNI string) (net.Conn, error) 
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
-	tc, err := tlsx.Handshake(ctx, config, timeout, conn, d.C)
+	tc, err := tlsx.Handshake(ctx, config, timeout, conn, d.Handler)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -125,7 +125,7 @@ func (d *Dialer) DialContextEx(
 	var addrs []string
 	addrs, err = d.LookupHost(ctx, onlyhost)
 	stop := time.Now()
-	d.safesend(model.Measurement{
+	d.Handler.OnMeasurement(model.Measurement{
 		Resolve: &model.ResolveEvent{
 			Addresses: addrs,
 			ConnID:    connid,
@@ -159,10 +159,4 @@ func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
 		config = &tls.Config{}
 	}
 	return
-}
-
-func (d *Dialer) safesend(m model.Measurement) {
-	if d.C != nil {
-		d.C <- m
-	}
 }

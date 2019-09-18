@@ -13,7 +13,7 @@ import (
 type MeasuringConn struct {
 	net.Conn
 	Beginning time.Time
-	C         chan model.Measurement
+	Handler   model.Handler
 	ID        int64
 }
 
@@ -22,7 +22,7 @@ func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Read(b)
 	stop := time.Now()
-	c.safesend(model.Measurement{
+	c.Handler.OnMeasurement(model.Measurement{
 		Read: &model.ReadEvent{
 			Duration: stop.Sub(start),
 			Error:    err,
@@ -39,7 +39,7 @@ func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Write(b)
 	stop := time.Now()
-	c.safesend(model.Measurement{
+	c.Handler.OnMeasurement(model.Measurement{
 		Write: &model.WriteEvent{
 			Duration: stop.Sub(start),
 			Error:    err,
@@ -56,7 +56,7 @@ func (c *MeasuringConn) Close() (err error) {
 	start := time.Now()
 	err = c.Conn.Close()
 	stop := time.Now()
-	c.safesend(model.Measurement{
+	c.Handler.OnMeasurement(model.Measurement{
 		Close: &model.CloseEvent{
 			Duration: stop.Sub(start),
 			Error:    err,
@@ -65,12 +65,6 @@ func (c *MeasuringConn) Close() (err error) {
 		},
 	})
 	return
-}
-
-func (c *MeasuringConn) safesend(m model.Measurement) {
-	if c.C != nil {
-		c.C <- m
-	}
 }
 
 // DNSMeasuringConn is like MeasuringConn except that it also
@@ -84,7 +78,7 @@ type DNSMeasuringConn struct {
 func (c *DNSMeasuringConn) Read(b []byte) (n int, err error) {
 	n, err = c.MeasuringConn.Read(b)
 	if err == nil {
-		c.MeasuringConn.safesend(model.Measurement{
+		c.MeasuringConn.Handler.OnMeasurement(model.Measurement{
 			DNSReply: &model.DNSReplyEvent{
 				ConnID: c.MeasuringConn.ID,
 				Message: model.DNSMessage{
@@ -113,7 +107,7 @@ func (c *DNSMeasuringConn) ReadFrom(p []byte) (n int, addr net.Addr, err error) 
 func (c *DNSMeasuringConn) Write(b []byte) (n int, err error) {
 	n, err = c.MeasuringConn.Write(b)
 	if err == nil {
-		c.MeasuringConn.safesend(model.Measurement{
+		c.MeasuringConn.Handler.OnMeasurement(model.Measurement{
 			DNSQuery: &model.DNSQueryEvent{
 				ConnID: c.MeasuringConn.ID,
 				Message: model.DNSMessage{

@@ -21,9 +21,9 @@ type Dialer struct {
 }
 
 // NewDialer returns a new Dialer instance.
-func NewDialer(ch chan model.Measurement) *Dialer {
+func NewDialer(handler model.Handler) *Dialer {
 	return &Dialer{
-		dialer: dialerapi.NewDialer(time.Now(), ch),
+		dialer: dialerapi.NewDialer(time.Now(), handler),
 	}
 }
 

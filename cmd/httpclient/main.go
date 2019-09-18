@@ -10,7 +10,6 @@ import (
 
 	"github.com/bassosimone/netx/httpx"
 	"github.com/bassosimone/netx/internal/testingx"
-	"github.com/bassosimone/netx/model"
 )
 
 func fetch(client *http.Client, url string) {
@@ -23,10 +22,7 @@ func fetch(client *http.Client, url string) {
 }
 
 func main() {
-	ch := make(chan model.Measurement)
-	cancel := testingx.SpawnLogger(ch)
-	defer cancel()
-	client := httpx.NewClient(ch)
+	client := httpx.NewClient(testingx.StdoutHandler)
 	var err error
 	//err = client.ConfigureDNS("udp", "1.1.1.1:53")
 	//err = client.ConfigureDNS("tcp", "8.8.8.8:53")

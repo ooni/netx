@@ -15,7 +15,7 @@ import (
 // Handshake performs a TLS handshake.
 func Handshake(
 	ctx context.Context, config *tls.Config, timeout time.Duration,
-	conn *connx.MeasuringConn, mch chan model.Measurement,
+	conn *connx.MeasuringConn, handler model.Handler,
 ) (tc *tls.Conn, err error) {
 	tc = tls.Client(net.Conn(conn), config)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -33,7 +33,7 @@ func Handshake(
 	}
 	stop := time.Now()
 	state := tc.ConnectionState()
-	safesend(mch, model.Measurement{
+	handler.OnMeasurement(model.Measurement{
 		TLSHandshake: &model.TLSHandshakeEvent{
 			Config: model.TLSConfig{
 				NextProtos: config.NextProtos,
@@ -66,10 +66,4 @@ func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
 		})
 	}
 	return
-}
-
-func safesend(c chan model.Measurement, m model.Measurement) {
-	if c != nil {
-		c <- m
-	}
 }

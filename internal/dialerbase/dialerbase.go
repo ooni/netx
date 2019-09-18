@@ -17,7 +17,7 @@ import (
 type Dialer struct {
 	net.Dialer
 	Beginning time.Time
-	C         chan model.Measurement
+	Handler   model.Handler
 }
 
 // DialHostPort is like net.DialContext but requires a separate host
@@ -32,7 +32,7 @@ func (d *Dialer) DialHostPort(
 	start := time.Now()
 	conn, err := d.Dialer.DialContext(ctx, network, address)
 	stop := time.Now()
-	d.safesend(model.Measurement{
+	d.Handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
 			ConnID:        connid,
 			Duration:      stop.Sub(start),
@@ -46,15 +46,9 @@ func (d *Dialer) DialHostPort(
 	return &connx.MeasuringConn{
 		Conn:      conn,
 		Beginning: d.Beginning,
-		C:         d.C,
+		Handler:   d.Handler,
 		ID:        connid,
 	}, err
-}
-
-func (d *Dialer) safesend(m model.Measurement) {
-	if d.C != nil {
-		d.C <- m
-	}
 }
 
 func safeLocalAddress(conn net.Conn) (s string) {

@@ -50,7 +50,7 @@ func (clnt *Client) NewResolver() *net.Resolver {
 
 // NewConn creates a new DoT pseudo-conn
 func (clnt *Client) NewConn() (net.Conn, error) {
-	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.C, func(b []byte) dox.Result {
+	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.Handler, func(b []byte) dox.Result {
 		return do(clnt.dialer, clnt.address, clnt.sni, b)
 	}), nil
 }

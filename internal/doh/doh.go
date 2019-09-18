@@ -28,8 +28,8 @@ func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	child := dialerapi.NewDialer(dialer.Beginning, dialer.C)
-	transport := httptransport.NewTransport(dialer.Beginning, dialer.C)
+	child := dialerapi.NewDialer(dialer.Beginning, dialer.Handler)
+	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
 	// this duplicates some logic from httpx/httpx.go
 	child.TLSConfig = transport.TLSClientConfig
 	transport.Dial = child.Dial
@@ -57,7 +57,7 @@ func (clnt *Client) NewResolver() *net.Resolver {
 
 // NewConn creates a new doh pseudo-conn.
 func (clnt *Client) NewConn() (net.Conn, error) {
-	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.C, func(b []byte) dox.Result {
+	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.Handler, func(b []byte) dox.Result {
 		return do(clnt.client, clnt.url, b)
 	}), nil
 }

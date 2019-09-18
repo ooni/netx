@@ -20,15 +20,15 @@ var nextTransactionID int64
 // measurement events as they happen.
 type Transport struct {
 	http.Transport
-	C         chan model.Measurement
+	Handler   model.Handler
 	Beginning time.Time
 }
 
 // NewTransport creates a new Transport.
-func NewTransport(beginning time.Time, ch chan model.Measurement) *Transport {
+func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	transport := &Transport{
 		Beginning: beginning,
-		C:         ch,
+		Handler:   handler,
 		Transport: http.Transport{
 			ExpectContinueTimeout: 1 * time.Second,
 			IdleConnTimeout:       90 * time.Second,
@@ -58,7 +58,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
-			t.safesend(model.Measurement{
+			t.Handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
 					LocalAddress:  info.Conn.LocalAddr().String(),
 					Network:       info.Conn.LocalAddr().Network(),
@@ -85,10 +85,10 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 				},
 			}
 			mutex.Unlock()
-			t.safesend(m)
+			t.Handler.OnMeasurement(m)
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
-			t.safesend(model.Measurement{
+			t.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
 					Time:          time.Now().Sub(t.Beginning),
 					TransactionID: tid,
@@ -96,7 +96,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 			})
 		},
 		GotFirstResponseByte: func() {
-			t.safesend(model.Measurement{
+			t.Handler.OnMeasurement(model.Measurement{
 				HTTPResponseStart: &model.HTTPResponseStartEvent{
 					Time:          time.Now().Sub(t.Beginning),
 					TransactionID: tid,
@@ -109,7 +109,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	if err != nil {
 		return
 	}
-	t.safesend(model.Measurement{
+	t.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
 			Headers:       resp.Header,
 			StatusCode:    int64(resp.StatusCode),
@@ -136,17 +136,11 @@ type bodyWrapper struct {
 
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
-	bw.t.safesend(model.Measurement{
+	bw.t.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseDone: &model.HTTPResponseDoneEvent{
 			Time:          time.Now().Sub(bw.t.Beginning),
 			TransactionID: bw.tid,
 		},
 	})
 	return
-}
-
-func (t *Transport) safesend(m model.Measurement) {
-	if t.C != nil {
-		t.C <- m
-	}
 }

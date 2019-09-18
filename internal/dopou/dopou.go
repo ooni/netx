@@ -23,7 +23,7 @@ func NewResolver(dialer *dialerapi.Dialer, address string) *net.Resolver {
 
 // NewConn returns a new dopou pseudo-conn
 func NewConn(dialer *dialerapi.Dialer, address string) (net.Conn, error) {
-	return dox.NewConn(dialer.Beginning, dialer.C, func(b []byte) dox.Result {
+	return dox.NewConn(dialer.Beginning, dialer.Handler, func(b []byte) dox.Result {
 		return do(dialer, address, b)
 	}), nil
 }
