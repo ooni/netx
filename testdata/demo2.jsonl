@@ -1,0 +1,790 @@
+"./httpclient http://www.example.com  # with DoH"
+
+{
+  "Connect": {
+    "ConnID": 2,
+    "Duration": 0,
+    "Error": null,
+    "LocalAddress": "2",
+    "Network": "dns-over-x",
+    "RemoteAddress": "2",
+    "Time": 701092
+  }
+}
+
+{
+  "Connect": {
+    "ConnID": 3,
+    "Duration": 0,
+    "Error": null,
+    "LocalAddress": "3",
+    "Network": "dns-over-x",
+    "RemoteAddress": "3",
+    "Time": 701121
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 3,
+    "Duration": 2647,
+    "Error": null,
+    "NumBytes": 33,
+    "Time": 1454135
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 2,
+    "Duration": 6437,
+    "Error": null,
+    "NumBytes": 33,
+    "Time": 1457922
+  }
+}
+
+{
+  "DNSQuery": {
+    "ConnID": 2,
+    "Message": {
+      "Data": "sPIBAAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAHAAB"
+    },
+    "Time": 1620200
+  }
+}
+
+{
+  "DNSQuery": {
+    "ConnID": 3,
+    "Message": {
+      "Data": "nncBAAABAAAAAAAAA3d3dwdleGFtcGxlA2NvbQAAAQAB"
+    },
+    "Time": 1494981
+  }
+}
+
+{
+  "Connect": {
+    "ConnID": 5,
+    "Duration": 314168,
+    "Error": null,
+    "LocalAddress": "192.168.43.253:64690",
+    "Network": "udp",
+    "RemoteAddress": "8.8.8.8:53",
+    "Time": 2083056
+  }
+}
+
+{
+  "Connect": {
+    "ConnID": 6,
+    "Duration": 334212,
+    "Error": null,
+    "LocalAddress": "192.168.43.253:63364",
+    "Network": "udp",
+    "RemoteAddress": "8.8.8.8:53",
+    "Time": 2095990
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 5,
+    "Duration": 42105,
+    "Error": null,
+    "NumBytes": 36,
+    "Time": 2171307
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 6,
+    "Duration": 29842,
+    "Error": null,
+    "NumBytes": 36,
+    "Time": 2172122
+  }
+}
+
+{
+  "DNSQuery": {
+    "ConnID": 5,
+    "Message": {
+      "Data": "O1UBAAABAAAAAAAADmNsb3VkZmxhcmUtZG5zA2NvbQAAAQAB"
+    },
+    "Time": 2181303
+  }
+}
+
+{
+  "DNSQuery": {
+    "ConnID": 6,
+    "Message": {
+      "Data": "GKMBAAABAAAAAAAADmNsb3VkZmxhcmUtZG5zA2NvbQAAHAAB"
+    },
+    "Time": 2185840
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 5,
+    "Duration": 493619959,
+    "Error": null,
+    "NumBytes": 68,
+    "Time": 495809847
+  }
+}
+
+{
+  "DNSReply": {
+    "ConnID": 5,
+    "Message": {
+      "Data": "O1WBgAABAAIAAAAADmNsb3VkZmxhcmUtZG5zA2NvbQAAAQABwAwAAQABAAABHwAEaBD5+cAMAAEAAQAAAR8ABGgQ+Pk="
+    },
+    "Time": 495851720
+  }
+}
+
+{
+  "Close": {
+    "ConnID": 5,
+    "Duration": 59510,
+    "Error": null,
+    "Time": 495950962
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 6,
+    "Duration": 504785617,
+    "Error": null,
+    "NumBytes": 92,
+    "Time": 506993225
+  }
+}
+
+{
+  "DNSReply": {
+    "ConnID": 6,
+    "Message": {
+      "Data": "GKOBgAABAAIAAAAADmNsb3VkZmxhcmUtZG5zA2NvbQAAHAABwAwAHAABAAABAgAQJgZHAAAAAAAAAAAAaBD4+cAMABwAAQAAAQIAECYGRwAAAAAAAAAAAGgQ+fk="
+    },
+    "Time": 507036700
+  }
+}
+
+{
+  "Close": {
+    "ConnID": 6,
+    "Duration": 55527,
+    "Error": null,
+    "Time": 507128802
+  }
+}
+
+{
+  "Resolve": {
+    "Addresses": [
+      "104.16.249.249",
+      "104.16.248.249",
+      "2606:4700::6810:f8f9",
+      "2606:4700::6810:f9f9"
+    ],
+    "ConnID": 4,
+    "Duration": 505994167,
+    "Error": null,
+    "Hostname": "cloudflare-dns.com",
+    "Time": 507649985
+  }
+}
+
+{
+  "Connect": {
+    "ConnID": 4,
+    "Duration": 85200285,
+    "Error": null,
+    "LocalAddress": "192.168.43.253:63532",
+    "Network": "tcp",
+    "RemoteAddress": "104.16.249.249:443",
+    "Time": 592900145
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 65323,
+    "Error": null,
+    "NumBytes": 292,
+    "Time": 594155505
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 120768230,
+    "Error": null,
+    "NumBytes": 517,
+    "Time": 715023637
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 18877,
+    "Error": null,
+    "NumBytes": 2532,
+    "Time": 715589432
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 52276,
+    "Error": null,
+    "NumBytes": 64,
+    "Time": 928656368
+  }
+}
+
+{
+  "TLSHandshake": {
+    "Config": {
+      "NextProtos": [
+        "h2",
+        "http/1.1"
+      ],
+      "ServerName": "cloudflare-dns.com"
+    },
+    "ConnectionState": {
+      "CipherSuite": 4865,
+      "NegotiatedProtocol": "h2",
+      "NegotiatedProtocolIsMutual": true,
+      "PeerCertificates": [
+        {
+          "Data": "MIIFxjCCBUygAwIBAgIQAczjGN6fVn+rKySQH62nHTAKBggqhkjOPQQDAjBMMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMSYwJAYDVQQDEx1EaWdpQ2VydCBFQ0MgU2VjdXJlIFNlcnZlciBDQTAeFw0xOTAxMjgwMDAwMDBaFw0yMTAyMDExMjAwMDBaMHIxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRkwFwYDVQQKExBDbG91ZGZsYXJlLCBJbmMuMRswGQYDVQQDExJjbG91ZGZsYXJlLWRucy5jb20wWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATFIHCMIEJQKB59REF8MHkpHGNeHUSbxfdxOive0qKksWw9ash3uMuPLlBT/fQYJn9hN+3/wr7pC125fuHfHOJ0o4ID6DCCA+QwHwYDVR0jBBgwFoAUo53mH/naOU/AbuiRy5Wl2jHiCp8wHQYDVR0OBBYEFHCV3FyjjmYH28uBEMar58OoRX+gMIGsBgNVHREEgaQwgaGCEmNsb3VkZmxhcmUtZG5zLmNvbYIUKi5jbG91ZGZsYXJlLWRucy5jb22CD29uZS5vbmUub25lLm9uZYcEAQEBAYcEAQAAAYcEop+ENYcQJgZHAEcAAAAAAAAAAAAREYcQJgZHAEcAAAAAAAAAAAAQAYcQJgZHAEcAAAAAAAAAAAAAZIcQJgZHAEcAAAAAAAAAAABkAIcEop8kAYcEop8uATAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMGkGA1UdHwRiMGAwLqAsoCqGKGh0dHA6Ly9jcmwzLmRpZ2ljZXJ0LmNvbS9zc2NhLWVjYy1nMS5jcmwwLqAsoCqGKGh0dHA6Ly9jcmw0LmRpZ2ljZXJ0LmNvbS9zc2NhLWVjYy1nMS5jcmwwTAYDVR0gBEUwQzA3BglghkgBhv1sAQEwKjAoBggrBgEFBQcCARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzAIBgZngQwBAgIwewYIKwYBBQUHAQEEbzBtMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5jb20wRQYIKwYBBQUHMAKGOWh0dHA6Ly9jYWNlcnRzLmRpZ2ljZXJ0LmNvbS9EaWdpQ2VydEVDQ1NlY3VyZVNlcnZlckNBLmNydDAMBgNVHRMBAf8EAjAAMIIBfgYKKwYBBAHWeQIEAgSCAW4EggFqAWgAdgCkuQmQtBhYFIe7E6LMZ3AKPDWYBPkb37jjd80OyA3cEAAAAWiVHhSLAAAEAwBHMEUCIQDlnoPeMXtFkRsy3Vs0eovk3ILKt01x6bgUdMlmQTFIvAIgcAn0lFSjiGzHm2eOjDZJzMiP5Uaj0Jwub9GO8RkxkkoAdQCHdb/nWXz4jEOZX73zbv9WjUdWNv9KtWDBtOr/XqCDDwAAAWiVHhVsAAAEAwBGMEQCIFC0n0JModeol8b/Qicxd5Blf/o7xOs/Bk0j9hdc5N7jAiAQocYnHL9iMqTtFkh0vmSsII5NbiakM/2yDEXnwkPRvAB3ALvZ37wfinG1k5Qjl6qSe0c4V5UKq1LoGpCWZDaOHtGFAAABaJUeFJEAAAQDAEgwRgIhAL3OPTBzOZpS5rS/uLzqMOiACCFQyY+mTJ+L0I9TcB3RAiEA4+SiPz0/5kFxvrk7AKYKdvelgV1hiiPbM2YHY+/0BIkwCgYIKoZIzj0EAwIDaAAwZQIwez76hX2HTMur/I3XRuwfdmVoa8J6ZVEVq+AZsE7DyQh7AV4WNLU+092BrPbnyVUFAjEAzUf5jdz1pyc74lgOunC7LBE6cPtWbzfGpJiYyT/T+c5eIAwRYziKT0DKbaql7tiZ"
+        },
+        {
+          "Data": "MIIDrDCCApSgAwIBAgIQCssoukZe5TkIdnRw883GEjANBgkqhkiG9w0BAQwFADBhMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBDQTAeFw0xMzAzMDgxMjAwMDBaFw0yMzAzMDgxMjAwMDBaMEwxCzAJBgNVBAYTAlVTMRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxJjAkBgNVBAMTHURpZ2lDZXJ0IEVDQyBTZWN1cmUgU2VydmVyIENBMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4ghC6nfYJN6gLGSkE85AnCNyqQIKDjc/ITa4jVMU9tWRlUvzlgKNcR7E2Munn17voOZ/WpIRllNv68DLP679Wz9HJOeaBy6Wvqgvu1cYr3GkvXg6HuhbPGtkESvMNCuMo4IBITCCAR0wEgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAYYwNAYIKwYBBQUHAQEEKDAmMCQGCCsGAQUFBzABhhhodHRwOi8vb2NzcC5kaWdpY2VydC5jb20wQgYDVR0fBDswOTA3oDWgM4YxaHR0cDovL2NybDMuZGlnaWNlcnQuY29tL0RpZ2lDZXJ0R2xvYmFsUm9vdENBLmNybDA9BgNVHSAENjA0MDIGBFUdIAAwKjAoBggrBgEFBQcCARYcaHR0cHM6Ly93d3cuZGlnaWNlcnQuY29tL0NQUzAdBgNVHQ4EFgQUo53mH/naOU/AbuiRy5Wl2jHiCp8wHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUwDQYJKoZIhvcNAQEMBQADggEBAMeKoENL7HTJxavVHzA1Nm6YVntIrAVjrnuaVyRXzG/63qttnMe2uuzO58pzZNvfBDcKAEmzP58mrZGMIOgfiA4q+2Y3yDDo0sIkp0VILeoBUEoxlBPfjV/aKrtJPGHzecicZpIalir0ezZYoyxBEHQa0+1IttK7igZFcTMQMHp6mCHdJLnsnLWSB62DxsRq+HfmNb4TDydkskO/g+l3VtsIh5RHFPVfKK+jaEyDj2D3loB5hWp2Jp2VDCADjT7ueihlZGak2YPqmXTNbk19HOuNssWvFhtOyPNV6og4ETQdEa8/B6hPatJ0ES8q/HO3X8IVQwVs1n3aAr0im0/T+Xc="
+        }
+      ],
+      "Version": 772
+    },
+    "ConnID": 4,
+    "Duration": 335264349,
+    "Error": null,
+    "Time": 928698606
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 25715,
+    "Error": null,
+    "NumBytes": 86,
+    "Time": 928893316
+  }
+}
+
+{
+  "HTTPConnectionReady": {
+    "LocalAddress": "192.168.43.253:63532",
+    "Network": "tcp",
+    "RemoteAddress": "104.16.249.249:443",
+    "Time": 928988152,
+    "TransactionID": 3
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 29259,
+    "Error": null,
+    "NumBytes": 100,
+    "Time": 929121342
+  }
+}
+
+{
+  "HTTPRequestHeadersDone": {
+    "Headers": {
+      ":authority": [
+        "cloudflare-dns.com"
+      ],
+      ":method": [
+        "POST"
+      ],
+      ":path": [
+        "/dns-query"
+      ],
+      ":scheme": [
+        "https"
+      ],
+      "accept-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "33"
+      ],
+      "content-type": [
+        "application/dns-message"
+      ],
+      "user-agent": [
+        "Go-http-client/2.0"
+      ]
+    },
+    "Method": "POST",
+    "Time": 929134416,
+    "TransactionID": 3,
+    "URL": "https://cloudflare-dns.com/dns-query"
+  }
+}
+
+{
+  "HTTPConnectionReady": {
+    "LocalAddress": "192.168.43.253:63532",
+    "Network": "tcp",
+    "RemoteAddress": "104.16.249.249:443",
+    "Time": 929176730,
+    "TransactionID": 2
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 22059,
+    "Error": null,
+    "NumBytes": 64,
+    "Time": 929226707
+  }
+}
+
+{
+  "HTTPRequestDone": {
+    "Time": 929259923,
+    "TransactionID": 3
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 27397,
+    "Error": null,
+    "NumBytes": 39,
+    "Time": 929303835
+  }
+}
+
+{
+  "HTTPRequestHeadersDone": {
+    "Headers": {
+      ":authority": [
+        "cloudflare-dns.com"
+      ],
+      ":method": [
+        "POST"
+      ],
+      ":path": [
+        "/dns-query"
+      ],
+      ":scheme": [
+        "https"
+      ],
+      "accept-encoding": [
+        "gzip"
+      ],
+      "content-length": [
+        "33"
+      ],
+      "content-type": [
+        "application/dns-message"
+      ],
+      "user-agent": [
+        "Go-http-client/2.0"
+      ]
+    },
+    "Method": "POST",
+    "Time": 929317045,
+    "TransactionID": 2,
+    "URL": "https://cloudflare-dns.com/dns-query"
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 17956,
+    "Error": null,
+    "NumBytes": 64,
+    "Time": 929381168
+  }
+}
+
+{
+  "HTTPRequestDone": {
+    "Time": 929402090,
+    "TransactionID": 2
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 54262402,
+    "Error": null,
+    "NumBytes": 62,
+    "Time": 983308652
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 4,
+    "Duration": 81782,
+    "Error": null,
+    "NumBytes": 31,
+    "Time": 983661467
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 6833458,
+    "Error": null,
+    "NumBytes": 31,
+    "Time": 990533178
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 3590974,
+    "Error": null,
+    "NumBytes": 378,
+    "Time": 994175926
+  }
+}
+
+{
+  "HTTPResponseStart": {
+    "Time": 994500362,
+    "TransactionID": 3
+  }
+}
+
+{
+  "HTTPResponseHeadersDone": {
+    "Headers": {
+      "Access-Control-Allow-Origin": [
+        "*"
+      ],
+      "Cache-Control": [
+        "max-age=7640"
+      ],
+      "Cf-Ray": [
+        "5183c9faac2ebe64-MXP"
+      ],
+      "Content-Length": [
+        "128"
+      ],
+      "Content-Type": [
+        "application/dns-message"
+      ],
+      "Date": [
+        "Wed, 18 Sep 2019 13:50:26 GMT"
+      ],
+      "Expect-Ct": [
+        "max-age=604800, report-uri=\"https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct\""
+      ],
+      "Server": [
+        "cloudflare"
+      ],
+      "Vary": [
+        "Accept-Encoding"
+      ]
+    },
+    "StatusCode": 200,
+    "Time": 994628728,
+    "TransactionID": 3
+  }
+}
+
+{
+  "HTTPResponseDone": {
+    "Time": 994694920,
+    "TransactionID": 3
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 2,
+    "Duration": 993023065,
+    "Error": null,
+    "NumBytes": 128,
+    "Time": 994725405
+  }
+}
+
+{
+  "DNSReply": {
+    "ConnID": 2,
+    "Message": {
+      "Data": "sPKBoAABAAEAAAABA3d3dwdleGFtcGxlA2NvbQAAHAABwAwAHAABAAAd2AAQJgYoAAIgAAECSBiTJcgZRgAAKQWsAAAAAAA4AAwANAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "Time": 994748596
+  }
+}
+
+{
+  "Close": {
+    "ConnID": 2,
+    "Duration": 341,
+    "Error": null,
+    "Time": 994766271
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 4,
+    "Duration": 9343319,
+    "Error": null,
+    "NumBytes": 259,
+    "Time": 1003917525
+  }
+}
+
+{
+  "HTTPResponseStart": {
+    "Time": 1004049392,
+    "TransactionID": 2
+  }
+}
+
+{
+  "HTTPResponseHeadersDone": {
+    "Headers": {
+      "Access-Control-Allow-Origin": [
+        "*"
+      ],
+      "Cache-Control": [
+        "max-age=9721"
+      ],
+      "Cf-Ray": [
+        "5183c9fabc47be64-MXP"
+      ],
+      "Content-Length": [
+        "128"
+      ],
+      "Content-Type": [
+        "application/dns-message"
+      ],
+      "Date": [
+        "Wed, 18 Sep 2019 13:50:27 GMT"
+      ],
+      "Expect-Ct": [
+        "max-age=604800, report-uri=\"https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct\""
+      ],
+      "Server": [
+        "cloudflare"
+      ],
+      "Vary": [
+        "Accept-Encoding"
+      ]
+    },
+    "StatusCode": 200,
+    "Time": 1004138997,
+    "TransactionID": 2
+  }
+}
+
+{
+  "HTTPResponseDone": {
+    "Time": 1004210092,
+    "TransactionID": 2
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 3,
+    "Duration": 1002495354,
+    "Error": null,
+    "NumBytes": 128,
+    "Time": 1004288720
+  }
+}
+
+{
+  "DNSReply": {
+    "ConnID": 3,
+    "Message": {
+      "Data": "nneBoAABAAEAAAABA3d3dwdleGFtcGxlA2NvbQAAAQABwAwAAQABAAAl+QAEXbjYIgAAKQWsAAAAAABEAAwAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    },
+    "Time": 1004309680
+  }
+}
+
+{
+  "Close": {
+    "ConnID": 3,
+    "Duration": 363,
+    "Error": null,
+    "Time": 1004325560
+  }
+}
+
+{
+  "Resolve": {
+    "Addresses": [
+      "93.184.216.34",
+      "2606:2800:220:1:248:1893:25c8:1946"
+    ],
+    "ConnID": 1,
+    "Duration": 1004250788,
+    "Error": null,
+    "Hostname": "www.example.com",
+    "Time": 1004547198
+  }
+}
+
+{
+  "Connect": {
+    "ConnID": 1,
+    "Duration": 36194855,
+    "Error": null,
+    "LocalAddress": "192.168.43.253:63533",
+    "Network": "tcp",
+    "RemoteAddress": "93.184.216.34:80",
+    "Time": 1040758975
+  }
+}
+
+{
+  "HTTPConnectionReady": {
+    "LocalAddress": "192.168.43.253:63533",
+    "Network": "tcp",
+    "RemoteAddress": "93.184.216.34:80",
+    "Time": 1040856590,
+    "TransactionID": 1
+  }
+}
+
+{
+  "HTTPRequestHeadersDone": {
+    "Headers": {
+      "Accept-Encoding": [
+        "gzip"
+      ],
+      "Host": [
+        "www.example.com"
+      ],
+      "User-Agent": [
+        "Go-http-client/1.1"
+      ]
+    },
+    "Method": "GET",
+    "Time": 1041014495,
+    "TransactionID": 1,
+    "URL": "http://www.example.com"
+  }
+}
+
+{
+  "HTTPRequestDone": {
+    "Time": 1041072425,
+    "TransactionID": 1
+  }
+}
+
+{
+  "Write": {
+    "ConnID": 1,
+    "Duration": 65350,
+    "Error": null,
+    "NumBytes": 96,
+    "Time": 1041146227
+  }
+}
+
+{
+  "Read": {
+    "ConnID": 1,
+    "Duration": 47753495,
+    "Error": null,
+    "NumBytes": 984,
+    "Time": 1088667102
+  }
+}
+
+{
+  "HTTPResponseStart": {
+    "Time": 1088706805,
+    "TransactionID": 1
+  }
+}
+
+{
+  "HTTPResponseHeadersDone": {
+    "Headers": {
+      "Age": [
+        "557"
+      ],
+      "Cache-Control": [
+        "max-age=604800"
+      ],
+      "Connection": [
+        "keep-alive"
+      ],
+      "Content-Type": [
+        "text/html; charset=UTF-8"
+      ],
+      "Date": [
+        "Wed, 18 Sep 2019 13:41:10 GMT"
+      ],
+      "Etag": [
+        "\"1541025663+gzip\""
+      ],
+      "Expires": [
+        "Wed, 25 Sep 2019 13:41:10 GMT"
+      ],
+      "Last-Modified": [
+        "Fri, 09 Aug 2013 23:54:35 GMT"
+      ],
+      "Server": [
+        "ECS (dcb/7F83)"
+      ],
+      "Vary": [
+        "Accept-Encoding"
+      ],
+      "X-Cache": [
+        "HIT"
+      ]
+    },
+    "StatusCode": 200,
+    "Time": 1088809677,
+    "TransactionID": 1
+  }
+}
+
+{
+  "HTTPResponseDone": {
+    "Time": 1089064840,
+    "TransactionID": 1
+  }
+}
+
