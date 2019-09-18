@@ -6,15 +6,14 @@ import (
 	"fmt"
 
 	"github.com/bassosimone/netx/model"
+	"github.com/m-lab/go/rtx"
 )
 
 type handler struct{}
 
 func (handler) OnMeasurement(m model.Measurement) {
 	data, err := json.Marshal(m)
-	if err != nil {
-		panic(err)
-	}
+	rtx.Must(err, "unexpected json.Marshal failure")
 	fmt.Printf("%s\n", string(data))
 }
 

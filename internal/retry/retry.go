@@ -1,4 +1,5 @@
-// Package retry contains code to retry operations.
+// Package retry contains code to retry operations. This package
+// is still considered very experimental.
 package retry
 
 import (
