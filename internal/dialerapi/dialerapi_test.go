@@ -2,6 +2,7 @@ package dialerapi_test
 
 import (
 	"context"
+	"crypto/tls"
 	"testing"
 	"time"
 
@@ -76,7 +77,7 @@ func TestIntegrationLookupFailure(t *testing.T) {
 	}
 }
 
-func TestDialTCPFailure(t *testing.T) {
+func TestIntegrationDialTCPFailure(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -95,9 +96,6 @@ func TestDialTCPFailure(t *testing.T) {
 }
 
 func TestDialDNSFailure(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
 	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
 	// The insane timeout is such that the DNS resolver fails because it
 	// times out when trying to dial for the default server. (This is
@@ -105,6 +103,20 @@ func TestDialDNSFailure(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()
 	conn, err := dialer.DialContext(ctx, "tcp", "ooni.io:80")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
+}
+
+func TestIntegrationDialInvalidSNI(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
+	dialer.TLSConfig = &tls.Config{
+		ServerName: "www.google.com",
+	}
+	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
