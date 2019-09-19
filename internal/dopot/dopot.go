@@ -23,7 +23,7 @@ func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	transport := dnsovertcp.NewTransport(dialer, host)
+	transport := dnsovertcp.NewTransport(dialer.Beginning, dialer.Handler, host)
 	transport.NoTLS = true
 	transport.Port = port
 	return &Client{

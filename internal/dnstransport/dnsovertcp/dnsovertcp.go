@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
+	"github.com/bassosimone/netx/model"
 	"github.com/m-lab/go/rtx"
 )
 
@@ -43,7 +44,8 @@ type Transport struct {
 }
 
 // NewTransport creates a new Transport
-func NewTransport(dialer *dialerapi.Dialer, hostname string) *Transport {
+func NewTransport(beginning time.Time, handler model.Handler, hostname string) *Transport {
+	dialer := dialerapi.NewDialer(beginning, handler)
 	return &Transport{
 		Dialer:   dialer,
 		Hostname: hostname,

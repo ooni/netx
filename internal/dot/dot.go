@@ -21,7 +21,7 @@ type Client struct {
 // NewClient creates a new client.
 func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
 	return &Client{
-		transport: dnsovertcp.NewTransport(dialer, address),
+		transport: dnsovertcp.NewTransport(dialer.Beginning, dialer.Handler, address),
 	}, nil
 }
 
