@@ -3,6 +3,7 @@ package dialerapi_test
 import (
 	"context"
 	"crypto/tls"
+	"net"
 	"testing"
 	"time"
 
@@ -115,6 +116,20 @@ func TestIntegrationDialInvalidSNI(t *testing.T) {
 	dialer := dialerapi.NewDialer(time.Now(), handlers.StdoutHandler)
 	dialer.TLSConfig = &tls.Config{
 		ServerName: "www.google.com",
+	}
+	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
+}
+
+func TestIntegrationTLSHandshakeSetDeadlineError(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), handlers.StdoutHandler)
+	dialer.StartTLSHandshakeHook = func(c net.Conn) {
+		c.Close() // close the connection so SetDealine should fail
 	}
 	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {

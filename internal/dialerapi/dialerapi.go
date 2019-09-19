@@ -29,10 +29,11 @@ type lookupHostFunc func(context.Context, string) ([]string, error)
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	dialerbase.Dialer
-	Handler             model.Handler
-	LookupHost          lookupHostFunc
-	TLSConfig           *tls.Config
-	TLSHandshakeTimeout time.Duration
+	Handler               model.Handler
+	LookupHost            lookupHostFunc
+	StartTLSHandshakeHook func(net.Conn)
+	TLSConfig             *tls.Config
+	TLSHandshakeTimeout   time.Duration
 }
 
 // NewDialer creates a new Dialer.
@@ -43,7 +44,8 @@ func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 			Dialer:    net.Dialer{},
 			Handler:   handler,
 		},
-		Handler: handler,
+		Handler:               handler,
+		StartTLSHandshakeHook: func(net.Conn) {},
 	}
 	r := &net.Resolver{
 		PreferGo: true,
@@ -165,20 +167,15 @@ func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
 func (d *Dialer) tlsHandshake(
 	config *tls.Config, timeout time.Duration, conn *connx.MeasuringConn,
 ) (tc *tls.Conn, err error) {
-	tc = tls.Client(net.Conn(conn), config)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	ech := make(chan error, 1)
-	start := time.Now()
-	go func() {
-		ech <- tc.Handshake()
-	}()
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-	case err = <-ech:
-		// FALLTHROUGH
+	d.StartTLSHandshakeHook(conn)
+	err = conn.SetDeadline(time.Now().Add(timeout))
+	if err != nil {
+		conn.Close()
+		return
 	}
+	tc = tls.Client(net.Conn(conn), config)
+	start := time.Now()
+	err = tc.Handshake()
 	stop := time.Now()
 	state := tc.ConnectionState()
 	d.Handler.OnMeasurement(model.Measurement{
