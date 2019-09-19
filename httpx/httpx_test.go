@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bassosimone/netx/httpx"
 	"github.com/bassosimone/netx/handlers"
+	"github.com/bassosimone/netx/httpx"
 )
 
 func TestIntegration(t *testing.T) {

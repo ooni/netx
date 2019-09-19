@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bassosimone/netx/handlers"
 	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
 	"github.com/bassosimone/netx/internal/oodns"
-	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegration(t *testing.T) {

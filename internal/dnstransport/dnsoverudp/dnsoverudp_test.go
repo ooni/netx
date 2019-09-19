@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bassosimone/netx/handlers"
 	"github.com/bassosimone/netx/internal/connx"
 	"github.com/bassosimone/netx/internal/dnstransport/dnsoverudp"
-	"github.com/bassosimone/netx/handlers"
 	"github.com/miekg/dns"
 )
 

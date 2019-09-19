@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bassosimone/netx/internal/httptransport"
 	"github.com/bassosimone/netx/handlers"
+	"github.com/bassosimone/netx/internal/httptransport"
 )
 
 func TestIntegration(t *testing.T) {

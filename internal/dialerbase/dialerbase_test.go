@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bassosimone/netx/internal/dialerbase"
 	"github.com/bassosimone/netx/handlers"
+	"github.com/bassosimone/netx/internal/dialerbase"
 )
 
 func TestIntegrationSuccess(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bassosimone/netx/httpx"
 	"github.com/bassosimone/netx/handlers"
+	"github.com/bassosimone/netx/httpx"
 )
 
 func fetch(client *http.Client, url string) {
