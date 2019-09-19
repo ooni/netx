@@ -55,7 +55,7 @@ func NewDialer(handler model.Handler) *Dialer {
 // use the pure Go implementation of the DNS. This means that it
 // does not work on Windows, where the C library is preferred.
 func (d *Dialer) ConfigureDNS(network, address string) error {
-	return dnsconf.Do(d.dialer, network, address)
+	return dnsconf.ConfigureDNS(d.dialer, network, address)
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.

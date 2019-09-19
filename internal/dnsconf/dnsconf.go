@@ -13,8 +13,8 @@ import (
 	"github.com/bassosimone/netx/internal/godns"
 )
 
-// Do implements netx.Dialer.ConfigureDNS.
-func Do(dialer *dialerapi.Dialer, network, address string) error {
+// ConfigureDNS implements netx.Dialer.ConfigureDNS.
+func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 	r, err := NewResolver(dialer, network, address)
 	if err == nil {
 		dialer.LookupHost = r.LookupHost

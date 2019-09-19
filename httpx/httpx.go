@@ -50,7 +50,7 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	return dnsconf.Do(t.dialer, network, address)
+	return dnsconf.ConfigureDNS(t.dialer, network, address)
 }
 
 // Client is a replacement for http.Client.
