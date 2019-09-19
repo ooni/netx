@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal/connx"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegrationMeasuringConn(t *testing.T) {
 	conn := net.Conn(&connx.MeasuringConn{
 		Conn:    fakeconn{},
-		Handler: testingx.StdoutHandler,
+		Handler: handlers.StdoutHandler,
 	})
 	defer conn.Close()
 	data := make([]byte, 1<<17)
@@ -36,7 +36,7 @@ func TestIntegrationDNSMeasuringConn(t *testing.T) {
 	conn := net.Conn(&connx.DNSMeasuringConn{
 		MeasuringConn: connx.MeasuringConn{
 			Conn:    fakeconn{},
-			Handler: testingx.StdoutHandler,
+			Handler: handlers.StdoutHandler,
 		},
 	})
 	defer conn.Close()

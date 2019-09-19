@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/bassosimone/netx/httpx"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func fetch(client *http.Client, url string) {
@@ -22,7 +22,7 @@ func fetch(client *http.Client, url string) {
 }
 
 func main() {
-	client := httpx.NewClient(testingx.StdoutHandler)
+	client := httpx.NewClient(handlers.StdoutHandler)
 	var err error
 	//err = client.ConfigureDNS("udp", "1.1.1.1:53")
 	//err = client.ConfigureDNS("tcp", "8.8.8.8:53")

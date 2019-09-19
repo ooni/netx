@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"github.com/bassosimone/netx/internal/dialerbase"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: testingx.StdoutHandler,
+		Handler: handlers.StdoutHandler,
 	}
 	conn, err := dialer.DialHostPort(
 		context.Background(), "tcp", "8.8.8.8", "53", 17,
@@ -23,7 +23,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationErrorDomain(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: testingx.StdoutHandler,
+		Handler: handlers.StdoutHandler,
 	}
 	conn, err := dialer.DialHostPort(
 		context.Background(), "tcp", "dns.google.com", "53", 17,
@@ -38,7 +38,7 @@ func TestIntegrationErrorDomain(t *testing.T) {
 
 func TestIntegrationErrorNoConnect(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: testingx.StdoutHandler,
+		Handler: handlers.StdoutHandler,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()

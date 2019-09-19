@@ -7,16 +7,16 @@ import (
 
 	"github.com/bassosimone/netx/internal/dnstransport/dnsoverhttps"
 	"github.com/bassosimone/netx/internal/godns"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
 	start := time.Now()
 	transport := dnsoverhttps.NewTransport(
-		start, testingx.StdoutHandler,
+		start, handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
-	client := godns.NewClient(start, testingx.StdoutHandler, transport)
+	client := godns.NewClient(start, handlers.StdoutHandler, transport)
 	addrs, err := client.LookupHost(context.Background(), "ooni.io")
 	if err != nil {
 		t.Fatal(err)
@@ -29,10 +29,10 @@ func TestIntegrationSuccess(t *testing.T) {
 func TestIntegrationReadWithTimeout(t *testing.T) {
 	start := time.Now()
 	transport := dnsoverhttps.NewTransport(
-		start, testingx.StdoutHandler,
+		start, handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
-	conn := godns.NewPseudoConn(start, testingx.StdoutHandler, transport)
+	conn := godns.NewPseudoConn(start, handlers.StdoutHandler, transport)
 	err := conn.SetDeadline(time.Now()) // very short deadline
 	reply := make([]byte, 1<<17)
 	n, err := conn.Read(reply)

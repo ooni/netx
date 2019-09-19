@@ -9,13 +9,13 @@ import (
 
 	"github.com/bassosimone/netx/internal/connx"
 	"github.com/bassosimone/netx/internal/dnstransport/dnsoverudp"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 	"github.com/miekg/dns"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -25,7 +25,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationDialContextExFailure(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -44,7 +44,7 @@ func TestIntegrationDialContextExFailure(t *testing.T) {
 
 func TestIntegrationSetDeadlineError(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -57,7 +57,7 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 			Conn: fakeconn{
 				setDeadlineError: errors.New("mocked error"),
 			},
-			Handler: testingx.StdoutHandler,
+			Handler: handlers.StdoutHandler,
 		}, "", "", nil
 	}
 	err := threeRounds(transport)
@@ -68,7 +68,7 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 
 func TestIntegrationWriteError(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -81,7 +81,7 @@ func TestIntegrationWriteError(t *testing.T) {
 			Conn: fakeconn{
 				writeError: errors.New("mocked error"),
 			},
-			Handler: testingx.StdoutHandler,
+			Handler: handlers.StdoutHandler,
 		}, "", "", nil
 	}
 	err := threeRounds(transport)

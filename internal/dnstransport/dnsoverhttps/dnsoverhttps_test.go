@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal/dnstransport/dnsoverhttps"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 	"github.com/miekg/dns"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), testingx.StdoutHandler,
+		time.Now(), handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	err := threeRounds(transport)
@@ -26,7 +26,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationNewRequestFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), testingx.StdoutHandler,
+		time.Now(), handlers.StdoutHandler,
 		"\t", // invalid URL
 	)
 	err := threeRounds(transport)
@@ -37,7 +37,7 @@ func TestIntegrationNewRequestFailure(t *testing.T) {
 
 func TestIntegrationClientDoFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), testingx.StdoutHandler,
+		time.Now(), handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {
@@ -51,7 +51,7 @@ func TestIntegrationClientDoFailure(t *testing.T) {
 
 func TestIntegrationHTTPFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), testingx.StdoutHandler,
+		time.Now(), handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {
@@ -68,7 +68,7 @@ func TestIntegrationHTTPFailure(t *testing.T) {
 
 func TestIntegrationMissingHeader(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), testingx.StdoutHandler,
+		time.Now(), handlers.StdoutHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {

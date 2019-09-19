@@ -30,11 +30,11 @@ import (
 
 	"github.com/bassosimone/netx"
 	"github.com/bassosimone/netx/dnsx"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func main() {
-	dialer := netx.NewDialer(testingx.StdoutHandler)
+	dialer := netx.NewDialer(handlers.StdoutHandler)
 	var (
 		flagName      = flag.String("name", "ooni.io", "Name to query for")
 		flagEndpoint  = flag.String("endpoint", "8.8.8.8:53", "Transport endpoint")

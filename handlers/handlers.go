@@ -1,5 +1,5 @@
-// Package testingx contains testing extensions
-package testingx
+// Package handlers contains default model.Handler handlers.
+package handlers
 
 import (
 	"encoding/json"

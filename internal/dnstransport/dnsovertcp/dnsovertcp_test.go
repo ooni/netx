@@ -8,19 +8,19 @@ import (
 	"time"
 
 	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 	"github.com/miekg/dns"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
 	transport = dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "9.9.9.9",
+		time.Now(), handlers.StdoutHandler, "9.9.9.9",
 	)
 	transport.NoTLS = true
 	if err := threeRounds(transport); err != nil {
@@ -30,7 +30,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationLookupHostError(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "antani.local",
+		time.Now(), handlers.StdoutHandler, "antani.local",
 	)
 	if err := roundTrip(transport, "ooni.io."); err == nil {
 		t.Fatal("expected an error here")
@@ -39,7 +39,7 @@ func TestIntegrationLookupHostError(t *testing.T) {
 
 func TestIntegrationCustomTLSConfig(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	transport.Dialer.TLSConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -51,7 +51,7 @@ func TestIntegrationCustomTLSConfig(t *testing.T) {
 
 func TestIntegrationDialFailure(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	transport.Port = "53" // should cause dial to fail
 	if err := roundTrip(transport, "ooni.io."); err == nil {
@@ -61,7 +61,7 @@ func TestIntegrationDialFailure(t *testing.T) {
 
 func TestIntegrationLookupHostFailure(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	transport.LookupHost = func(host string) ([]string, error) {
 		return nil, errors.New("mocked error")
@@ -73,7 +73,7 @@ func TestIntegrationLookupHostFailure(t *testing.T) {
 
 func TestIntegrationEmptyLookupReply(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	transport.LookupHost = func(host string) ([]string, error) {
 		return nil, nil
@@ -85,7 +85,7 @@ func TestIntegrationEmptyLookupReply(t *testing.T) {
 
 func TestUnitRoundTripWithConnFailure(t *testing.T) {
 	transport := dnsovertcp.NewTransport(
-		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+		time.Now(), handlers.StdoutHandler, "dns.quad9.net",
 	)
 	query := make([]byte, 1<<10)
 	// fakeconn will fail in the SetDeadline, therefore we will have

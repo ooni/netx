@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"github.com/bassosimone/netx/httpx"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegration(t *testing.T) {
-	client := httpx.NewClient(testingx.StdoutHandler)
+	client := httpx.NewClient(handlers.StdoutHandler)
 	defer client.Transport.CloseIdleConnections()
 	err := client.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {

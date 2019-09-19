@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"github.com/bassosimone/netx"
-	"github.com/bassosimone/netx/internal/testingx"
+	"github.com/bassosimone/netx/handlers"
 )
 
 func TestIntegrationDialer(t *testing.T) {
-	dialer := netx.NewDialer(testingx.StdoutHandler)
+	dialer := netx.NewDialer(handlers.StdoutHandler)
 	err := dialer.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestIntegrationDialer(t *testing.T) {
 }
 
 func TestIntegrationResolver(t *testing.T) {
-	dialer := netx.NewDialer(testingx.StdoutHandler)
+	dialer := netx.NewDialer(handlers.StdoutHandler)
 	resolver, err := dialer.NewResolver("tcp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
