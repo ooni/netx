@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
@@ -41,6 +42,9 @@ type Transport struct {
 
 	// init indicates whether we've initialized
 	init bool
+
+	// mutex makes initialize idempotent.
+	mutex sync.Mutex
 }
 
 // NewTransport creates a new Transport
@@ -52,7 +56,7 @@ func NewTransport(beginning time.Time, handler model.Handler, hostname string) *
 	}
 }
 
-func (t *Transport) initialize() (err error) {
+func (t *Transport) initUnlocked() (err error) {
 	if t.LookupHost == nil {
 		t.LookupHost = net.LookupHost
 	}
@@ -87,18 +91,25 @@ func (t *Transport) initialize() (err error) {
 	return nil
 }
 
+func (t *Transport) initialize() (err error) {
+	t.mutex.Lock()
+	if !t.init {
+		t.init = true
+		err = t.initUnlocked()
+	}
+	t.mutex.Unlock()
+	return
+}
+
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(query []byte) ([]byte, error) {
 	var (
 		conn net.Conn
 		err  error
 	)
-	if !t.init {
-		err = t.initialize()
-		if err != nil {
-			return nil, err
-		}
-		t.init = true
+	err = t.initialize()
+	if err != nil {
+		return nil, err
 	}
 	if t.NoTLS == false {
 		conn, err = t.Dialer.DialTLS(
