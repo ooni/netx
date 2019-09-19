@@ -1,0 +1,72 @@
+// Package dnsoverudp implements DNS over UDP.
+package dnsoverudp
+
+import (
+	"context"
+	"net"
+	"time"
+
+	"github.com/bassosimone/netx/internal/connx"
+	"github.com/bassosimone/netx/internal/dialerapi"
+	"github.com/bassosimone/netx/model"
+)
+
+// Transport is a DNS over UDP dnsx.RoundTripper.
+type Transport struct {
+	// Dialer is the dialer to use.
+	Dialer *dialerapi.Dialer
+
+	// DialContextEx is the function used to dial. NewTransport
+	// initializes it to the namesake method of Dialer.
+	DialContextEx func(
+		ctx context.Context,
+		network string,
+		address string,
+		requireIP bool,
+	) (
+		conn *connx.MeasuringConn,
+		onlyhost string,
+		onlyport string,
+		err error,
+	)
+
+	// Address is the address of the service.
+	Address string
+}
+
+// NewTransport creates a new Transport
+func NewTransport(beginning time.Time, handler model.Handler, address string) *Transport {
+	dialer := dialerapi.NewDialer(beginning, handler)
+	return &Transport{
+		Dialer:        dialer,
+		DialContextEx: dialer.DialContextEx,
+		Address:       address,
+	}
+}
+
+// RoundTrip sends a request and receives a response.
+func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+	var conn net.Conn
+	conn, _, _, err = t.DialContextEx(
+		context.Background(), "udp", t.Address, true,
+	)
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+	err = conn.SetDeadline(time.Now().Add(3 * time.Second))
+	if err != nil {
+		return
+	}
+	_, err = conn.Write(query)
+	if err != nil {
+		return
+	}
+	reply = make([]byte, 1<<17)
+	var n int
+	n, err = conn.Read(reply)
+	if err == nil {
+		reply = reply[:n]
+	}
+	return
+}
