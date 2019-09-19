@@ -34,6 +34,9 @@ func TestIntegrationReadWithTimeout(t *testing.T) {
 	)
 	conn := godns.NewPseudoConn(start, handlers.StdoutHandler, transport)
 	err := conn.SetDeadline(time.Now()) // very short deadline
+	if err != nil {
+		t.Fatal(err)
+	}
 	reply := make([]byte, 1<<17)
 	n, err := conn.Read(reply)
 	if err == nil {
