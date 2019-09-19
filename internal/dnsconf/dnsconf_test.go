@@ -10,7 +10,7 @@ import (
 )
 
 func TestIntegrationNewResolver(t *testing.T) {
-	d := dialerapi.NewDialer(time.Now(), handlers.StdoutHandler)
+	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	resolver, err := dnsconf.NewResolver(
 		d, "udp", "8.8.8.8:53",
 	)
@@ -63,7 +63,7 @@ func TestIntegrationNewResolver(t *testing.T) {
 }
 
 func TestIntegrationNewResolverBadTCPEndpoint(t *testing.T) {
-	d := dialerapi.NewDialer(time.Now(), handlers.StdoutHandler)
+	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	resolver, err := dnsconf.NewResolver(
 		d, "tcp", "8.8.8.8",
 	)
@@ -76,7 +76,7 @@ func TestIntegrationNewResolverBadTCPEndpoint(t *testing.T) {
 }
 
 func TestIntegrationDo(t *testing.T) {
-	d := dialerapi.NewDialer(time.Now(), handlers.StdoutHandler)
+	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	err := dnsconf.ConfigureDNS(d, "dot", "dns.quad9.net")
 	if err != nil {
 		t.Fatal(err)

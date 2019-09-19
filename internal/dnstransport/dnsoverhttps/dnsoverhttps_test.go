@@ -15,7 +15,7 @@ import (
 
 func TestIntegrationSuccess(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), handlers.StdoutHandler,
+		time.Now(), handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	err := threeRounds(transport)
@@ -26,7 +26,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationNewRequestFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), handlers.StdoutHandler,
+		time.Now(), handlers.NoHandler,
 		"\t", // invalid URL
 	)
 	err := threeRounds(transport)
@@ -37,7 +37,7 @@ func TestIntegrationNewRequestFailure(t *testing.T) {
 
 func TestIntegrationClientDoFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), handlers.StdoutHandler,
+		time.Now(), handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {
@@ -51,7 +51,7 @@ func TestIntegrationClientDoFailure(t *testing.T) {
 
 func TestIntegrationHTTPFailure(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), handlers.StdoutHandler,
+		time.Now(), handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {
@@ -68,7 +68,7 @@ func TestIntegrationHTTPFailure(t *testing.T) {
 
 func TestIntegrationMissingHeader(t *testing.T) {
 	transport := dnsoverhttps.NewTransport(
-		time.Now(), handlers.StdoutHandler,
+		time.Now(), handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
 	transport.ClientDo = func(*http.Request) (*http.Response, error) {

@@ -15,7 +15,7 @@ import (
 
 func TestIntegrationSuccess(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.NoHandler, "9.9.9.9:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -25,7 +25,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationDialContextExFailure(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.NoHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -44,7 +44,7 @@ func TestIntegrationDialContextExFailure(t *testing.T) {
 
 func TestIntegrationSetDeadlineError(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.NoHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -57,7 +57,7 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 			Conn: fakeconn{
 				setDeadlineError: errors.New("mocked error"),
 			},
-			Handler: handlers.StdoutHandler,
+			Handler: handlers.NoHandler,
 		}, "", "", nil
 	}
 	err := threeRounds(transport)
@@ -68,7 +68,7 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 
 func TestIntegrationWriteError(t *testing.T) {
 	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.StdoutHandler, "9.9.9.9:53",
+		time.Now(), handlers.NoHandler, "9.9.9.9:53",
 	)
 	transport.DialContextEx = func(
 		ctx context.Context, network string, address string,
@@ -81,7 +81,7 @@ func TestIntegrationWriteError(t *testing.T) {
 			Conn: fakeconn{
 				writeError: errors.New("mocked error"),
 			},
-			Handler: handlers.StdoutHandler,
+			Handler: handlers.NoHandler,
 		}, "", "", nil
 	}
 	err := threeRounds(transport)

@@ -12,8 +12,8 @@ import (
 
 func TestIntegration(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.StdoutHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.StdoutHandler, "dns.quad9.net",
+		handlers.NoHandler, dnsovertcp.NewTransport(
+			time.Now(), handlers.NoHandler, "dns.quad9.net",
 		),
 	)
 	addrs, err := client.LookupHost(context.Background(), "ooni.io")

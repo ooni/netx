@@ -10,7 +10,7 @@ import (
 
 func TestIntegrationSuccess(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: handlers.StdoutHandler,
+		Handler: handlers.NoHandler,
 	}
 	conn, err := dialer.DialHostPort(
 		context.Background(), "tcp", "8.8.8.8", "53", 17,
@@ -23,7 +23,7 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationErrorDomain(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: handlers.StdoutHandler,
+		Handler: handlers.NoHandler,
 	}
 	conn, err := dialer.DialHostPort(
 		context.Background(), "tcp", "dns.google.com", "53", 17,
@@ -38,7 +38,7 @@ func TestIntegrationErrorDomain(t *testing.T) {
 
 func TestIntegrationErrorNoConnect(t *testing.T) {
 	dialer := dialerbase.Dialer{
-		Handler: handlers.StdoutHandler,
+		Handler: handlers.NoHandler,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()

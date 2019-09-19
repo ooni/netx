@@ -12,7 +12,7 @@ import (
 
 func TestIntegration(t *testing.T) {
 	client := &http.Client{
-		Transport: httptransport.NewTransport(time.Now(), handlers.StdoutHandler),
+		Transport: httptransport.NewTransport(time.Now(), handlers.NoHandler),
 	}
 	resp, err := client.Get("https://www.google.com")
 	if err != nil {
@@ -27,7 +27,7 @@ func TestIntegration(t *testing.T) {
 
 func TestIntegrationFailure(t *testing.T) {
 	client := &http.Client{
-		Transport: httptransport.NewTransport(time.Now(), handlers.StdoutHandler),
+		Transport: httptransport.NewTransport(time.Now(), handlers.NoHandler),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with
 	// a server that instead is expecting TLS.

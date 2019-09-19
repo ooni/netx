@@ -8,5 +8,6 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	handlers.StdoutHandler.OnMeasurement(model.Measurement{})
+	handlers.NoHandler.OnMeasurement(model.Measurement{})
+	handlers.NoHandler.OnMeasurement(model.Measurement{})
 }

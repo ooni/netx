@@ -12,7 +12,7 @@ import (
 func TestIntegrationMeasuringConn(t *testing.T) {
 	conn := net.Conn(&connx.MeasuringConn{
 		Conn:    fakeconn{},
-		Handler: handlers.StdoutHandler,
+		Handler: handlers.NoHandler,
 	})
 	defer conn.Close()
 	data := make([]byte, 1<<17)
@@ -36,7 +36,7 @@ func TestIntegrationDNSMeasuringConn(t *testing.T) {
 	conn := net.Conn(&connx.DNSMeasuringConn{
 		MeasuringConn: connx.MeasuringConn{
 			Conn:    fakeconn{},
-			Handler: handlers.StdoutHandler,
+			Handler: handlers.NoHandler,
 		},
 	})
 	defer conn.Close()

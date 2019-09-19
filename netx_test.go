@@ -9,7 +9,7 @@ import (
 )
 
 func TestIntegrationDialer(t *testing.T) {
-	dialer := netx.NewDialer(handlers.StdoutHandler)
+	dialer := netx.NewDialer(handlers.NoHandler)
 	err := dialer.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +34,7 @@ func TestIntegrationDialer(t *testing.T) {
 }
 
 func TestIntegrationResolver(t *testing.T) {
-	dialer := netx.NewDialer(handlers.StdoutHandler)
+	dialer := netx.NewDialer(handlers.NoHandler)
 	resolver, err := dialer.NewResolver("tcp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)

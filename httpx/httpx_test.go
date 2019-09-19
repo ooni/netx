@@ -9,7 +9,7 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	client := httpx.NewClient(handlers.StdoutHandler)
+	client := httpx.NewClient(handlers.NoHandler)
 	defer client.Transport.CloseIdleConnections()
 	err := client.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {

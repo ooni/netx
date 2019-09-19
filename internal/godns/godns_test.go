@@ -13,10 +13,10 @@ import (
 func TestIntegrationSuccess(t *testing.T) {
 	start := time.Now()
 	transport := dnsoverhttps.NewTransport(
-		start, handlers.StdoutHandler,
+		start, handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
-	client := godns.NewClient(start, handlers.StdoutHandler, transport)
+	client := godns.NewClient(start, handlers.NoHandler, transport)
 	addrs, err := client.LookupHost(context.Background(), "ooni.io")
 	if err != nil {
 		t.Fatal(err)
@@ -29,10 +29,10 @@ func TestIntegrationSuccess(t *testing.T) {
 func TestIntegrationReadWithTimeout(t *testing.T) {
 	start := time.Now()
 	transport := dnsoverhttps.NewTransport(
-		start, handlers.StdoutHandler,
+		start, handlers.NoHandler,
 		"https://cloudflare-dns.com/dns-query",
 	)
-	conn := godns.NewPseudoConn(start, handlers.StdoutHandler, transport)
+	conn := godns.NewPseudoConn(start, handlers.NoHandler, transport)
 	err := conn.SetDeadline(time.Now()) // very short deadline
 	if err != nil {
 		t.Fatal(err)
