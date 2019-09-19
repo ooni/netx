@@ -6,6 +6,24 @@ This repository contains `net` and `net/http` extensions for performing
 seamless network measurements. It is a meant as PoC for code that I wish to
 integrate into [ooni/probe-engine](https://github.com/ooni/probe-engine).
 
+## Build, run tests, run example commands
+
+You need Go >= 1.11. To run tests:
+
+```
+go test -v -race ./...
+```
+
+To build the example commands:
+
+```
+go build -v ./cmd/dnsclient
+go build -v ./cmd/httpclient
+```
+
+Both commands will provide useful help messages when run with `-h`. When
+run without arguments they run against default input.
+
 ## Rationale and design
 
 The main design principle implemented here is that we want to perform
