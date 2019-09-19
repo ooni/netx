@@ -168,6 +168,14 @@ LookupNS(ctx context.Context, name string) ([]*net.NS, error)
 When using the Dialer replacement or the Resolver replacement, the
 network level events are being logged as well.
 
+See [cmd/dnsclient/main.go](cmd/dnsclient/main.go) for a more comprehensive
+example of how you can use a `net.Resolver` replacement.
+
+## Data model
+
+The data model is in the [model](model) Go package. Please refer to
+its documentation for more details.
+
 ## Expected integration plan
 
 If this proposal is accepted, I believe we should have this code
