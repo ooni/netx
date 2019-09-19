@@ -19,7 +19,7 @@ const (
 	stdevFactor = 0.05
 )
 
-// Retry retries op until it succeds, context expires, or we've
+// Retry retries op until it succeeds, context expires, or we've
 // attempted to retry the operation for too much time.
 func Retry(ctx context.Context, op func() error) error {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
