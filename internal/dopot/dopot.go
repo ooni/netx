@@ -3,26 +3,29 @@ package dopot
 
 import (
 	"context"
-	"errors"
 	"net"
-	"time"
 
 	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/dot"
+	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
 	"github.com/bassosimone/netx/internal/dox"
 )
 
 // Client is a DNS over plain old TCP client
 type Client struct {
-	address string
-	dialer  *dialerapi.Dialer
+	transport *dnsovertcp.Transport
 }
 
 // NewClient creates a new DoPOT client.
 func NewClient(dialer *dialerapi.Dialer, address string) (*Client, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+	transport := dnsovertcp.NewTransport(dialer, host)
+	transport.NoTLS = true
+	transport.Port = port
 	return &Client{
-		address: address,
-		dialer:  dialer,
+		transport: transport,
 	}, nil
 }
 
@@ -39,7 +42,9 @@ func (clnt *Client) NewResolver() *net.Resolver {
 
 // NewConn returns a new dopot pseudo-conn.
 func (clnt *Client) NewConn() (net.Conn, error) {
-	return dox.NewConn(clnt.dialer.Beginning, clnt.dialer.Handler, func(b []byte) dox.Result {
+	beginning := clnt.transport.Dialer.Beginning
+	handler := clnt.transport.Dialer.Handler
+	return dox.NewConn(beginning, handler, func(b []byte) dox.Result {
 		return clnt.do(b)
 	}), nil
 }
@@ -51,31 +56,10 @@ type plainResult struct {
 
 // RoundTrip implements the dnsx.RoundTripper interface
 func (clnt *Client) RoundTrip(query []byte) (reply []byte, err error) {
-	out := clnt.do(query)
-	reply = out.Data
-	err = out.Err
-	return
+	return clnt.transport.RoundTrip(query)
 }
 
 func (clnt *Client) do(b []byte) (out dox.Result) {
-	var conn net.Conn
-	ch := make(chan plainResult, 1)
-	go func() {
-		var r plainResult
-		r.conn, _, _, r.err = clnt.dialer.DialContextEx(
-			context.Background(), "tcp", clnt.address, true,
-		)
-		ch <- r
-	}()
-	select {
-	case <-time.After(10 * time.Second):
-		out.Err = errors.New("dopot: connect deadline expired")
-	case r := <-ch:
-		conn, out.Err = r.conn, r.err
-	}
-	if out.Err != nil {
-		return
-	}
-	out = dot.OwnConnAndRoundTrip(conn, b)
+	out.Data, out.Err = clnt.RoundTrip(b)
 	return
 }
