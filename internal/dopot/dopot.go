@@ -1,4 +1,6 @@
-// Package dopot implements DNS over plain old TCP
+// Package dopot implements DNS over plain old TCP.
+//
+// This code is just a tiny wrapper around dnsovertcp.
 package dopot
 
 import (
