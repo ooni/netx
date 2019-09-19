@@ -179,6 +179,6 @@ its documentation for more details.
 ## Expected integration plan
 
 If this proposal is accepted, I believe we should have this code
-live in the `github.com/ooni` namespace as a separate library. It
-seems to me that this code is a lower level of abstraction and
+live in the `github.com/ooni` namespace as a separate library. IMHO
+this code is a lower level of abstraction and
 deals with different concerns than `ooni/probe-engine`.
