@@ -7,19 +7,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bassosimone/netx/internal/dialerapi"
 	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
 	"github.com/bassosimone/netx/internal/testingx"
 	"github.com/miekg/dns"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
-	transport = dnsovertcp.NewTransport(dialer, "9.9.9.9")
+	transport = dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "9.9.9.9",
+	)
 	transport.NoTLS = true
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
@@ -27,27 +29,30 @@ func TestIntegrationSuccess(t *testing.T) {
 }
 
 func TestIntegrationLookupHostError(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "antani.local")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "antani.local",
+	)
 	if err := roundTrip(transport, "ooni.io."); err == nil {
 		t.Fatal("expected an error here")
 	}
 }
 
 func TestIntegrationCustomTLSConfig(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	dialer.TLSConfig = &tls.Config{
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
+	transport.Dialer.TLSConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
 	if err := roundTrip(transport, "ooni.io."); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestIntegrationDialFailure(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
 	transport.Port = "53" // should cause dial to fail
 	if err := roundTrip(transport, "ooni.io."); err == nil {
 		t.Fatal("expected an error here")
@@ -55,8 +60,9 @@ func TestIntegrationDialFailure(t *testing.T) {
 }
 
 func TestIntegrationLookupHostFailure(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
 	transport.LookupHost = func(host string) ([]string, error) {
 		return nil, errors.New("mocked error")
 	}
@@ -66,8 +72,9 @@ func TestIntegrationLookupHostFailure(t *testing.T) {
 }
 
 func TestIntegrationEmptyLookupReply(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
 	transport.LookupHost = func(host string) ([]string, error) {
 		return nil, nil
 	}
@@ -77,8 +84,9 @@ func TestIntegrationEmptyLookupReply(t *testing.T) {
 }
 
 func TestUnitRoundTripWithConnFailure(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), testingx.StdoutHandler)
-	transport := dnsovertcp.NewTransport(dialer, "dns.quad9.net")
+	transport := dnsovertcp.NewTransport(
+		time.Now(), testingx.StdoutHandler, "dns.quad9.net",
+	)
 	query := make([]byte, 1<<10)
 	// fakeconn will fail in the SetDeadline, therefore we will have
 	// an immediate error and we expect all errors the be alike
