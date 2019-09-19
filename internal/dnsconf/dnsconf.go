@@ -5,11 +5,12 @@ import (
 	"errors"
 	"net"
 
+	"github.com/bassosimone/netx/dnsx"
 	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/doh"
-	"github.com/bassosimone/netx/internal/dopot"
-	"github.com/bassosimone/netx/internal/dopou"
-	"github.com/bassosimone/netx/internal/dot"
+	"github.com/bassosimone/netx/internal/dnstransport/dnsoverhttps"
+	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
+	"github.com/bassosimone/netx/internal/dnstransport/dnsoverudp"
+	"github.com/bassosimone/netx/internal/godns"
 )
 
 // Do implements netx.Dialer.ConfigureDNS.
@@ -23,38 +24,34 @@ func Do(dialer *dialerapi.Dialer, network, address string) error {
 
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
-func NewResolver(dialer *dialerapi.Dialer, network, address string) (r *net.Resolver, err error) {
+func NewResolver(dialer *dialerapi.Dialer, network, address string) (*net.Resolver, error) {
+	var transport dnsx.RoundTripper
 	if network == "doh" {
-		var clnt *doh.Client
-		clnt, err = doh.NewClient(dialer, address)
-		if err == nil {
-			r = clnt.NewResolver()
+		transport = dnsoverhttps.NewTransport(
+			dialer.Beginning, dialer.Handler, address,
+		)
+	} else if network == "dot" {
+		transport = dnsovertcp.NewTransport(
+			dialer.Beginning, dialer.Handler, address,
+		)
+	} else if network == "tcp" {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
 		}
-		return
+		dotTransport := dnsovertcp.NewTransport(
+			dialer.Beginning, dialer.Handler, host,
+		)
+		dotTransport.Port = port
+		dotTransport.NoTLS = true
+		transport = dotTransport
+	} else if network == "udp" {
+		transport = dnsoverudp.NewTransport(
+			dialer.Beginning, dialer.Handler, address,
+		)
 	}
-	if network == "dot" {
-		var clnt *dot.Client
-		clnt, err = dot.NewClient(dialer, address)
-		if err == nil {
-			r = clnt.NewResolver()
-		}
-		return
+	if transport == nil {
+		return nil, errors.New("dnsconf: unsupported network value")
 	}
-	if network == "tcp" {
-		var clnt *dopot.Client
-		clnt, err = dopot.NewClient(dialer, address)
-		if err == nil {
-			r = clnt.NewResolver()
-		}
-		return
-	}
-	if network == "udp" {
-		var clnt *dopou.Client
-		clnt, err = dopou.NewClient(dialer, address)
-		if err == nil {
-			r = clnt.NewResolver()
-		}
-		return
-	}
-	return nil, errors.New("dnsconf: unsupported network value")
+	return godns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
 }
