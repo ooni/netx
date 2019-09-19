@@ -22,7 +22,8 @@ go build -v ./cmd/httpclient
 ```
 
 Both commands will provide useful help messages when run with `-h`. When
-run without arguments they run against default input.
+run without arguments they run against default input suitable to show
+at a first glance their functionality.
 
 ## Rationale and design
 
@@ -120,3 +121,56 @@ printed on the standard output when running the above code:
 By passing to `NewClient` a different handler implementing the
 `model.Handler` interface, you can store such measurements rather
 than printing them on the standard output.
+
+## Using a different DNS
+
+We also want this code to use different kind of DNS transports,
+and namely, at leat, DoT and DoH. This is implemented by a method
+of the `httpx.Client` object, `ConfigureDNS`.
+
+When you change the DNS transport, you also see events generated
+by such transport. For example, if you use DoH, you see the
+TLS handshake with the DoH server, HTTP messages, etc.
+
+Please, refer to [cmd/httpclient/main.go](cmd/httpclient/main.go) to
+see how this could be used in practice.
+
+## Low level networking
+
+The `httpx` functionality is built on top of low level networking
+APIs scattered across the `netx` and `netx/dnsx` packages. The
+main object that we expose is a replacement for `net.Dialer`, called
+`netx.Dialer`, which implements the following APIs:
+
+```Go
+Dial(network, address string) (net.Conn, error)
+DialContext(ctx context.Context, network, address string) (net.Conn, error)
+DialTLS(network, address string) (conn net.Conn, err error)
+```
+
+These are the APIs that several libraries, including `net/http` and
+`gorilla/websocket` except an underlying dialer to implement.
+
+You can also call `netx.Dialer.ConfigureDNS` to change the transport to
+be used for the DNS, as described above for `httpx.Client`.
+
+The `netx.Dialer.NewResolver` API allows you to get a functional
+replacement for a `net.Resolver` object that implements:
+
+```
+LookupAddr(ctx context.Context, addr string) (names []string, err error)
+LookupCNAME(ctx context.Context, host string) (cname string, err error)
+LookupHost(ctx context.Context, hostname string) (addrs []string, err error)
+LookupMX(ctx context.Context, name string) ([]*net.MX, error)
+LookupNS(ctx context.Context, name string) ([]*net.NS, error)
+```
+
+When using the Dialer replacement or the Resolver replacement, the
+network level events are being logged as well.
+
+## Expected integration plan
+
+If this proposal is accepted, I believe we should have this code
+live in the `github.com/ooni` namespace as a separate library. It
+seems to me that this code is a lower level of abstraction and
+deals with different concerns than `ooni/probe-engine`.
