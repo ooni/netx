@@ -166,14 +166,14 @@ func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
 
 func (d *Dialer) tlsHandshake(
 	config *tls.Config, timeout time.Duration, conn *connx.MeasuringConn,
-) (tc *tls.Conn, err error) {
+) (*tls.Conn, error) {
 	d.StartTLSHandshakeHook(conn)
-	err = conn.SetDeadline(time.Now().Add(timeout))
+	err := conn.SetDeadline(time.Now().Add(timeout))
 	if err != nil {
 		conn.Close()
-		return
+		return nil, err
 	}
-	tc = tls.Client(net.Conn(conn), config)
+	tc := tls.Client(net.Conn(conn), config)
 	start := time.Now()
 	err = tc.Handshake()
 	stop := time.Now()
@@ -199,9 +199,14 @@ func (d *Dialer) tlsHandshake(
 	})
 	if err != nil {
 		tc.Close()
-		tc = nil
+		return nil, err
 	}
-	return
+	// The following call fails if the connection is not connected
+	// which should not be the case at this point. If the connection
+	// has just been disconnected, we'll notice when doing I/O, so
+	// it is fine to ignore the return value of SetDeadline.
+	tc.SetDeadline(time.Time{})
+	return tc, nil
 }
 
 func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
