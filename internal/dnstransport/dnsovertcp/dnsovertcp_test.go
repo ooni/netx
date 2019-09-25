@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/miekg/dns"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
-	"github.com/miekg/dns"
 )
 
 func TestIntegrationSuccess(t *testing.T) {

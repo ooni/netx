@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ooni/netx/model"
 	"github.com/m-lab/go/rtx"
+	"github.com/ooni/netx/model"
 )
 
 type stdoutHandler struct{}

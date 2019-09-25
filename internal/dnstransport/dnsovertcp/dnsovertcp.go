@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/model"
-	"github.com/m-lab/go/rtx"
 )
 
 // Transport is a DNS over TCP/TLS dnsx.RoundTripper.

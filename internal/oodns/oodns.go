@@ -13,9 +13,9 @@ import (
 	"errors"
 	"net"
 
+	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/model"
-	"github.com/miekg/dns"
 )
 
 // Client is OONI's DNS client. It is a simplistic client where we
