@@ -21,7 +21,7 @@ go build -v ./cmd/dnsclient
 go build -v ./cmd/httpclient
 ```
 
-Both commands will provide useful help messages when run with `-h`. When
+Both commands will provide useful help messages when run with `-help`. When
 run without arguments they run against default input suitable to show
 at a first glance their functionality.
 
