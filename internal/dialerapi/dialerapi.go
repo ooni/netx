@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bassosimone/netx/internal/connx"
-	"github.com/bassosimone/netx/internal/dialerbase"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/dialerbase"
+	"github.com/ooni/netx/model"
 )
 
 var nextConnID int64

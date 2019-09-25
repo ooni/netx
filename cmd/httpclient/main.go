@@ -28,8 +28,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bassosimone/netx/handlers"
-	"github.com/bassosimone/netx/httpx"
+	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/httpx"
 )
 
 func fetch(client *http.Client, url string) {

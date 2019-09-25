@@ -3,8 +3,8 @@ package handlers_test
 import (
 	"testing"
 
-	"github.com/bassosimone/netx/handlers"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/model"
 )
 
 func TestIntegration(t *testing.T) {

@@ -28,9 +28,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/bassosimone/netx"
-	"github.com/bassosimone/netx/dnsx"
-	"github.com/bassosimone/netx/handlers"
+	"github.com/ooni/netx"
+	"github.com/ooni/netx/dnsx"
+	"github.com/ooni/netx/handlers"
 )
 
 func main() {

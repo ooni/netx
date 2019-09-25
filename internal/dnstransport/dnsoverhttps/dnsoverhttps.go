@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/httptransport"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/model"
 )
 
 // Transport is a DNS over HTTPS dnsx.RoundTripper.
@@ -61,7 +61,7 @@ func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		// TODO(bassosimone): we should map the status code to a
+		// TODO(ooni): we should map the status code to a
 		// proper Error in the DNS context.
 		err = errors.New("doh: server returned error")
 		return

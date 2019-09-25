@@ -1,4 +1,4 @@
-module github.com/bassosimone/netx
+module github.com/ooni/netx
 
 go 1.11
 

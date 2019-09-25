@@ -5,12 +5,12 @@ import (
 	"errors"
 	"net"
 
-	"github.com/bassosimone/netx/dnsx"
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/dnstransport/dnsoverhttps"
-	"github.com/bassosimone/netx/internal/dnstransport/dnsovertcp"
-	"github.com/bassosimone/netx/internal/dnstransport/dnsoverudp"
-	"github.com/bassosimone/netx/internal/godns"
+	"github.com/ooni/netx/dnsx"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
+	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
+	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
+	"github.com/ooni/netx/internal/godns"
 )
 
 // ConfigureDNS implements netx.Dialer.ConfigureDNS.

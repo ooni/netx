@@ -8,8 +8,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/bassosimone/netx/internal/connx"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/model"
 )
 
 // Dialer is a net.Dialer that is only able to connect to

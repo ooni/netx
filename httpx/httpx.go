@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/dnsconf"
-	"github.com/bassosimone/netx/internal/httptransport"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dnsconf"
+	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/model"
 )
 
 // Transport performs measurements during HTTP round trips.

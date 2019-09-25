@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/bassosimone/netx/internal/connx"
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/model"
 )
 
 // Transport is a DNS over UDP dnsx.RoundTripper.

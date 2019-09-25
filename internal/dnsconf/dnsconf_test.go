@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bassosimone/netx/handlers"
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/internal/dnsconf"
+	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dnsconf"
 )
 
 func TestIntegrationNewResolver(t *testing.T) {

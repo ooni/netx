@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bassosimone/netx"
-	"github.com/bassosimone/netx/handlers"
+	"github.com/ooni/netx"
+	"github.com/ooni/netx/handlers"
 )
 
 func TestIntegrationDialer(t *testing.T) {

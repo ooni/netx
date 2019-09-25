@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/model"
 )
 
 // MeasuringConn is a net.Conn used to perform measurements

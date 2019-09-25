@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
 )
 

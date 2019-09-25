@@ -34,10 +34,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bassosimone/netx/dnsx"
-	"github.com/bassosimone/netx/internal/connx"
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/dnsx"
+	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/model"
 )
 
 // NewClient returns a dnsx.Client implementation that is using

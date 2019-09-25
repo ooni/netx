@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bassosimone/netx/handlers"
-	"github.com/bassosimone/netx/internal/connx"
+	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/internal/connx"
 )
 
 func TestIntegrationMeasuringConn(t *testing.T) {

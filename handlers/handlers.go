@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/model"
 	"github.com/m-lab/go/rtx"
 )
 

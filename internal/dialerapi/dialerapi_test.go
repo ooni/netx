@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bassosimone/netx/handlers"
-	"github.com/bassosimone/netx/internal/dialerapi"
+	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/internal/dialerapi"
 )
 
 func TestIntegrationDial(t *testing.T) {

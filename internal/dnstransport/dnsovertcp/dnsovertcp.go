@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bassosimone/netx/internal/dialerapi"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/model"
 	"github.com/m-lab/go/rtx"
 )
 

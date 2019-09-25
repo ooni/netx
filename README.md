@@ -1,6 +1,6 @@
-# github.com/bassosimone/netx
+# github.com/ooni/netx
 
-[![GoDoc](https://godoc.org/github.com/bassosimone/netx?status.svg)](https://godoc.org/github.com/bassosimone/netx) [![Build Status](https://travis-ci.org/bassosimone/netx.svg?branch=master)](https://travis-ci.org/bassosimone/netx) [![Coverage Status](https://coveralls.io/repos/github/bassosimone/netx/badge.svg?branch=master)](https://coveralls.io/github/bassosimone/netx?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/bassosimone/netx)](https://goreportcard.com/report/github.com/bassosimone/netx)
+[![GoDoc](https://godoc.org/github.com/ooni/netx?status.svg)](https://godoc.org/github.com/ooni/netx) [![Build Status](https://travis-ci.org/ooni/netx.svg?branch=master)](https://travis-ci.org/ooni/netx) [![Coverage Status](https://coveralls.io/repos/github/ooni/netx/badge.svg?branch=master)](https://coveralls.io/github/ooni/netx?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ooni/netx)](https://goreportcard.com/report/github.com/ooni/netx)
 
 This repository contains `net` and `net/http` extensions for performing
 seamless network measurements. It is a meant as PoC for code that I wish to
@@ -59,8 +59,8 @@ code snippet
 
 ```Go
 import (
-  "github.com/bassosimone/netx/handlers"
-  "github.com/bassosimone/netx/httpx"
+  "github.com/ooni/netx/handlers"
+  "github.com/ooni/netx/httpx"
 )
 
 func main() {

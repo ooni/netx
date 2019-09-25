@@ -13,8 +13,8 @@ import (
 	"errors"
 	"net"
 
-	"github.com/bassosimone/netx/dnsx"
-	"github.com/bassosimone/netx/model"
+	"github.com/ooni/netx/dnsx"
+	"github.com/ooni/netx/model"
 	"github.com/miekg/dns"
 )
 
@@ -50,8 +50,8 @@ func (c *Client) LookupCNAME(ctx context.Context, host string) (cname string, er
 
 // LookupHost returns the IP addresses of a host
 func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, error) {
-	// TODO(bassosimone): wrap errors as net.DNSError
-	// TODO(bassosimone): emit DNS messages
+	// TODO(ooni): wrap errors as net.DNSError
+	// TODO(ooni): emit DNS messages
 	var addrs []string
 	var reply *dns.Msg
 	reply, errA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
@@ -114,7 +114,7 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 }
 
 func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
-	// TODO(bassosimone): we are ignoring the context here
+	// TODO(ooni): we are ignoring the context here
 	var (
 		querydata []byte
 		replydata []byte
