@@ -80,6 +80,12 @@ func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, err
 			}
 		}
 	}
+	return LookupHostResult(addrs, errA, errAAAA)
+}
+
+// LookupHostResult computes the final result of LookupHost. You generally
+// only care about this function when writing tests.
+func LookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
 	if len(addrs) > 0 {
 		return addrs, nil
 	}
@@ -114,21 +120,43 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 }
 
 func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
+	return c.RoundTripEx(
+		ctx, query, func(msg *dns.Msg) ([]byte, error) {
+			return msg.Pack()
+		},
+		func(t dnsx.RoundTripper, query []byte) (reply []byte, err error) {
+			return t.RoundTrip(query)
+		},
+		func(msg *dns.Msg, data []byte) (err error) {
+			return msg.Unpack(data)
+		},
+	)
+}
+
+// RoundTripEx is a mockable implementation of the piece
+// of code that performs the DNS round trip.
+func (c *Client) RoundTripEx(
+	ctx context.Context,
+	query *dns.Msg,
+	pack func(msg *dns.Msg) ([]byte, error),
+	roundTrip func(t dnsx.RoundTripper, query []byte) (reply []byte, err error),
+	unpack func(msg *dns.Msg, data []byte) (err error),
+) (reply *dns.Msg, err error) {
 	// TODO(ooni): we are ignoring the context here
 	var (
 		querydata []byte
 		replydata []byte
 	)
-	querydata, err = query.Pack()
+	querydata, err = pack(query)
 	if err != nil {
 		return
 	}
-	replydata, err = c.transport.RoundTrip(querydata)
+	replydata, err = roundTrip(c.transport, querydata)
 	if err != nil {
 		return
 	}
 	reply = new(dns.Msg)
-	err = reply.Unpack(replydata)
+	err = unpack(reply, replydata)
 	if err != nil {
 		return
 	}
