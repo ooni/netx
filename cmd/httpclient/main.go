@@ -2,8 +2,9 @@
 //
 // Usage:
 //
-//   dnsclient -dns-transport tcp|udp|dot|doh
-//             -url <URL>
+//   httpclient -dns-transport tcp|udp|dot|doh -url <URL>
+//
+//   httpclient -help
 //
 // The default is to use the system DNS. Use -dns-engine to force
 // a different type of DNS transport. We'll use a good default resolver
@@ -29,13 +30,13 @@ import (
 	"os"
 
 	"github.com/m-lab/go/rtx"
+	"github.com/ooni/netx/cmd/common"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 )
 
 var (
 	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
-	flagHelp         = flag.Bool("h", false, "Print help message")
 	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
 )
 
@@ -47,7 +48,7 @@ func main() {
 
 func mainfunc() (err error) {
 	client := httpx.NewClient(handlers.StdoutHandler)
-	if *flagHelp {
+	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: dnsclient [flags]\n")
 		flag.PrintDefaults()

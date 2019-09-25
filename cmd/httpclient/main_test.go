@@ -1,15 +1,18 @@
 package main
 
-import "testing"
+import (
+	"github.com/ooni/netx/cmd/common"
+	"testing"
+)
 
 func TestIntegration(t *testing.T) {
 	main()
 }
 
 func TestHelp(t *testing.T) {
-	*flagHelp = true
+	*common.FlagHelp = true
 	err := mainfunc()
-	*flagHelp = false
+	*common.FlagHelp = false
 	if err != nil {
 		t.Fatal(err)
 	}

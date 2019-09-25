@@ -6,11 +6,14 @@
 //             -transport tcp|udp|dot|doh
 //             -endpoint <transport-specific-endpoint>
 //
+//   dnsclient -help
+//
 // The default is to use the udp transport. For each transport
 // we use a specific default resolver.
 //
 // We emit JSONL messages on the stdout showing what we are
 // currently doing. We also print the final result on the stdout.
+//
 //
 // Examples:
 //
@@ -31,6 +34,7 @@ import (
 
 	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx"
+	"github.com/ooni/netx/cmd/common"
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
 )
@@ -38,7 +42,6 @@ import (
 var (
 	flagName      = flag.String("name", "ooni.io", "Name to query for")
 	flagEndpoint  = flag.String("endpoint", "8.8.8.8:53", "Transport endpoint")
-	flagHelp      = flag.Bool("h", false, "Print usage")
 	flagTransport = flag.String("transport", "udp", "Transport to use")
 	flagType      = flag.String("type", "Host", "Query type")
 )
@@ -54,7 +57,7 @@ func mainWithContext(ctx context.Context) error {
 		nsrecs   []*net.NS
 		resolver dnsx.Client
 	)
-	if *flagHelp {
+	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: dnsclient [flags]\n")
 		flag.PrintDefaults()

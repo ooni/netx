@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"testing"
+
+	"github.com/ooni/netx/cmd/common"
 )
 
 func TestIntegration(t *testing.T) {
@@ -10,9 +12,9 @@ func TestIntegration(t *testing.T) {
 }
 
 func TestHelp(t *testing.T) {
-	*flagHelp = true
+	*common.FlagHelp = true
 	err := mainWithContext(context.Background())
-	*flagHelp = false
+	*common.FlagHelp = false
 	if err != nil {
 		t.Fatal(err)
 	}
