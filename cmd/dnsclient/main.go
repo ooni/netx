@@ -23,28 +23,37 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"net"
 	"os"
 
+	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
 )
 
-func main() {
+var (
+	flagName      = flag.String("name", "ooni.io", "Name to query for")
+	flagEndpoint  = flag.String("endpoint", "8.8.8.8:53", "Transport endpoint")
+	flagHelp      = flag.Bool("h", false, "Print usage")
+	flagTransport = flag.String("transport", "udp", "Transport to use")
+	flagType      = flag.String("type", "Host", "Query type")
+)
+
+func mainWithContext(ctx context.Context) error {
 	dialer := netx.NewDialer(handlers.StdoutHandler)
 	var (
-		flagName      = flag.String("name", "ooni.io", "Name to query for")
-		flagEndpoint  = flag.String("endpoint", "8.8.8.8:53", "Transport endpoint")
-		flagHelp      = flag.Bool("h", false, "Print usage")
-		flagTransport = flag.String("transport", "udp", "Transport to use")
-		flagType      = flag.String("type", "Host", "Query type")
-		err           error
-		resolver      dnsx.Client
+		addrs    []string
+		cname    string
+		err      error
+		mxrecs   []*net.MX
+		names    []string
+		nsrecs   []*net.NS
+		resolver dnsx.Client
 	)
-	flag.Parse()
 	if *flagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: dnsclient [flags]\n")
@@ -54,42 +63,40 @@ func main() {
 		fmt.Printf("%s\n", "  ./dnsclient -transport dot -endpoint dns.quad9.net ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport tcp -endpoint 8.8.8.8:53 ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport udp -endpoint 1.1.1.1:53 ...")
-		os.Exit(0)
+		return nil
 	}
 	resolver, err = dialer.NewResolver(*flagTransport, *flagEndpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ctx := context.Background()
+	rtx.Must(err, "cannot create new resolver")
 	if *flagType == "Addr" {
-		names, err := resolver.LookupAddr(ctx, *flagName)
+		names, err = resolver.LookupAddr(ctx, *flagName)
 		prettyprint(names)
-		prettyprint(err)
 	} else if *flagType == "CNAME" {
-		cname, err := resolver.LookupCNAME(ctx, *flagName)
+		cname, err = resolver.LookupCNAME(ctx, *flagName)
 		prettyprint(cname)
-		prettyprint(err)
 	} else if *flagType == "Host" {
-		addrs, err := resolver.LookupHost(ctx, *flagName)
+		addrs, err = resolver.LookupHost(ctx, *flagName)
 		prettyprint(addrs)
-		prettyprint(err)
 	} else if *flagType == "MX" {
-		recs, err := resolver.LookupMX(ctx, *flagName)
-		prettyprint(recs)
-		prettyprint(err)
+		mxrecs, err = resolver.LookupMX(ctx, *flagName)
+		prettyprint(mxrecs)
 	} else if *flagType == "NS" {
-		recs, err := resolver.LookupNS(ctx, *flagName)
-		prettyprint(recs)
-		prettyprint(err)
+		nsrecs, err = resolver.LookupNS(ctx, *flagName)
+		prettyprint(nsrecs)
 	} else {
-		log.Fatal("unsupported query type")
+		err = errors.New("unsupported query type")
 	}
+	prettyprint(err)
+	return err
+}
+
+func main() {
+	flag.Parse()
+	err := mainWithContext(context.Background())
+	rtx.Must(err, "mainWithContext failed")
 }
 
 func prettyprint(v interface{}) {
 	data, err := json.Marshal(v)
-	if err != nil {
-		log.Fatal(err)
-	}
+	rtx.Must(err, "json.Marshal failed")
 	fmt.Printf("%s\n", string(data))
 }

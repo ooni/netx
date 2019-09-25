@@ -21,35 +21,32 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 )
 
-func fetch(client *http.Client, url string) {
-	resp, err := client.Get(url)
-	if err != nil {
-		return
-	}
-	ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-}
+var (
+	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
+	flagHelp         = flag.Bool("h", false, "Print help message")
+	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
+)
 
 func main() {
-	client := httpx.NewClient(handlers.StdoutHandler)
-	var (
-		err              error
-		flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
-		flagHelp         = flag.Bool("h", false, "Print help message")
-		flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
-	)
 	flag.Parse()
+	err := mainfunc()
+	rtx.Must(err, "mainfunc failed")
+}
+
+func mainfunc() (err error) {
+	client := httpx.NewClient(handlers.StdoutHandler)
 	if *flagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: dnsclient [flags]\n")
@@ -61,7 +58,7 @@ func main() {
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport udp ...")
 		fmt.Printf("\nWe'll select a suitable backend for each transport. Note\n")
 		fmt.Printf("that this only works on Unix.\n")
-		os.Exit(0)
+		return nil
 	}
 	if *flagDNSTransport == "udp" {
 		err = client.ConfigureDNS("udp", "1.1.1.1:53")
@@ -72,10 +69,18 @@ func main() {
 	} else if *flagDNSTransport == "doh" {
 		err = client.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 	} else if *flagDNSTransport != "" {
-		log.Fatal("invalid -dns-transport argument")
+		err = errors.New("invalid -dns-transport argument")
 	}
-	if err != nil {
-		log.Fatal(err)
+	if err == nil {
+		fetch(client.HTTPClient, *flagURL)
 	}
-	fetch(client.HTTPClient, *flagURL)
+	return
+}
+
+func fetch(client *http.Client, url string) {
+	resp, err := client.Get(url)
+	if err == nil {
+		ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+	}
 }
