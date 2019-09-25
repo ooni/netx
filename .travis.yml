@@ -11,14 +11,4 @@ before_script:
 - go get github.com/mattn/goveralls
 script:
 - go test -v -race -coverprofile=coverage.cov -coverpkg=./... ./...
-- go build -v -race ./cmd/dnsclient
-- go build -v -race ./cmd/httpclient
-- ./dnsclient -transport doh -endpoint https://cloudflare-dns.com/dns-query
-- ./dnsclient -transport dot -endpoint dns.quad9.net
-- ./dnsclient -transport tcp -endpoint 8.8.8.8:53
-- ./dnsclient -transport udp -endpoint 1.1.1.1:53
-- ./httpclient -dns-transport doh
-- ./httpclient -dns-transport dot
-- ./httpclient -dns-transport tcp
-- ./httpclient -dns-transport udp
 - $GOPATH/bin/goveralls -coverprofile=coverage.cov -service=travis-ci
