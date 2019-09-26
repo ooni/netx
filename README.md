@@ -56,6 +56,12 @@ Implements a relacement for `net.Resolver` that saves the timing and
 content of DNS packets. Allows to use several transports for DNS
 queries and replies, including DoT and DoH.
 
+### Other packages
+
+There are other utility and internal packages. Their documentation
+is reachable from [the netx online documentation](
+https://godoc.org/github.com/ooni/netx).
+
 ## Build, run tests, run example commands
 
 You need Go >= 1.11. We use Go modules.
