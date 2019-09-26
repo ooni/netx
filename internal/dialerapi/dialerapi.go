@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"io/ioutil"
 	"net"
 	"sync/atomic"
 	"time"
@@ -54,6 +55,7 @@ func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 			Handler:   handler,
 		},
 		Handler:               handler,
+		TLSConfig:             &tls.Config{},
 		StartTLSHandshakeHook: func(net.Conn) {},
 	}
 	// This is equivalent to ConfigureDNS("system", "...")
@@ -158,13 +160,8 @@ func (d *Dialer) DialContextEx(
 	return
 }
 
-func (d *Dialer) clonedTLSConfig() (config *tls.Config) {
-	if d.TLSConfig != nil {
-		config = d.TLSConfig.Clone()
-	} else {
-		config = &tls.Config{}
-	}
-	return
+func (d *Dialer) clonedTLSConfig() *tls.Config {
+	return d.TLSConfig.Clone()
 }
 
 func (d *Dialer) tlsHandshake(
@@ -219,4 +216,16 @@ func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
 		})
 	}
 	return
+}
+
+// SetCABundle configures the dialer to use a specific CA bundle.
+func (d *Dialer) SetCABundle(path string) error {
+	cert, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(cert)
+	d.TLSConfig.RootCAs = pool
+	return nil
 }

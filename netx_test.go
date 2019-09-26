@@ -47,3 +47,11 @@ func TestIntegrationResolver(t *testing.T) {
 		t.Fatal("No addresses returned")
 	}
 }
+
+func TestSetCABundle(t *testing.T) {
+	dialer := netx.NewDialer(handlers.NoHandler)
+	err := dialer.SetCABundle("testdata/cacert.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+}

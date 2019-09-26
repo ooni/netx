@@ -4,7 +4,6 @@ package dnsovertcp
 
 import (
 	"bufio"
-	"crypto/tls"
 	"errors"
 	"io"
 	"net"
@@ -79,11 +78,7 @@ func (t *Transport) initUnlocked() (err error) {
 		if t.Port == "" {
 			t.Port = "853"
 		}
-		if t.Dialer.TLSConfig != nil {
-			t.Dialer.TLSConfig = t.Dialer.TLSConfig.Clone()
-		} else {
-			t.Dialer.TLSConfig = &tls.Config{}
-		}
+		t.Dialer.TLSConfig = t.Dialer.TLSConfig.Clone()
 		t.Dialer.TLSConfig.ServerName = t.Hostname
 	} else if t.Port == "" {
 		t.Port = "53"

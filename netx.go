@@ -106,3 +106,10 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
 	return dnsconf.NewResolver(d.dialer, network, address)
 }
+
+// SetCABundle configures the dialer to use a specific CA bundle. This
+// function is not goroutine safe. Make sure you call it befor starting
+// to use this specific dialer.
+func (d *Dialer) SetCABundle(path string) error {
+	return d.dialer.SetCABundle(path)
+}

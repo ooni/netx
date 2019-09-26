@@ -3,6 +3,7 @@ package dialerapi_test
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"testing"
 	"time"
@@ -166,6 +167,40 @@ func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
 	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {
 		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
+}
+
+func TestSetCABundleExisting(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	err := dialer.SetCABundle("../../testdata/cacert.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSetCABundleNonexisting(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	err := dialer.SetCABundle("../../testdata/cacert-nonexistent.pem")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestSetCABundleWAI(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	err := dialer.SetCABundle("../../testdata/cacert.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := dialer.DialTLS("tcp", "www.google.com:443")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if _, ok := err.(x509.UnknownAuthorityError); !ok {
+		t.Fatal("not the error we expected")
 	}
 	if conn != nil {
 		t.Fatal("expected a nil conn here")

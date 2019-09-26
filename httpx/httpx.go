@@ -53,6 +53,12 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 	return dnsconf.ConfigureDNS(t.dialer, network, address)
 }
 
+// SetCABundle internally calls netx.Dialer.SetCABundle and
+// therefore it has the same caveats and limitations.
+func (t *Transport) SetCABundle(path string) error {
+	return t.dialer.SetCABundle(path)
+}
+
 // Client is a replacement for http.Client.
 type Client struct {
 	// HTTPClient is the underlying client. Pass this client to existing code
@@ -79,4 +85,10 @@ func NewClient(handler model.Handler) *Client {
 // therefore it has the same caveats and limitations.
 func (c *Client) ConfigureDNS(network, address string) error {
 	return c.Transport.ConfigureDNS(network, address)
+}
+
+// SetCABundle internally calls netx.Dialer.SetCABundle and
+// therefore it has the same caveats and limitations.
+func (c *Client) SetCABundle(path string) error {
+	return c.Transport.SetCABundle(path)
 }
