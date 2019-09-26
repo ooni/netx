@@ -49,8 +49,8 @@ results of network events.
 
 ### github.com/ooni/netx/dnsx
 
-[![GoDoc](https://godoc.org/github.com/ooni/dnsx?status.svg)](
-https://godoc.org/github.com/ooni/dnsx)
+[![GoDoc](https://godoc.org/github.com/ooni/netx/dnsx?status.svg)](
+https://godoc.org/github.com/ooni/netx/dnsx)
 
 Implements a relacement for `net.Resolver` that saves the timing and
 content of DNS packets. Allows to use several transports for DNS
