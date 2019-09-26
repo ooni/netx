@@ -58,7 +58,9 @@ queries and replies, including DoT and DoH.
 
 ## Build, run tests, run example commands
 
-You need Go >= 1.11. To run tests:
+You need Go >= 1.11. We use Go modules.
+
+To run tests:
 
 ```
 GO111MODULE=on go test -v -race ./...
@@ -74,4 +76,5 @@ GO111MODULE=on go build -v ./cmd/httpclient
 Both commands will provide useful help messages when run with `-help`. When
 run without arguments they run against default input suitable to show
 at a first glance their functionality. They both emit the events they have
-measured on the standard ouput, using the JSONL format.
+measured on the standard ouput, using the JSONL format (i.e. newline
+separated serialized JSON documents).
