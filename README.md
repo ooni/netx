@@ -60,7 +60,7 @@ queries and replies, including DoT and DoH.
 
 There are other utility and internal packages. Their documentation
 is reachable from [the netx online documentation](
-https://godoc.org/github.com/ooni/netx).
+https://godoc.org/github.com/ooni/netx#pkg-subdirectories).
 
 ## Build, run tests, run example commands
 
