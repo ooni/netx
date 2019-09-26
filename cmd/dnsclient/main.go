@@ -3,12 +3,12 @@
 // Usage:
 //
 //   dnsclient -type Addr|CNAME|Host|MX|NS -name <name>
-//             -transport tcp|udp|dot|doh
+//             -transport system|godns|tcp|udp|dot|doh
 //             -endpoint <transport-specific-endpoint>
 //
 //   dnsclient -help
 //
-// The default is to use the udp transport. For each transport
+// The default is to use the system transport. For each transport
 // we use a specific default resolver.
 //
 // We emit JSONL messages on the stdout showing what we are
@@ -17,6 +17,8 @@
 //
 // Examples:
 //
+//   ./dnsclient -transport system ...
+//   ./dnsclient -transport godns ...
 //   ./dnsclient -transport doh -endpoint https://cloudflare-dns.com/dns-query ...
 //   ./dnsclient -transport dot -endpoint dns.quad9.net ...
 //   ./dnsclient -transport tcp -endpoint 8.8.8.8:53 ...
@@ -41,8 +43,8 @@ import (
 
 var (
 	flagName      = flag.String("name", "ooni.io", "Name to query for")
-	flagEndpoint  = flag.String("endpoint", "8.8.8.8:53", "Transport endpoint")
-	flagTransport = flag.String("transport", "udp", "Transport to use")
+	flagEndpoint  = flag.String("endpoint", "", "Transport endpoint")
+	flagTransport = flag.String("transport", "system", "Transport to use")
 	flagType      = flag.String("type", "Host", "Query type")
 )
 
@@ -62,6 +64,8 @@ func mainWithContext(ctx context.Context) error {
 		fmt.Printf("Usage: dnsclient [flags]\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
+		fmt.Printf("%s\n", "  ./dnsclient -transport system ...")
+		fmt.Printf("%s\n", "  ./dnsclient -transport godns ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport doh -endpoint https://cloudflare-dns.com/dns-query ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport dot -endpoint dns.quad9.net ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport tcp -endpoint 8.8.8.8:53 ...")

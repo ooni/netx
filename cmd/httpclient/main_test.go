@@ -18,6 +18,22 @@ func TestHelp(t *testing.T) {
 	}
 }
 
+func TestSystemTransport(t *testing.T) {
+	*flagDNSTransport = "system"
+	err := mainfunc()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGoDNSTransport(t *testing.T) {
+	*flagDNSTransport = "godns"
+	err := mainfunc()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUDPTransport(t *testing.T) {
 	*flagDNSTransport = "udp"
 	err := mainfunc()

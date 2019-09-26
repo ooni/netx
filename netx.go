@@ -30,8 +30,22 @@ func NewDialer(handler model.Handler) *Dialer {
 
 // ConfigureDNS configures the DNS resolver. The network argument
 // selects the type of resolver. The address argument indicates the
-// resolver address and depends on the network. The following is a
-// list of all the possible network values:
+// resolver address and depends on the network.
+//
+// This functionality is not goroutine safe. You should only change
+// the DNS settings before starting to use the Dialer.
+//
+// The following is a list of all the possible network values:
+//
+// - "system": this indicates that Go should use the system resolver
+// and prevents us from seeing any DNS packet. The value of the
+// address parameter is ignored when using "system". If you do
+// not ConfigureDNS, this is the default resolver used.
+//
+// - "netgo": this indicates that Go should use its pure Go DNS
+// resolver with the default server. The value of the address
+// parameter is ignored when using "netgo". However, with this
+// resolver we'll be able to see DNS packets.
 //
 // - "udp": indicates that we should send queries using UDP. In this
 // case the address is a host, port UDP endpoint.
@@ -46,6 +60,8 @@ func NewDialer(handler model.Handler) *Dialer {
 //
 // For example:
 //
+//   d.SetResolver("system", "")
+//   d.SetResolver("godns", "")
 //   d.SetResolver("udp", "8.8.8.8:53")
 //   d.SetResolver("tcp", "8.8.8.8:53")
 //   d.SetResolver("dot", "dns.quad9.net")
@@ -53,7 +69,8 @@ func NewDialer(handler model.Handler) *Dialer {
 //
 // ConfigureDNS is currently only executed when Go chooses to
 // use the pure Go implementation of the DNS. This means that it
-// does not work on Windows, where the C library is preferred.
+// does not work on Windows, where the C library is preferred. That
+// is, on Windows you always use the "system" DNS.
 func (d *Dialer) ConfigureDNS(network, address string) error {
 	return dnsconf.ConfigureDNS(d.dialer, network, address)
 }
@@ -65,7 +82,9 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 
 // DialContext is like Dial but the context allows to interrupt a
 // pending connection attempt at any time.
-func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+func (d *Dialer) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
 	return d.dialer.DialContext(ctx, network, address)
 }
 

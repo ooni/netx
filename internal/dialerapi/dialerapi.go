@@ -23,14 +23,23 @@ func NextConnID() int64 {
 	return atomic.AddInt64(&nextConnID, 1)
 }
 
-type lookupHostFunc func(context.Context, string) ([]string, error)
+// LookupHostFunc is the type of the function used to lookup
+// the addresses of a specific host.
+type LookupHostFunc func(context.Context, string) ([]string, error)
+
+// DialHostPortFunc is the type of the function that is actually
+// used to dial a connection to a specific host and port.
+type DialHostPortFunc func(
+	ctx context.Context, network, onlyhost, onlyport string, connid int64,
+) (*connx.MeasuringConn, error)
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	dialerbase.Dialer
+	DialHostPort          DialHostPortFunc
 	Handler               model.Handler
-	LookupHost            lookupHostFunc
+	LookupHost            LookupHostFunc
 	StartTLSHandshakeHook func(net.Conn)
 	TLSConfig             *tls.Config
 	TLSHandshakeTimeout   time.Duration
@@ -47,18 +56,12 @@ func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 		Handler:               handler,
 		StartTLSHandshakeHook: func(net.Conn) {},
 	}
+	// This is equivalent to ConfigureDNS("system", "...")
 	r := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			conn, _, _, err := d.DialContextEx(ctx, network, address, false)
-			if err != nil {
-				return nil, err
-			}
-			// convince Go this is really a net.PacketConn
-			return &connx.DNSMeasuringConn{MeasuringConn: *conn}, nil
-		},
+		PreferGo: false,
 	}
 	d.LookupHost = r.LookupHost
+	d.DialHostPort = d.Dialer.DialHostPort
 	return
 }
 
@@ -117,7 +120,7 @@ func (d *Dialer) DialContextEx(
 	}
 	connid := NextConnID()
 	if net.ParseIP(onlyhost) != nil {
-		conn, err = d.Dialer.DialHostPort(ctx, network, onlyhost, onlyport, connid)
+		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, connid)
 		return
 	}
 	if requireIP == true {
@@ -142,7 +145,7 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	for _, addr := range addrs {
-		conn, err = d.Dialer.DialHostPort(ctx, network, addr, onlyport, connid)
+		conn, err = d.DialHostPort(ctx, network, addr, onlyport, connid)
 		if err == nil {
 			return
 		}

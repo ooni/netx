@@ -40,6 +40,26 @@ func TestIntegrationInvalidAddress(t *testing.T) {
 	}
 }
 
+func TestIntegrationDialContextExIPAddress(t *testing.T) {
+	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	conn, onlyhost, onlyport, err := dialer.DialContextEx(
+		context.Background(), "tcp", "8.8.8.8:443", true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if onlyhost != "8.8.8.8" {
+		t.Fatal("unexpected onlyhost value")
+	}
+	if onlyport != "443" {
+		t.Fatal("unexpected onlyport value")
+	}
+	if conn == nil {
+		t.Fatal("expected a non-nil conn here")
+	}
+	conn.Close()
+}
+
 func TestIntegrationUnexpectedDomain(t *testing.T) {
 	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	conn, onlyhost, onlyport, err := dialer.DialContextEx(

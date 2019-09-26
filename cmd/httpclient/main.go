@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//   httpclient -dns-transport tcp|udp|dot|doh -url <URL>
+//   httpclient -dns-transport system|godns|tcp|udp|dot|doh -url <URL>
 //
 //   httpclient -help
 //
@@ -15,6 +15,8 @@
 //
 // Examples:
 //
+//   ./httpclient -dns-transport system ...
+//   ./httpclient -dns-transport godns ...
 //   ./httpclient -dns-transport doh ...
 //   ./httpclient -dns-transport dot ...
 //   ./httpclient -dns-transport tcp ...
@@ -53,6 +55,8 @@ func mainfunc() (err error) {
 		fmt.Printf("Usage: dnsclient [flags]\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
+		fmt.Printf("%s\n", "  ./httpclient -dns-transport system ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-transport godns ...")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport doh ...")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport dot ...")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport tcp ...")
@@ -61,7 +65,11 @@ func mainfunc() (err error) {
 		fmt.Printf("that this only works on Unix.\n")
 		return nil
 	}
-	if *flagDNSTransport == "udp" {
+	if *flagDNSTransport == "system" {
+		err = client.ConfigureDNS("system", "")
+	} else if *flagDNSTransport == "godns" {
+		err = client.ConfigureDNS("godns", "")
+	} else if *flagDNSTransport == "udp" {
 		err = client.ConfigureDNS("udp", "1.1.1.1:53")
 	} else if *flagDNSTransport == "tcp" {
 		err = client.ConfigureDNS("tcp", "8.8.8.8:53")

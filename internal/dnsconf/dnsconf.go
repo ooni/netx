@@ -2,10 +2,12 @@
 package dnsconf
 
 import (
+	"context"
 	"errors"
 	"net"
 
 	"github.com/ooni/netx/dnsx"
+	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
@@ -24,7 +26,32 @@ func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
-func NewResolver(dialer *dialerapi.Dialer, network, address string) (*net.Resolver, error) {
+func NewResolver(
+	dialer *dialerapi.Dialer, network, address string,
+) (*net.Resolver, error) {
+	// Implementation note: system and godns need to be dealt with
+	// separately because they don't have any transport.
+	if network == "system" {
+		return &net.Resolver{
+			PreferGo: false,
+		}, nil
+	} else if network == "godns" {
+		return &net.Resolver{
+			PreferGo: true,
+			Dial: func(
+				ctx context.Context, network, address string,
+			) (net.Conn, error) {
+				conn, _, _, err := dialer.DialContextEx(ctx, network, address, false)
+				if err != nil {
+					return nil, err
+				}
+				// convince Go this is really a net.PacketConn
+				return &connx.DNSMeasuringConn{MeasuringConn: *conn}, nil
+			},
+		}, nil
+	} else {
+		// FALLTHROUGH
+	}
 	var transport dnsx.RoundTripper
 	if network == "doh" {
 		transport = dnsoverhttps.NewTransport(

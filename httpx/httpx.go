@@ -75,7 +75,8 @@ func NewClient(handler model.Handler) *Client {
 	}
 }
 
-// ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
+// ConfigureDNS internally calls netx.Dialer.ConfigureDNS and
+// therefore it has the same caveats and limitations.
 func (c *Client) ConfigureDNS(network, address string) error {
 	return c.Transport.ConfigureDNS(network, address)
 }
