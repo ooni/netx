@@ -289,7 +289,7 @@ whether we can join measurements in a better way.
 
 (As a contextual note, the problem of knowing the ID
 of a connection is that we cannot wrap `*tls.Conn`
-with a ConnID-replacement that is compatible with `net.Conn`,
+with a ConnID-aware-replacement that is compatible with `net.Conn`,
 because that will confuse `net/http` and prevent using
 `http2`. We could solve the problem to join automatically network
 and lower-level events by implementing a goroutine
