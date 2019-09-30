@@ -115,7 +115,7 @@ is left unspecified, as they are poised to change. That said, we will
 be careful to not remove existing fields and/or change the meaning
 of existing fields unless that is necessary.
 
-## The github.com/ooni/netx/model package
+### The github.com/ooni/netx/model package
 
 This package will contain the definition of low-level
 events. We are interested to know the following:
@@ -295,7 +295,7 @@ because that will confuse `net/http` and prevent using
 and lower-level events by implementing a goroutine
 safe cache mapping the five tuple to a `ConnID`.)
 
-## The github.com/ooni/netx/httpx package
+### The github.com/ooni/netx/httpx package
 
 This package will contain HTTP extensions. The core
 structure that we will provide is as follows:
@@ -358,7 +358,7 @@ The `handler` shall point to a structure implementing the
 automatically record the current time as the "zero" time
 used to compute the `Time` field of every event.
 
-## The github.com/ooni/netx package
+### The github.com/ooni/netx package
 
 This package will contain a replacement for `net.Dialer`,
 called `netx.Dialer`, that exposes the following API:
@@ -451,7 +451,7 @@ The arguments have the same meaning of `ConfigureDNS` and
 the will return an interface replacement for `net.Resolver`
 as described below.
 
-## The github.com/ooni/netx/dnsx package
+### The github.com/ooni/netx/dnsx package
 
 This package will define an interface compatible with the
 `net.Resolver` struct, such that its methods can be used
@@ -467,7 +467,7 @@ type Client interface {
 }
 ```
 
-# Future work
+## Future work
 
 The current revision of this specification does not specify a
 programmatic way of joining measurements occurring at different
