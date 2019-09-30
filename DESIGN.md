@@ -404,8 +404,10 @@ func (c *Client) SetCABundle(path string) error
 func (c *Client) ForceSpecificSNI(sni string) error
 ```
 
-We have already discussed `SetCABundle` and `ForceSpecificSNI`. As
-far as `ConfigureDNS` is concerned it will work as follows:
+`SetCABundle` and `ForceSpecificSNI` behave exactly like the namesake
+methods of `httpx.Client`.
+
+As far as `ConfigureDNS` is concerned it will work as follows:
 
 * when `network` is `"system"`, the system resolver will be
 used and no low-level events pertaining to the DNS will be
