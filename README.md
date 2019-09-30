@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/ooni/netx.svg?branch=master)](https://travis-ci.org/ooni/netx) [![Coverage Status](https://coveralls.io/repos/github/ooni/netx/badge.svg?branch=master)](https://coveralls.io/github/ooni/netx?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ooni/netx)](https://goreportcard.com/report/github.com/ooni/netx)
 
-OONI extensions to the `net` and `net/http` packages.
+OONI extensions to the `net` and `net/http` packages. This code is
+used by `ooni/probe-engine` as a low level library to collect
+network, DNS, and HTTP events occurring during OONI measurements.
 
 ## API documentation
 

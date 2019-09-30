@@ -65,6 +65,14 @@ document to use an alternative approach where we provide
 OONI-measurements-aware replacements for Go standard
 library interfaces, e.g., `http.RoundTripper`.
 
+This repository is separate from `ooni/probe-engine`
+because they solve different problems. Here we provide
+replacements for standard Go library interfaces that
+allow us to perform measurements. In `probe-engine` we
+implement OONI tests and clients for OONI backend
+services. Putting all the code into the same repository
+would have put too many concerns into the same repo.
+
 ## Design
 
 We want to provide moral replacements for the following
