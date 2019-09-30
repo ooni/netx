@@ -289,9 +289,9 @@ whether we can join measurements in a better way.
 
 (As a contextual note, the problem of knowing the ID
 of a connection is that we cannot wrap `*tls.Conn`
-to be compatible with `net.Conn`, because that will
-confuse `net/http` and prevent using `http2`. We
-could solve the problem to join automatically network
+with a ConnID-replacement that is compatible with `net.Conn`,
+because that will confuse `net/http` and prevent using
+`http2`. We could solve the problem to join automatically network
 and lower-level events by implementing a goroutine
 safe cache mapping the five tuple to a `ConnID`.)
 
@@ -305,11 +305,6 @@ type Client struct {
   HTTPClient *http.Client
   Transport  Transport
 }
-
-func (c *Client) ConfigureDNS(network, address string) error
-func (c *Client) SetCABundle(path string) error
-func (c *Client) ForceSpecificSNI(sni string) error
-func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
 ```
 
 Client code is expected to create a `*Client` instance
@@ -317,23 +312,38 @@ using the `NewClient` constructor, configure it, and
 then pass to code that needs it `HTTPClient` as the real
 `*http.Client` instance.
 
+The following methods will be exposed:
+
 To configure our `*Client` instance, one could use the
 `ConfigureDNS`, `SetCABundle` and `ForceSpecificSNI`
 methods. They should all be called before using the
 `HTTPClient` field, as they'll not be goroutine safe.
 
+```Go
+func (c *Client) SetCABundle(path string) error
+```
+
 The `SetCABundle` forces using a specific CA bundle,
 which is what we already do with OONI.
+
+```Go
+func (c *Client) ForceSpecificSNI(sni string) error
+```
 
 The `ForceSpecificSNI` forces the TLS code to use a
 specific SNI when connecting. This allows us to check
 whether there is SNI-based blocking.
 
-The `ConfigureDNS` will configure under the hood the
-specific DNS to be used. Because this is lengthy to
-explain and will just use an underlying `net.Resolver`
-replacement, please see below for a more thorough
-documentation of this functionality.
+```Go
+func (c *Client) ConfigureDNS(network, address string) error
+```
+
+The `ConfigureDNS` method will behave exactly like the
+namesake method of `netx.Resolver` (see below).
+
+```Go
+func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
+```
 
 The `SetProxyFunc` will allow us to configure
 a specific proxy. This is useful to have precise
@@ -357,11 +367,15 @@ called `netx.Dialer`, that exposes the following API:
 
 ```Go
 func (d *Dialer) Dial(network, address string) (net.Conn, error)
+```
 
+```Go
 func (d *Dialer) DialContext(
     ctx context.Context, network, address string,
 ) (net.Conn, error)
+```
 
+```Go
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error)
 ```
 
@@ -382,7 +396,13 @@ be called before using the dialer:
 
 ```Go
 func (c *Client) ConfigureDNS(network, address string) error
+```
+
+```Go
 func (c *Client) SetCABundle(path string) error
+```
+
+```Go
 func (c *Client) ForceSpecificSNI(sni string) error
 ```
 
