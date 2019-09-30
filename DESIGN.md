@@ -312,8 +312,6 @@ using the `NewClient` constructor, configure it, and
 then pass to code that needs it `HTTPClient` as the real
 `*http.Client` instance.
 
-The following methods will be exposed:
-
 To configure our `*Client` instance, one could use the
 `ConfigureDNS`, `SetCABundle` and `ForceSpecificSNI`
 methods. They should all be called before using the
