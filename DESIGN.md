@@ -337,7 +337,7 @@ func (c *Client) ConfigureDNS(network, address string) error
 ```
 
 The `ConfigureDNS` method will behave exactly like the
-golang stdlib method of `netx.Resolver` (see below).
+`ConfigureDNS` method of `netx.Resolver` (see below).
 
 ```Go
 func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
