@@ -24,7 +24,7 @@ over HTTPS (DoH) and then attempt to fetch again an URL. Or
 we may want to force TLS to use a specific SNI.
 
 In this document we design a Go library that solves all the
-above problems by exposing the the API user simple replacements
+above problems by exposing to the user an API with simple replacements
 for standard Go interfaces, e.g. `http.RoundTripper`.
 
 ## Rationale
@@ -46,17 +46,17 @@ that provide data useful to complete the analysis.
 
 In [Measurement Kit](https//github.com/measurement-kit/measurement-it),
 we implement measurement gathering by combining _nettest
-templates_. That is, special APIs that perform a single
+templates_. These are special APIs that perform a single
 low-level action (e.g. connecting to a TCP endpoint, resolving
 a domain name). So, for example, Web Connectivity's
-measurement gathering is obtained by combining, the DNS
+measurement gathering is obtained by combining the DNS
 template, the TCP template, and the HTTP template.
 
 This approach based on combining low-level test helpers
 has two problems. First, the implementation of an
 experiment is rather low level, because you need to
-invoke the test helpers in sequence, to fill the
-measurement. Second, the test helpers API is poised
+invoke the test helpers in sequence, to populate the
+measurement result object. Second, the test helpers API is likely
 to eventually change when new measurement techniques
 are added to the measurement engine.
 
@@ -86,7 +86,7 @@ compatible with the originals. For example, in the
 case of `net.Dialer`, we will provide compatible
 functions, such as `Dial`, `DialContext`, and `DialTLS`.
 
-This choice allows to use, say, our `net.Dialer`
+This make it possible to use our `net.Dialer`
 replacement with other libraries. Both `http.Transport`
 and `gorilla/websocket`'s `websocket.Dialer` have 
 functions like `Dial` and `DialContext` that can be
@@ -103,7 +103,7 @@ then use our replacements, which are compatible with
 standard library mechanisms to perform their task,
 e.g. fetching a URL. After the measurement task
 is completed, the experiment code will include the
-low-level events into the report, and will walk
+low-level events into the measurement result object, and will walk
 through the stream of events to determine in a more
 precise way what could have gone wrong.
 
@@ -111,14 +111,14 @@ precise way what could have gone wrong.
 
 The actual implementation must follow this spec. It may include more
 methods or interfaces. The exact structure of measurements events
-is left unspecified, as they are poised to change. That said, we will
+is left unspecified, as they are likely to change. That said, we will
 be careful to not remove existing fields and/or change the meaning
 of existing fields unless that is necessary.
 
 ### The github.com/ooni/netx/model package
 
 This package will contain the definition of low-level
-events. We are interested to know the following:
+events. We are interested in knowing the following:
 
 1. the timing and result of each I/O operation.
 
@@ -220,7 +220,7 @@ Every event will include at the minimum this field:
     Time     time.Duration
 ```
 
-This would be the time when the event occurred, relative to
+This will be the time when the event occurred, relative to
 a configured "zero" time. If an event pertains to a blocking
 operation (i.e. `Read`), it will also contain this field:
 
@@ -228,7 +228,7 @@ operation (i.e. `Read`), it will also contain this field:
     Duration time.Duration
 ```
 
-This would be the time for which we have been waiting for
+This will be the amount time we have been waiting for
 the event to occur. That is, in the case of `Read` the
 amount of time we've been blocking waiting for the `Read`
 operation to return a value or an error.
@@ -239,11 +239,11 @@ Every operation that can fail will have a field
     Error    error
 ```
 
-This would indicate the error that occurred.
+This will indicate the error that occurred.
 
 Measurement events will also contain contextual information
-that is meaningful to the event itself. Since this is poised
-to change as we improve our understanding of what it could
+that is meaningful to the event itself. Since this is likely
+to change as we improve our understanding of what could
 be measured, as stated above, please see the current documentation
 for more information on the structure of each event.
 
@@ -265,9 +265,9 @@ Likewise, HTTP events will have their
 which will uniquely identify the round trip within a specific
 set of measurements.
 
-Because in this first PoC it has deemed complex to access
-the `ConnID` from HTTP code, we have determined that we
-would be using the five tuple to join network and HTTP
+Because in this first PoC it has been deemed complex to access
+the `ConnID` from the HTTP code, we have determined that we
+will be using the five-tuple to join network and HTTP
 events. Accordingly, both the `ConnectEvent` and
 `HTTPConnectionReadyEvent` structures will thus include:
 
@@ -322,7 +322,7 @@ func (c *Client) SetCABundle(path string) error
 ```
 
 The `SetCABundle` forces using a specific CA bundle,
-which is what we already do with OONI.
+which is what we already do in OONI Probe.
 
 ```Go
 func (c *Client) ForceSpecificSNI(sni string) error
@@ -337,7 +337,7 @@ func (c *Client) ConfigureDNS(network, address string) error
 ```
 
 The `ConfigureDNS` method will behave exactly like the
-namesake method of `netx.Resolver` (see below).
+golang stdlib method of `netx.Resolver` (see below).
 
 ```Go
 func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
@@ -377,7 +377,7 @@ func (d *Dialer) DialContext(
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error)
 ```
 
-These three functions will behave exactly as their namesake
+These three functions will behave exactly as the same
 functions in the Go standard library, except that they
 will perform measurements. A `Dialer` replacement will be
 constructed like:
@@ -404,7 +404,7 @@ func (c *Client) SetCABundle(path string) error
 func (c *Client) ForceSpecificSNI(sni string) error
 ```
 
-`SetCABundle` and `ForceSpecificSNI` behave exactly like the namesake
+`SetCABundle` and `ForceSpecificSNI` behave exactly like the same
 methods of `httpx.Client`.
 
 As far as `ConfigureDNS` is concerned it will work as follows:
@@ -455,7 +455,7 @@ as described below.
 
 This package will define an interface compatible with the
 `net.Resolver` struct, such that its methods can be used
-as replacaments for namesake `net.Resolver` methods:
+as replacaments for the golang stdlib `net.Resolver` methods:
 
 ```Go
 type Client interface {
