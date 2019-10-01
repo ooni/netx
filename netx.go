@@ -113,3 +113,8 @@ func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
 func (d *Dialer) SetCABundle(path string) error {
 	return d.dialer.SetCABundle(path)
 }
+
+// ForceSpecificSNI forces using a specific SNI.
+func (d *Dialer) ForceSpecificSNI(sni string) error {
+	return d.dialer.ForceSpecificSNI(sni)
+}

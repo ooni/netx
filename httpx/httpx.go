@@ -59,6 +59,11 @@ func (t *Transport) SetCABundle(path string) error {
 	return t.dialer.SetCABundle(path)
 }
 
+// ForceSpecificSNI forces using a specific SNI.
+func (t *Transport) ForceSpecificSNI(sni string) error {
+	return t.dialer.ForceSpecificSNI(sni)
+}
+
 // Client is a replacement for http.Client.
 type Client struct {
 	// HTTPClient is the underlying client. Pass this client to existing code
@@ -91,4 +96,9 @@ func (c *Client) ConfigureDNS(network, address string) error {
 // therefore it has the same caveats and limitations.
 func (c *Client) SetCABundle(path string) error {
 	return c.Transport.SetCABundle(path)
+}
+
+// ForceSpecificSNI forces using a specific SNI.
+func (c *Client) ForceSpecificSNI(sni string) error {
+	return c.Transport.ForceSpecificSNI(sni)
 }

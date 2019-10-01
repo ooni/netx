@@ -39,6 +39,7 @@ import (
 
 var (
 	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
+	flagSNI          = flag.String("sni", "", "Force specific SNI")
 	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
 )
 
@@ -81,7 +82,10 @@ func mainfunc() (err error) {
 		err = errors.New("invalid -dns-transport argument")
 	}
 	if err == nil {
-		fetch(client.HTTPClient, *flagURL)
+		err = client.ForceSpecificSNI(*flagSNI)
+		if err == nil {
+			fetch(client.HTTPClient, *flagURL)
+		}
 	}
 	return
 }
