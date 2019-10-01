@@ -3,7 +3,7 @@
 | Author       | Simone Basso |
 |--------------|--------------|
 | Last-Updated | 2019-09-30   |
-| Status       | open         |
+| Status       | approved     |
 
 ## Introduction
 
