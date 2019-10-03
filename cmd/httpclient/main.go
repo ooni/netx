@@ -20,10 +20,11 @@
 //   ./httpclient -dns-transport doh ...
 //   ./httpclient -dns-transport dot ...
 //   ./httpclient -dns-transport tcp ...
-//   ./httpclient -dns-transport udp ...
+//   ./httpclient -dns-transport udp [-dns-udp-server <addr>:<port>] ...
 package main
 
 import (
+	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,6 +39,9 @@ import (
 )
 
 var (
+	flagDNSUDPServer = flag.String(
+		"dns-udp-server", "1.1.1.1:53", "Server to use with -dns-transport udp",
+	)
 	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
 	flagSNI          = flag.String("sni", "", "Force specific SNI")
 	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
@@ -66,7 +70,7 @@ func mainfunc() (err error) {
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport doh ...")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport dot ...")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport tcp ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport udp ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-transport udp [-dns-udp-server <addr>:<port>] ...")
 		fmt.Printf("\nWe'll select a suitable backend for each transport. Note\n")
 		fmt.Printf("that this only works on Unix.\n")
 		return nil
@@ -76,7 +80,7 @@ func mainfunc() (err error) {
 	} else if *flagDNSTransport == "godns" {
 		err = client.ConfigureDNS("godns", "")
 	} else if *flagDNSTransport == "udp" {
-		err = client.ConfigureDNS("udp", "1.1.1.1:53")
+		err = client.ConfigureDNS("udp", *flagDNSUDPServer)
 	} else if *flagDNSTransport == "tcp" {
 		err = client.ConfigureDNS("tcp", "8.8.8.8:53")
 	} else if *flagDNSTransport == "dot" {
@@ -95,10 +99,18 @@ func mainfunc() (err error) {
 }
 
 func fetch(client *http.Client, url string) (err error) {
+	defer func() {
+		if recover() != nil {
+			// JUST KNOW WE ARRIVED HERE
+		}
+	}()
 	resp, err := client.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-	}
+	rtx.PanicOnError(err, "client.Get failed")
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	rtx.PanicOnError(err, "ioutil.ReadAll failed")
+	fmt.Printf(
+		`{"_HTTPResponseBody": "%s"}`+"\n", base64.StdEncoding.EncodeToString(data),
+	)
 	return
 }
