@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/ooni/netx/cmd/common"
 	"testing"
+
+	"github.com/ooni/netx/cmd/common"
 )
 
 func TestIntegration(t *testing.T) {
@@ -20,6 +21,9 @@ func TestHelp(t *testing.T) {
 
 func TestSystemTransport(t *testing.T) {
 	*flagDNSTransport = "system"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -28,6 +32,9 @@ func TestSystemTransport(t *testing.T) {
 
 func TestGoDNSTransport(t *testing.T) {
 	*flagDNSTransport = "godns"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -36,6 +43,9 @@ func TestGoDNSTransport(t *testing.T) {
 
 func TestUDPTransport(t *testing.T) {
 	*flagDNSTransport = "udp"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -44,6 +54,9 @@ func TestUDPTransport(t *testing.T) {
 
 func TestTCPTransport(t *testing.T) {
 	*flagDNSTransport = "tcp"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -52,6 +65,9 @@ func TestTCPTransport(t *testing.T) {
 
 func TestDoTTransport(t *testing.T) {
 	*flagDNSTransport = "dot"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -60,6 +76,9 @@ func TestDoTTransport(t *testing.T) {
 
 func TestDoHTransport(t *testing.T) {
 	*flagDNSTransport = "doh"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
 	err := mainfunc()
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +87,20 @@ func TestDoHTransport(t *testing.T) {
 
 func TestInvalidTransport(t *testing.T) {
 	*flagDNSTransport = "invalid"
+	defer func() {
+		*flagDNSTransport = ""
+	}()
+	err := mainfunc()
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestInvalidURL(t *testing.T) {
+	*flagURL = "\t"
+	defer func() {
+		*flagURL = "" // restore default
+	}()
 	err := mainfunc()
 	if err == nil {
 		t.Fatal("expected an error here")
