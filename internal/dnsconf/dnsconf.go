@@ -58,9 +58,18 @@ func NewResolver(
 			dialer.Beginning, dialer.Handler, address,
 		)
 	} else if network == "dot" {
-		transport = dnsovertcp.NewTransport(
-			dialer.Beginning, dialer.Handler, address,
-		)
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			transport = dnsovertcp.NewTransport(
+				dialer.Beginning, dialer.Handler, address,
+			)
+		} else {
+			dotTransport := dnsovertcp.NewTransport(
+				dialer.Beginning, dialer.Handler, host,
+			)
+			dotTransport.Port = port
+			transport = dotTransport
+		}
 	} else if network == "tcp" {
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {

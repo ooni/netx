@@ -15,12 +15,13 @@
 //
 // Examples:
 //
-//   ./httpclient -dns-transport system ...
-//   ./httpclient -dns-transport godns ...
-//   ./httpclient -dns-transport doh ...
-//   ./httpclient -dns-transport dot ...
-//   ./httpclient -dns-transport tcp ...
-//   ./httpclient -dns-transport udp [-dns-udp-server <addr>:<port>] ...
+//   ./httpclient -dns-server system:/// -url https://ooni.org/ ...
+//   ./httpclient -dns-server godns:/// -url https://ooni.org/ ...
+//   ./httpclient -dns-server https://cloudflare-dns.com/dns-query -url https://ooni.org/ ...
+//   ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...
+//   ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...
+//   ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...
+//   ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...
 package main
 
 import (
@@ -30,6 +31,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/m-lab/go/rtx"
@@ -39,12 +41,9 @@ import (
 )
 
 var (
-	flagDNSUDPServer = flag.String(
-		"dns-udp-server", "1.1.1.1:53", "Server to use with -dns-transport udp",
-	)
-	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
-	flagSNI          = flag.String("sni", "", "Force specific SNI")
-	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
+	flagDNSServer = flag.String("dns-server", "system:///", "Server to use")
+	flagSNI       = flag.String("sni", "", "Force specific SNI")
+	flagURL       = flag.String("url", "https://ooni.io/", "URL to fetch")
 )
 
 func main() {
@@ -62,35 +61,55 @@ func mainfunc() (err error) {
 	client := httpx.NewClient(handlers.StdoutHandler)
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
-		fmt.Printf("Usage: httpclient [flags]\n")
+		fmt.Printf("Usage: httpclient [flags] -url <url>\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport system ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport godns ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport doh ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport dot ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport tcp ...")
-		fmt.Printf("%s\n", "  ./httpclient -dns-transport udp [-dns-udp-server <addr>:<port>] ...")
+		fmt.Printf("%s\n",
+			"  ./httpclient system:/// -url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server godns:/// -url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server https://cloudflare-dns.com/dns-query "+
+				"-url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...",
+		)
+		fmt.Printf("%s\n",
+			"  ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...",
+		)
 		fmt.Printf("\nWe'll select a suitable backend for each transport. Note\n")
 		fmt.Printf("that this only works on Unix.\n")
 		return nil
 	}
-	if *flagDNSTransport == "system" {
+
+	urlDNSServer, err := url.Parse(*flagDNSServer)
+	rtx.PanicOnError(err, "-dns-server argument is not a valid URL")
+
+	if urlDNSServer.Scheme == "system" {
 		err = client.ConfigureDNS("system", "")
-	} else if *flagDNSTransport == "godns" {
+	} else if urlDNSServer.Scheme == "godns" {
 		err = client.ConfigureDNS("godns", "")
-	} else if *flagDNSTransport == "udp" {
-		err = client.ConfigureDNS("udp", *flagDNSUDPServer)
-	} else if *flagDNSTransport == "tcp" {
-		err = client.ConfigureDNS("tcp", "8.8.8.8:53")
-	} else if *flagDNSTransport == "dot" {
-		err = client.ConfigureDNS("dot", "dns.quad9.net")
-	} else if *flagDNSTransport == "doh" {
-		err = client.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
-	} else if *flagDNSTransport != "" {
-		err = errors.New("invalid -dns-transport argument")
+	} else if urlDNSServer.Scheme == "udp" {
+		err = client.ConfigureDNS("udp", urlDNSServer.Host)
+	} else if urlDNSServer.Scheme == "tcp" {
+		err = client.ConfigureDNS("tcp", urlDNSServer.Host)
+	} else if urlDNSServer.Scheme == "dot" {
+		err = client.ConfigureDNS("dot", urlDNSServer.Host)
+	} else if urlDNSServer.Scheme == "https" {
+		err = client.ConfigureDNS("doh", urlDNSServer.String())
+	} else if *flagDNSServer != "" {
+		err = errors.New("invalid -dns-server argument")
 	}
-	rtx.PanicOnError(err, "cannot configure DNS transport")
+	rtx.PanicOnError(err, "cannot configure DNS server")
 	err = client.ForceSpecificSNI(*flagSNI)
 	rtx.PanicOnError(err, "cannot force specific SNI")
 	err = fetch(client.HTTPClient, *flagURL)

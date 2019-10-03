@@ -65,6 +65,16 @@ func TestIntegrationNewResolver(t *testing.T) {
 	}
 
 	resolver, err = dnsconf.NewResolver(
+		d, "dot", "1.1.1.1:853",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolver == nil {
+		t.Fatal("expected non-nil resolver here")
+	}
+
+	resolver, err = dnsconf.NewResolver(
 		d, "doh", "https://cloudflare-dns.com/dns-query",
 	)
 	if err != nil {

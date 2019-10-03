@@ -20,9 +20,9 @@ func TestHelp(t *testing.T) {
 }
 
 func TestSystemTransport(t *testing.T) {
-	*flagDNSTransport = "system"
+	*flagDNSServer = "system:///"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -31,9 +31,9 @@ func TestSystemTransport(t *testing.T) {
 }
 
 func TestGoDNSTransport(t *testing.T) {
-	*flagDNSTransport = "godns"
+	*flagDNSServer = "godns:///"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -42,9 +42,9 @@ func TestGoDNSTransport(t *testing.T) {
 }
 
 func TestUDPTransport(t *testing.T) {
-	*flagDNSTransport = "udp"
+	*flagDNSServer = "udp://1.1.1.1:53"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -53,9 +53,9 @@ func TestUDPTransport(t *testing.T) {
 }
 
 func TestTCPTransport(t *testing.T) {
-	*flagDNSTransport = "tcp"
+	*flagDNSServer = "tcp://8.8.8.8:53"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -64,9 +64,9 @@ func TestTCPTransport(t *testing.T) {
 }
 
 func TestDoTTransport(t *testing.T) {
-	*flagDNSTransport = "dot"
+	*flagDNSServer = "dot://dns.quad9.net"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -75,9 +75,9 @@ func TestDoTTransport(t *testing.T) {
 }
 
 func TestDoHTransport(t *testing.T) {
-	*flagDNSTransport = "doh"
+	*flagDNSServer = "https://cloudflare-dns.com/dns-query"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err != nil {
@@ -86,9 +86,20 @@ func TestDoHTransport(t *testing.T) {
 }
 
 func TestInvalidTransport(t *testing.T) {
-	*flagDNSTransport = "invalid"
+	*flagDNSServer = "invalid"
 	defer func() {
-		*flagDNSTransport = ""
+		*flagDNSServer = ""
+	}()
+	err := mainfunc()
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestParseError(t *testing.T) {
+	*flagDNSServer = "inva@lid://"
+	defer func() {
+		*flagDNSServer = ""
 	}()
 	err := mainfunc()
 	if err == nil {
