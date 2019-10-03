@@ -39,6 +39,7 @@ import (
 
 var (
 	flagDNSTransport = flag.String("dns-transport", "", "DNS transport to use")
+	flagSNI          = flag.String("sni", "", "Force specific SNI")
 	flagURL          = flag.String("url", "https://ooni.io/", "URL to fetch")
 )
 
@@ -49,10 +50,15 @@ func main() {
 }
 
 func mainfunc() (err error) {
+	defer func() {
+		if recover() != nil {
+			// JUST KNOW WE ARRIVED HERE
+		}
+	}()
 	client := httpx.NewClient(handlers.StdoutHandler)
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
-		fmt.Printf("Usage: dnsclient [flags]\n")
+		fmt.Printf("Usage: httpclient [flags]\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
 		fmt.Printf("%s\n", "  ./httpclient -dns-transport system ...")
@@ -80,16 +86,19 @@ func mainfunc() (err error) {
 	} else if *flagDNSTransport != "" {
 		err = errors.New("invalid -dns-transport argument")
 	}
-	if err == nil {
-		fetch(client.HTTPClient, *flagURL)
-	}
+	rtx.PanicOnError(err, "cannot configure DNS transport")
+	err = client.ForceSpecificSNI(*flagSNI)
+	rtx.PanicOnError(err, "cannot force specific SNI")
+	err = fetch(client.HTTPClient, *flagURL)
+	rtx.PanicOnError(err, "cannot fetch specific URL")
 	return
 }
 
-func fetch(client *http.Client, url string) {
+func fetch(client *http.Client, url string) (err error) {
 	resp, err := client.Get(url)
 	if err == nil {
-		ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
 	}
+	return
 }

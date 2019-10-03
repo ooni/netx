@@ -33,3 +33,21 @@ func TestSetCABundle(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestForceSpecificSNI(t *testing.T) {
+	client := httpx.NewClient(handlers.NoHandler)
+	err := client.ForceSpecificSNI("www.facebook.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.HTTPClient.Get("https://www.google.com")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	// TODO(bassosimone): how to unwrap the error in Go < 1.13? Anyway we are
+	// already testing we're getting the right error in netx_test.go.
+	t.Log(err)
+	if resp != nil {
+		t.Fatal("expected a nil response here")
+	}
+}

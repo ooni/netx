@@ -229,3 +229,9 @@ func (d *Dialer) SetCABundle(path string) error {
 	d.TLSConfig.RootCAs = pool
 	return nil
 }
+
+// ForceSpecificSNI forces using a specific SNI.
+func (d *Dialer) ForceSpecificSNI(sni string) error {
+	d.TLSConfig.ServerName = sni
+	return nil
+}
