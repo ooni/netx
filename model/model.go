@@ -106,7 +106,12 @@ type HTTPResponseHeadersDoneEvent struct {
 }
 
 // HTTPResponseBodyPartEvent is emitted after we have received
-// a part of the response body, or an error reading it.
+// a part of the response body, or an error reading it. Note that
+// bytes read here does not necessarily match bytes returned by
+// ReadEvent because of (1) transparent gzip decompression by Go,
+// (2) HTTP overhead (headers and chunked body), (3) TLS. This
+// is the reason why we also want to record the error here rather
+// than just recording the error in ReadEvent.
 type HTTPResponseBodyPartEvent struct {
 	Error         error
 	Data          []byte
