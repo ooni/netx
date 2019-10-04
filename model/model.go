@@ -105,6 +105,17 @@ type HTTPResponseHeadersDoneEvent struct {
 	TransactionID int64
 }
 
+// HTTPResponseBodyPartEvent is emitted after we have received
+// a part of the response body, or an error reading it.
+type HTTPResponseBodyPartEvent struct {
+	Error         error
+	Data          []byte
+	Duration      time.Duration
+	NumBytes      int64
+	Time          time.Duration
+	TransactionID int64
+}
+
 // HTTPResponseDoneEvent is emitted after we have received the body.
 type HTTPResponseDoneEvent struct {
 	Time          time.Duration
@@ -184,6 +195,7 @@ type Measurement struct {
 	HTTPRequestDone         *HTTPRequestDoneEvent         `json:",omitempty"`
 	HTTPResponseStart       *HTTPResponseStartEvent       `json:",omitempty"`
 	HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent `json:",omitempty"`
+	HTTPResponseBodyPart    *HTTPResponseBodyPartEvent    `json:",omitempty"`
 	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
 	Read                    *ReadEvent                    `json:",omitempty"`
 	Resolve                 *ResolveEvent                 `json:",omitempty"`

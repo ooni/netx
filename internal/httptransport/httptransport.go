@@ -132,6 +132,25 @@ type bodyWrapper struct {
 	tid int64
 }
 
+func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
+	start := time.Now()
+	n, err = bw.ReadCloser.Read(b)
+	stop := time.Now()
+	bw.t.Handler.OnMeasurement(model.Measurement{
+		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
+			// "Read reads up to len(p) bytes into p. It returns the number of
+			// bytes read (0 <= n <= len(p)) and any error encountered."
+			Data:          b[:n],
+			Duration:      stop.Sub(start),
+			Error:         err,
+			NumBytes:      int64(n),
+			Time:          stop.Sub(bw.t.Beginning),
+			TransactionID: bw.tid,
+		},
+	})
+	return
+}
+
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
 	bw.t.Handler.OnMeasurement(model.Measurement{
