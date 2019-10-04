@@ -5,6 +5,7 @@ package httpx
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ooni/netx/internal/dialerapi"
@@ -62,6 +63,11 @@ func (t *Transport) SetCABundle(path string) error {
 // ForceSpecificSNI forces using a specific SNI.
 func (t *Transport) ForceSpecificSNI(sni string) error {
 	return t.dialer.ForceSpecificSNI(sni)
+}
+
+// Set Proxy
+func (t *Transport) SetProxy(url *url.URL) {
+	t.transport.Transport.Proxy = http.ProxyURL(url)
 }
 
 // Client is a replacement for http.Client.
