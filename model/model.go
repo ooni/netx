@@ -105,6 +105,22 @@ type HTTPResponseHeadersDoneEvent struct {
 	TransactionID int64
 }
 
+// HTTPResponseBodyPartEvent is emitted after we have received
+// a part of the response body, or an error reading it. Note that
+// bytes read here does not necessarily match bytes returned by
+// ReadEvent because of (1) transparent gzip decompression by Go,
+// (2) HTTP overhead (headers and chunked body), (3) TLS. This
+// is the reason why we also want to record the error here rather
+// than just recording the error in ReadEvent.
+type HTTPResponseBodyPartEvent struct {
+	Error         error
+	Data          []byte
+	Duration      time.Duration
+	NumBytes      int64
+	Time          time.Duration
+	TransactionID int64
+}
+
 // HTTPResponseDoneEvent is emitted after we have received the body.
 type HTTPResponseDoneEvent struct {
 	Time          time.Duration
@@ -184,6 +200,7 @@ type Measurement struct {
 	HTTPRequestDone         *HTTPRequestDoneEvent         `json:",omitempty"`
 	HTTPResponseStart       *HTTPResponseStartEvent       `json:",omitempty"`
 	HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent `json:",omitempty"`
+	HTTPResponseBodyPart    *HTTPResponseBodyPartEvent    `json:",omitempty"`
 	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
 	Read                    *ReadEvent                    `json:",omitempty"`
 	Resolve                 *ResolveEvent                 `json:",omitempty"`

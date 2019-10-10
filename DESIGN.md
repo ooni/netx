@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-09-30   |
+| Last-Updated | 2019-10-04   |
 | Status       | approved     |
 
 ## Introduction
@@ -111,9 +111,9 @@ then use our replacements, which are compatible with
 standard library mechanisms to perform their task,
 e.g. fetching a URL. After the measurement task
 is completed, the experiment code will include the
-low-level events into the measurement result object, and will walk
-through the stream of events to determine in a more
-precise way what could have gone wrong.
+low-level events into the measurement result object,
+and will walk through the stream of events to determine
+in a more precise way what could have gone wrong.
 
 ## Implementation
 
@@ -175,6 +175,7 @@ type Measurement struct {
     HTTPRequestDone         *HTTPRequestDoneEvent
     HTTPResponseStart       *HTTPResponseStartEvent
     HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent
+    HTTPResponseBodyPart    *HTTPResponseBodyPartEvent
     HTTPResponseDone        *HTTPResponseDoneEvent
     Read                    *ReadEvent
     Resolve                 *ResolveEvent
@@ -219,7 +220,10 @@ byte of the HTTP response
 6. `HTTPResponseHeadersDoneEvent`, indicating when we have received the
 response headers, and containing headers and status code
 
-7. `HTTPResponseDoneEvent`, indicating when we have received the
+7. `HTTPResponseBodyPartEvent`, indicating when we have received a
+part of the response body, or an error reading it
+
+8. `HTTPResponseDoneEvent`, indicating when we have received the
 response body
 
 Every event will include at the minimum this field:
@@ -463,7 +467,7 @@ as described below.
 
 This package will define an interface compatible with the
 `net.Resolver` struct, such that its methods can be used
-as replacaments for the golang stdlib `net.Resolver` methods:
+as replacements for the golang stdlib `net.Resolver` methods:
 
 ```Go
 type Client interface {
