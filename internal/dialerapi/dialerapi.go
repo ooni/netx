@@ -49,11 +49,9 @@ type Dialer struct {
 // NewDialer creates a new Dialer.
 func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 	d = &Dialer{
-		Dialer: dialerbase.Dialer{
-			Beginning: beginning,
-			Dialer:    net.Dialer{},
-			Handler:   handler,
-		},
+		Dialer: dialerbase.NewDialer(
+			beginning, handler,
+		),
 		Handler:               handler,
 		TLSConfig:             &tls.Config{},
 		StartTLSHandshakeHook: func(net.Conn) {},
