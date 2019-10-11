@@ -80,8 +80,15 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 		t.dialer.LookupHost = resolver.LookupHost
 		return nil
 	}
+	if network == "udp" {
+		resolver := oodns.NewClient(oodns.NewTransportUDP(
+			address, dialercontext.NewDialer(t.transport.Beginning).DialContext,
+		))
+		t.dialer.LookupHost = resolver.LookupHost
+		return nil
+	}
 	// TODO(bassosimone): here we should re-enable all DNS transports.
-	if network == "dot" || network == "tcp" || network == "udp" {
+	if network == "dot" || network == "tcp" {
 		return nil // laying!
 	}
 	return errors.New("not implemented")

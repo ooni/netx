@@ -11,7 +11,7 @@ import (
 	"github.com/ooni/netx/dnsx"
 )
 
-func TestIntegrationSuccess(t *testing.T) {
+func TestIntegrationDoHSuccess(t *testing.T) {
 	transport := NewTransportDoH(
 		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
 	)

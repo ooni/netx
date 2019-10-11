@@ -1,4 +1,6 @@
 // Package dnsoverudp implements DNS over UDP.
+//
+// This package will be eventually replaced by oodns.
 package dnsoverudp
 
 import (
