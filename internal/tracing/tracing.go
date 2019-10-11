@@ -3,6 +3,7 @@ package tracing
 
 import (
 	"context"
+	"sync"
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/model"
@@ -54,4 +55,22 @@ func Compose(first, second model.Handler) model.Handler {
 		handler: first,
 		next:    second,
 	}
+}
+
+// Saver is a handler that saves all events.
+type Saver struct {
+	Measurements []model.Measurement
+	mutex        sync.Mutex
+}
+
+// NewSaver creates a new Saver instance.
+func NewSaver() *Saver {
+	return &Saver{}
+}
+
+// OnMeasurement handles a single measurement.
+func (s *Saver) OnMeasurement(m model.Measurement) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	s.Measurements = append(s.Measurements, m)
 }

@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
 )
@@ -49,6 +50,9 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	handler := tracing.Compose(
+		t.Handler, tracing.ContextHandler(req.Context()),
+	)
 	outmethod := req.Method
 	outurl := req.URL.String()
 	tid := atomic.AddInt64(&nextTransactionID, 1)
@@ -56,7 +60,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
-			t.Handler.OnMeasurement(model.Measurement{
+			handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
 					LocalAddress:  info.Conn.LocalAddr().String(),
 					Network:       info.Conn.LocalAddr().Network(),
@@ -83,10 +87,10 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 				},
 			}
 			mutex.Unlock()
-			t.Handler.OnMeasurement(m)
+			handler.OnMeasurement(m)
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
-			t.Handler.OnMeasurement(model.Measurement{
+			handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
 					Time:          time.Now().Sub(t.Beginning),
 					TransactionID: tid,
@@ -94,7 +98,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 			})
 		},
 		GotFirstResponseByte: func() {
-			t.Handler.OnMeasurement(model.Measurement{
+			handler.OnMeasurement(model.Measurement{
 				HTTPResponseStart: &model.HTTPResponseStartEvent{
 					Time:          time.Now().Sub(t.Beginning),
 					TransactionID: tid,
@@ -107,7 +111,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	if err != nil {
 		return
 	}
-	t.Handler.OnMeasurement(model.Measurement{
+	handler.OnMeasurement(model.Measurement{
 		HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
 			Headers:       resp.Header,
 			StatusCode:    int64(resp.StatusCode),
@@ -120,6 +124,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	//  a zero-length body." (from the docs)
 	resp.Body = &bodyWrapper{
 		ReadCloser: resp.Body,
+		handler:    handler,
 		t:          t,
 		tid:        tid,
 	}
@@ -128,15 +133,16 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 
 type bodyWrapper struct {
 	io.ReadCloser
-	t   *Transport
-	tid int64
+	handler model.Handler
+	t       *Transport
+	tid     int64
 }
 
 func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = bw.ReadCloser.Read(b)
 	stop := time.Now()
-	bw.t.Handler.OnMeasurement(model.Measurement{
+	bw.handler.OnMeasurement(model.Measurement{
 		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
 			// "Read reads up to len(p) bytes into p. It returns the number of
 			// bytes read (0 <= n <= len(p)) and any error encountered."
@@ -153,7 +159,7 @@ func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
-	bw.t.Handler.OnMeasurement(model.Measurement{
+	bw.handler.OnMeasurement(model.Measurement{
 		HTTPResponseDone: &model.HTTPResponseDoneEvent{
 			Time:          time.Now().Sub(bw.t.Beginning),
 			TransactionID: bw.tid,

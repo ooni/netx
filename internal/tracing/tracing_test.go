@@ -87,3 +87,26 @@ func TestCompose(t *testing.T) {
 		t.Fatal("not written on third handler")
 	}
 }
+
+func TestSaver(t *testing.T) {
+	saver := tracing.NewSaver()
+	saver.OnMeasurement(model.Measurement{
+		Resolve: &model.ResolveEvent{
+			ConnID: 17,
+		},
+	})
+	saver.OnMeasurement(model.Measurement{
+		Resolve: &model.ResolveEvent{
+			ConnID: 18,
+		},
+	})
+	if len(saver.Measurements) != 2 {
+		t.Fatal("unexpected number of entries")
+	}
+	if saver.Measurements[0].Resolve.ConnID != 17 {
+		t.Fatal("first measurement is wrong")
+	}
+	if saver.Measurements[1].Resolve.ConnID != 18 {
+		t.Fatal("second measurement is wrong")
+	}
+}
