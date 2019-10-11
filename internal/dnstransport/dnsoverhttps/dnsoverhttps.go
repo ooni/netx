@@ -1,4 +1,6 @@
 // Package dnsoverhttps implements DNS over HTTPS.
+//
+// This package will eventually be replaced by code in oodns.
 package dnsoverhttps
 
 import (

@@ -1,69 +1,58 @@
-package oodns_test
+package oodns
 
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
-	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
-	"github.com/ooni/netx/internal/oodns"
 )
 
 func TestLookupAddr(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
 	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if addrs != nil {
+		t.Fatal("expected nil addrs")
 	}
 }
 
 func TestLookupCNAME(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	addrs, err := client.LookupCNAME(context.Background(), "www.ooni.io")
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	addr, err := client.LookupCNAME(context.Background(), "www.ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if addr != "" {
+		t.Fatal("expected empty string")
 	}
 }
 
 func TestLookupHost(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
 	addrs, err := client.LookupHost(context.Background(), "www.google.com")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if addrs == nil {
+		t.Fatal("expected non nil addrs")
 	}
 }
 
 func TestLookupNonexistent(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
 	addrs, err := client.LookupHost(context.Background(), "nonexistent.ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -74,42 +63,36 @@ func TestLookupNonexistent(t *testing.T) {
 }
 
 func TestLookupMX(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	addrs, err := client.LookupMX(context.Background(), "ooni.io")
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	entries, err := client.LookupMX(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if entries != nil {
+		t.Fatal("expected nil entries")
 	}
 }
 
 func TestLookupNS(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	addrs, err := client.LookupNS(context.Background(), "ooni.io")
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	entries, err := client.LookupNS(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if entries != nil {
+		t.Fatal("expected nil entries")
 	}
 }
 
 func TestRoundTripExPackFailure(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	_, err := client.RoundTripEx(
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	_, err := client.roundTripEx(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, errors.New("mocked error")
@@ -127,12 +110,10 @@ func TestRoundTripExPackFailure(t *testing.T) {
 }
 
 func TestRoundTripExRoundTripFailure(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	_, err := client.RoundTripEx(
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	_, err := client.roundTripEx(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, nil
@@ -150,12 +131,10 @@ func TestRoundTripExRoundTripFailure(t *testing.T) {
 }
 
 func TestRoundTripExUnpackFailure(t *testing.T) {
-	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
-	)
-	_, err := client.RoundTripEx(
+	client := NewClient(NewTransportDoH(
+		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+	))
+	_, err := client.roundTripEx(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, nil
@@ -173,7 +152,7 @@ func TestRoundTripExUnpackFailure(t *testing.T) {
 }
 
 func TestLookupHostResultNoName(t *testing.T) {
-	addrs, err := oodns.LookupHostResult(nil, nil, nil)
+	addrs, err := lookupHostResult(nil, nil, nil)
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
@@ -183,7 +162,7 @@ func TestLookupHostResultNoName(t *testing.T) {
 }
 
 func TestLookupHostResultAAAAError(t *testing.T) {
-	addrs, err := oodns.LookupHostResult(nil, nil, errors.New("mocked error"))
+	addrs, err := lookupHostResult(nil, nil, errors.New("mocked error"))
 	if err == nil {
 		t.Fatal("expected an error here")
 	}

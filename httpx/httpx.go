@@ -4,11 +4,14 @@
 package httpx
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/ooni/netx/internal/dialercontext"
 	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/oodns"
 	"github.com/ooni/netx/internal/tlsx"
 	"github.com/ooni/netx/model"
 )
@@ -47,10 +50,25 @@ func (t *Transport) CloseIdleConnections() {
 	t.transport.CloseIdleConnections()
 }
 
-// ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
+// ConfigureDNS behaves exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
+	if network == "system" {
+		t.dialer.LookupHost = (&net.Resolver{PreferGo: false}).LookupHost
+		return nil
+	}
+	if network == "doh" {
+		child := NewTransport(t.transport.Beginning, t.transport.Handler)
+		resolver := oodns.NewClient(oodns.NewTransportDoH(&http.Client{
+			Transport: child,
+		}, address))
+		t.dialer.LookupHost = resolver.LookupHost
+		return nil
+	}
 	// TODO(bassosimone): here we should re-enable all DNS transports.
-	return nil
+	if network == "dot" || network == "tcp" || network == "udp" {
+		return nil // laying!
+	}
+	return errors.New("not implemented")
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

@@ -1,11 +1,6 @@
 // Package oodns is OONI's DNS client.
 //
-// This is currently experimental code that is not wired into the
-// rest of the code. We want to understand if we can always use the
-// github.com/miekg/dns client to implement dnsx.Client.
-//
-// If that is possible, then maybe we can fully replace the current
-// situation in which we monkey patch Go's +netgo DNS client.
+// This package will eventually replace godns, which is a hack.
 package oodns
 
 import (
@@ -15,23 +10,18 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
-	"github.com/ooni/netx/model"
 )
 
 // Client is OONI's DNS client. It is a simplistic client where we
 // manually create and submit queries. It can use all the transports
 // for DNS supported by this library, however.
 type Client struct {
-	handler   model.Handler
 	transport dnsx.RoundTripper
 }
 
 // NewClient creates a new OONI DNS client instance.
-func NewClient(handler model.Handler, t dnsx.RoundTripper) *Client {
-	return &Client{
-		handler:   handler,
-		transport: t,
-	}
+func NewClient(t dnsx.RoundTripper) *Client {
+	return &Client{transport: t}
 }
 
 var errNotImpl = errors.New("Not implemented")
@@ -80,12 +70,10 @@ func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, err
 			}
 		}
 	}
-	return LookupHostResult(addrs, errA, errAAAA)
+	return lookupHostResult(addrs, errA, errAAAA)
 }
 
-// LookupHostResult computes the final result of LookupHost. You generally
-// only care about this function when writing tests.
-func LookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
+func lookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
 	if len(addrs) > 0 {
 		return addrs, nil
 	}
@@ -122,7 +110,7 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 func (c *Client) roundTrip(
 	ctx context.Context, query *dns.Msg,
 ) (reply *dns.Msg, err error) {
-	return c.RoundTripEx(
+	return c.roundTripEx(
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
 		},
@@ -138,9 +126,7 @@ func (c *Client) roundTrip(
 	)
 }
 
-// RoundTripEx is a mockable implementation of the piece
-// of code that performs the DNS round trip.
-func (c *Client) RoundTripEx(
+func (c *Client) roundTripEx(
 	ctx context.Context,
 	query *dns.Msg,
 	pack func(msg *dns.Msg) ([]byte, error),

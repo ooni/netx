@@ -25,6 +25,8 @@
 // over TCP. However, the approach of faking a net.PacketConn is
 // superior because each Read/Write transfers a complete DNS
 // message. So, we don't to deal with DNS's TCP framing.
+//
+// This package will eventually be replaced by oodns.
 package godns
 
 import (
