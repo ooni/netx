@@ -3,6 +3,7 @@
 package httptransport
 
 import (
+	"crypto/tls"
 	"io"
 	"net/http"
 	"net/http/httptrace"
@@ -10,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ooni/netx/internal/tlsx"
 	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
@@ -57,8 +59,27 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	outurl := req.URL.String()
 	tid := atomic.AddInt64(&nextTransactionID, 1)
 	outheaders := http.Header{}
+	var tlsHandshakeStart time.Time
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
+		TLSHandshakeStart: func() {
+			mutex.Lock()
+			defer mutex.Unlock()
+			tlsHandshakeStart = time.Now()
+		},
+		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+			now := time.Now()
+			mutex.Lock()
+			defer mutex.Unlock()
+			tlsx.EmitTLSHandshakeEvent(
+				handler,
+				state,
+				now.Sub(t.Beginning),
+				now.Sub(tlsHandshakeStart),
+				err,
+				t.TLSClientConfig,
+			)
+		},
 		GotConn: func(info httptrace.GotConnInfo) {
 			handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{

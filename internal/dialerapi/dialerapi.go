@@ -5,7 +5,6 @@ package dialerapi
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"net"
 	"time"
@@ -182,25 +181,14 @@ func (d *Dialer) tlsHandshake(
 	err = tc.Handshake()
 	stop := time.Now()
 	state := tc.ConnectionState()
-	d.Handler.OnMeasurement(model.Measurement{
-		TLSHandshake: &model.TLSHandshakeEvent{
-			Config: model.TLSConfig{
-				NextProtos: config.NextProtos,
-				ServerName: config.ServerName,
-			},
-			ConnectionState: model.TLSConnectionState{
-				CipherSuite:                state.CipherSuite,
-				NegotiatedProtocol:         state.NegotiatedProtocol,
-				NegotiatedProtocolIsMutual: state.NegotiatedProtocolIsMutual,
-				PeerCertificates:           simplifyCerts(state.PeerCertificates),
-				Version:                    state.Version,
-			},
-			Duration: stop.Sub(start),
-			Error:    err,
-			ConnID:   conn.ID,
-			Time:     stop.Sub(conn.Beginning),
-		},
-	})
+	tlsx.EmitTLSHandshakeEvent(
+		d.Handler,
+		state,
+		stop.Sub(conn.Beginning),
+		stop.Sub(start),
+		err,
+		config,
+	)
 	if err != nil {
 		tc.Close()
 		return nil, err
@@ -211,15 +199,6 @@ func (d *Dialer) tlsHandshake(
 	// it is fine to ignore the return value of SetDeadline.
 	tc.SetDeadline(time.Time{})
 	return tc, nil
-}
-
-func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
-	for _, cert := range in {
-		out = append(out, model.X509Certificate{
-			Data: cert.Raw,
-		})
-	}
-	return
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle.
