@@ -25,7 +25,7 @@
 package main
 
 import (
-	"encoding/base64"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -38,6 +38,7 @@ import (
 	"github.com/ooni/netx/cmd/common"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
+	"github.com/ooni/netx/httpx/httptracex"
 )
 
 var (
@@ -58,7 +59,7 @@ func mainfunc() (err error) {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	client := httpx.NewClient(handlers.StdoutHandler)
+	client := httpx.NewClient(handlers.NoHandler)
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: httpclient [flags] -url <url>\n")
@@ -91,6 +92,9 @@ func mainfunc() (err error) {
 		return nil
 	}
 
+	ctx := context.Background()
+	ctx = httptracex.ContextWithHandler(ctx, handlers.StdoutHandler)
+
 	urlDNSServer, err := url.Parse(*flagDNSServer)
 	rtx.PanicOnError(err, "-dns-server argument is not a valid URL")
 
@@ -112,24 +116,23 @@ func mainfunc() (err error) {
 	rtx.PanicOnError(err, "cannot configure DNS server")
 	err = client.ForceSpecificSNI(*flagSNI)
 	rtx.PanicOnError(err, "cannot force specific SNI")
-	err = fetch(client.HTTPClient, *flagURL)
+	err = fetch(ctx, client.HTTPClient, *flagURL)
 	rtx.PanicOnError(err, "cannot fetch specific URL")
 	return
 }
 
-func fetch(client *http.Client, url string) (err error) {
+func fetch(ctx context.Context, client *http.Client, url string) (err error) {
 	defer func() {
 		if recover() != nil {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	resp, err := client.Get(url)
-	rtx.PanicOnError(err, "client.Get failed")
+	req, err := http.NewRequest("GET", url, nil)
+	rtx.PanicOnError(err, "http.NewRequest failed")
+	resp, err := client.Do(req.WithContext(ctx))
+	rtx.PanicOnError(err, "client.Do failed")
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	rtx.PanicOnError(err, "ioutil.ReadAll failed")
-	fmt.Printf(
-		`{"_HTTPResponseBody": "%s"}`+"\n", base64.StdEncoding.EncodeToString(data),
-	)
 	return
 }
