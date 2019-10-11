@@ -4,6 +4,7 @@ package dnsovertcp
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -97,7 +98,15 @@ func (t *Transport) initialize() (err error) {
 }
 
 // RoundTrip sends a request and receives a response.
-func (t *Transport) RoundTrip(query []byte) ([]byte, error) {
+func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+	return t.RoundTripContext(context.Background(), query)
+}
+
+// RoundTripContext is like RoundTrip but with context.
+func (t *Transport) RoundTripContext(
+	ctx context.Context, query []byte,
+) ([]byte, error) {
+	// TODO(bassosimone): this function does not honour the context.
 	var (
 		conn net.Conn
 		err  error

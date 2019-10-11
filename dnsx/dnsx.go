@@ -29,4 +29,8 @@ type Client interface {
 type RoundTripper interface {
 	// RoundTrip sends a DNS query and receives the reply.
 	RoundTrip(query []byte) (reply []byte, err error)
+
+	// RoundTripContext is like RoundTrip except that the context allows
+	// to interrupt the pending operation at any moment.
+	RoundTripContext(ctx context.Context, query []byte) (reply []byte, err error)
 }

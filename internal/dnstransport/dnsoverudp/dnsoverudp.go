@@ -46,10 +46,16 @@ func NewTransport(beginning time.Time, handler model.Handler, address string) *T
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+	return t.RoundTripContext(context.Background(), query)
+}
+
+// RoundTripContext is like RoundTrip but with context.
+func (t *Transport) RoundTripContext(
+	ctx context.Context, query []byte,
+) (reply []byte, err error) {
+	// TODO(bassosimone): this function does not honour the context.
 	var conn net.Conn
-	conn, _, _, err = t.DialContextEx(
-		context.Background(), "udp", t.Address, true,
-	)
+	conn, _, _, err = t.DialContextEx(ctx, "udp", t.Address, true)
 	if err != nil {
 		return
 	}

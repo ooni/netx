@@ -50,8 +50,8 @@ func (c *Client) LookupCNAME(ctx context.Context, host string) (cname string, er
 
 // LookupHost returns the IP addresses of a host
 func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, error) {
-	// TODO(ooni): wrap errors as net.DNSError
-	// TODO(ooni): emit DNS messages
+	// TODO(bassosimone): wrap errors as net.DNSError
+	// TODO(bassosimone): emit DNS messages
 	var addrs []string
 	var reply *dns.Msg
 	reply, errA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
@@ -119,13 +119,18 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 	return
 }
 
-func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
+func (c *Client) roundTrip(
+	ctx context.Context, query *dns.Msg,
+) (reply *dns.Msg, err error) {
 	return c.RoundTripEx(
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
 		},
 		func(t dnsx.RoundTripper, query []byte) (reply []byte, err error) {
-			return t.RoundTrip(query)
+			// Implementation note: if there is a measuring context bound to this
+			// context, passing the context to the round tripper gives it a chance
+			// to generate DNS (and possibly other) events.
+			return t.RoundTripContext(ctx, query)
 		},
 		func(msg *dns.Msg, data []byte) (err error) {
 			return msg.Unpack(data)
@@ -142,7 +147,6 @@ func (c *Client) RoundTripEx(
 	roundTrip func(t dnsx.RoundTripper, query []byte) (reply []byte, err error),
 	unpack func(msg *dns.Msg, data []byte) (err error),
 ) (reply *dns.Msg, err error) {
-	// TODO(ooni): we are ignoring the context here
 	var (
 		querydata []byte
 		replydata []byte
