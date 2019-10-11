@@ -9,19 +9,20 @@ import (
 	"errors"
 	"io/ioutil"
 	"net"
-	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerbase"
+	"github.com/ooni/netx/internal/dialercontext"
 	"github.com/ooni/netx/model"
 )
 
-var nextConnID int64
+// TODO(bassosimone): continue to refactor dialerapi such that it
+// becomes a tiny layer on top of dialercontext.
 
 // NextConnID returns the next connection ID.
 func NextConnID() int64 {
-	return atomic.AddInt64(&nextConnID, 1)
+	return dialercontext.NextConnID()
 }
 
 // LookupHostFunc is the type of the function used to lookup
