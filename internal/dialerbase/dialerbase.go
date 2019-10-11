@@ -21,8 +21,8 @@ type Dialer struct {
 }
 
 // NewDialer creates a new base dialer
-func NewDialer(beginning time.Time, handler model.Handler) Dialer {
-	return Dialer{
+func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
+	return &Dialer{
 		Dialer:    net.Dialer{},
 		Beginning: beginning,
 		Handler:   handler,
