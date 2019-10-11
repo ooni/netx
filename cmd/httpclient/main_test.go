@@ -31,7 +31,7 @@ func TestSystemTransport(t *testing.T) {
 }
 
 func TestGoDNSTransport(t *testing.T) {
-	*flagDNSServer = "godns:///"
+	*flagDNSServer = "netgo:///"
 	defer func() {
 		*flagDNSServer = ""
 	}()

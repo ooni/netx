@@ -112,6 +112,24 @@ func TestIntegrationUDP(t *testing.T) {
 	}
 }
 
+func TestIntegrationNetgo(t *testing.T) {
+	client := httpx.NewClient(handlers.NoHandler)
+	defer client.Transport.CloseIdleConnections()
+	err := client.ConfigureDNS("netgo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.HTTPClient.Get("https://www.google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestIntegrationInvalidDNS(t *testing.T) {
 	client := httpx.NewClient(handlers.NoHandler)
 	defer client.Transport.CloseIdleConnections()

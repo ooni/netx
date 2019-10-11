@@ -4,15 +4,18 @@
 package httpx
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialercontext"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/oodns"
 	"github.com/ooni/netx/internal/tlsx"
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
@@ -54,6 +57,19 @@ func (t *Transport) CloseIdleConnections() {
 func (t *Transport) ConfigureDNS(network, address string) error {
 	if network == "system" {
 		t.dialer.LookupHost = (&net.Resolver{PreferGo: false}).LookupHost
+		return nil
+	}
+	if network == "netgo" {
+		t.dialer.LookupHost = (&net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				conn, _, _, err := t.dialer.DialContextEx(
+					ctx, tracing.ContextHandler(ctx), network, address, false,
+				)
+				// convince Go this is really a net.PacketConn
+				return &connx.DNSMeasuringConn{MeasuringConn: *conn}, err
+			},
+		}).LookupHost
 		return nil
 	}
 	if network == "doh" {

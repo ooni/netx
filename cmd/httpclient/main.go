@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//   httpclient -dns-transport system|godns|tcp|udp|dot|doh -url <URL>
+//   httpclient -dns-transport system|netgo|tcp|udp|dot|doh -url <URL>
 //
 //   httpclient -help
 //
@@ -16,7 +16,7 @@
 // Examples:
 //
 //   ./httpclient -dns-server system:/// -url https://ooni.org/ ...
-//   ./httpclient -dns-server godns:/// -url https://ooni.org/ ...
+//   ./httpclient -dns-server netgo:/// -url https://ooni.org/ ...
 //   ./httpclient -dns-server https://cloudflare-dns.com/dns-query -url https://ooni.org/ ...
 //   ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...
 //   ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...
@@ -65,28 +65,13 @@ func mainfunc() (err error) {
 		fmt.Printf("Usage: httpclient [flags] -url <url>\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
-		fmt.Printf("%s\n",
-			"  ./httpclient system:/// -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server godns:/// -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server https://cloudflare-dns.com/dns-query "+
-				"-url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...",
-		)
+		fmt.Printf("%s\n", "  ./httpclient -dns-server system:/// ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server netgo:/// ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server https://cloudflare-dns.com/dns-query ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server dot://dns.quad9.net ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server dot://1.1.1.1:853 ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server tcp://8.8.8.8:53 ...")
+		fmt.Printf("%s\n", "  ./httpclient -dns-server udp://1.1.1.1:53 ...")
 		fmt.Printf("\nWe'll select a suitable backend for each transport. Note\n")
 		fmt.Printf("that this only works on Unix.\n")
 		return nil
@@ -100,8 +85,8 @@ func mainfunc() (err error) {
 
 	if urlDNSServer.Scheme == "system" {
 		err = client.ConfigureDNS("system", "")
-	} else if urlDNSServer.Scheme == "godns" {
-		err = client.ConfigureDNS("godns", "")
+	} else if urlDNSServer.Scheme == "netgo" {
+		err = client.ConfigureDNS("netgo", "")
 	} else if urlDNSServer.Scheme == "udp" {
 		err = client.ConfigureDNS("udp", urlDNSServer.Host)
 	} else if urlDNSServer.Scheme == "tcp" {
