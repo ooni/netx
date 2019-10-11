@@ -20,8 +20,8 @@ type Dialer struct {
 }
 
 // NewDialer creates a new base dialer
-func NewDialer(beginning time.Time) Dialer {
-	return Dialer{
+func NewDialer(beginning time.Time) *Dialer {
+	return &Dialer{
 		Dialer:    net.Dialer{},
 		Beginning: beginning,
 	}
