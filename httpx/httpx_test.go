@@ -26,11 +26,19 @@ func TestIntegration(t *testing.T) {
 	}
 }
 
-func TestSetCABundle(t *testing.T) {
+func TestSetCABundleExistent(t *testing.T) {
 	client := httpx.NewClient(handlers.NoHandler)
 	err := client.SetCABundle("../testdata/cacert.pem")
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSetCABundleNonexistent(t *testing.T) {
+	client := httpx.NewClient(handlers.NoHandler)
+	err := client.SetCABundle("../testdata/cacert-nonexistent.pem")
+	if err == nil {
+		t.Fatal("expected an error here")
 	}
 }
 

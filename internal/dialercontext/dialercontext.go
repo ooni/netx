@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerbase"
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
@@ -62,7 +62,9 @@ func NewDialer(beginning time.Time) (d *Dialer) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
-	return d.DialContextHandler(ctx, handlers.NoHandler, network, address)
+	return d.DialContextHandler(
+		ctx, tracing.ContextHandler(ctx), network, address,
+	)
 }
 
 // DialContextHandler is like DialContext but we also optionally

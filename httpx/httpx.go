@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ooni/netx/internal/dialerapi"
-	"github.com/ooni/netx/internal/dnsconf"
+	"github.com/ooni/netx/internal/dialercontext"
 	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/tlsx"
 	"github.com/ooni/netx/model"
 )
 
 // Transport performs measurements during HTTP round trips.
 type Transport struct {
-	dialer    *dialerapi.Dialer
+	dialer    *dialercontext.Dialer
 	transport *httptransport.Transport
 }
 
@@ -23,14 +23,14 @@ type Transport struct {
 // the time to use as zero for computing the elapsed time.
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
-	t.dialer = dialerapi.NewDialer(beginning, handler)
+	t.dialer = dialercontext.NewDialer(beginning)
 	t.transport = httptransport.NewTransport(beginning, handler)
-	// make sure we use an http2 ready TLS config
-	t.dialer.TLSConfig = t.transport.TLSClientConfig
-	// make sure HTTP uses our dialer
-	t.transport.Dial = t.dialer.Dial
+	//
+	// Implementation note: we use a reduced-complexity dialer that only
+	// exposes DialContext because we are using a context for storing the
+	// per-request handler, and DialTLS does not take a context.
+	//
 	t.transport.DialContext = t.dialer.DialContext
-	t.transport.DialTLS = t.dialer.DialTLS
 	return t
 }
 
@@ -49,18 +49,25 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(t.dialer, network, address)
+	// TODO(bassosimone): here we should re-enable all DNS transports.
+	return nil
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and
 // therefore it has the same caveats and limitations.
 func (t *Transport) SetCABundle(path string) error {
-	return t.dialer.SetCABundle(path)
+	pool, err := tlsx.ReadCABundle(path)
+	if err != nil {
+		return err
+	}
+	t.transport.TLSClientConfig.RootCAs = pool
+	return nil
 }
 
 // ForceSpecificSNI forces using a specific SNI.
 func (t *Transport) ForceSpecificSNI(sni string) error {
-	return t.dialer.ForceSpecificSNI(sni)
+	t.transport.TLSClientConfig.ServerName = sni
+	return nil
 }
 
 // Client is a replacement for http.Client.

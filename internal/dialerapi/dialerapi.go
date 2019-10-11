@@ -7,13 +7,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"io/ioutil"
 	"net"
 	"time"
 
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerbase"
 	"github.com/ooni/netx/internal/dialercontext"
+	"github.com/ooni/netx/internal/tlsx"
 	"github.com/ooni/netx/model"
 )
 
@@ -224,12 +224,10 @@ func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
 
 // SetCABundle configures the dialer to use a specific CA bundle.
 func (d *Dialer) SetCABundle(path string) error {
-	cert, err := ioutil.ReadFile(path)
+	pool, err := tlsx.ReadCABundle(path)
 	if err != nil {
 		return err
 	}
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(cert)
 	d.TLSConfig.RootCAs = pool
 	return nil
 }
