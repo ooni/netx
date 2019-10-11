@@ -31,7 +31,8 @@ type LookupHostFunc func(context.Context, string) ([]string, error)
 // DialHostPortFunc is the type of the function that is actually
 // used to dial a connection to a specific host and port.
 type DialHostPortFunc func(
-	ctx context.Context, network, onlyhost, onlyport string, connid int64,
+	ctx context.Context, handler model.Handler,
+	network, onlyhost, onlyport string, connid int64,
 ) (*connx.MeasuringConn, error)
 
 // Dialer defines the dialer API. We implement the most basic form
@@ -50,7 +51,7 @@ type Dialer struct {
 func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 	d = &Dialer{
 		Dialer: dialerbase.NewDialer(
-			beginning, handler,
+			beginning,
 		),
 		Handler:               handler,
 		TLSConfig:             &tls.Config{},
@@ -120,7 +121,9 @@ func (d *Dialer) DialContextEx(
 	}
 	connid := NextConnID()
 	if net.ParseIP(onlyhost) != nil {
-		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, connid)
+		conn, err = d.DialHostPort(
+			ctx, d.Handler, network, onlyhost, onlyport, connid,
+		)
 		return
 	}
 	if requireIP == true {
@@ -145,7 +148,7 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	for _, addr := range addrs {
-		conn, err = d.DialHostPort(ctx, network, addr, onlyport, connid)
+		conn, err = d.DialHostPort(ctx, d.Handler, network, addr, onlyport, connid)
 		if err == nil {
 			return
 		}

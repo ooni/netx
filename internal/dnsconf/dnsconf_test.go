@@ -10,6 +10,7 @@ import (
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
+	"github.com/ooni/netx/model"
 )
 
 func TestIntegrationNewResolver(t *testing.T) {
@@ -151,7 +152,8 @@ func TestIntegrationGoDNSResolverFailure(t *testing.T) {
 	// an error. This will cause the LookupHost to fail and allows us to
 	// fully cover the codepath where net.Resolver.Dial invoked.
 	d.DialHostPort = func(
-		ctx context.Context, network, onlyhost, onlyport string, connid int64,
+		ctx context.Context, handler model.Handler,
+		network, onlyhost, onlyport string, connid int64,
 	) (*connx.MeasuringConn, error) {
 		return nil, errors.New("mocked error")
 	}

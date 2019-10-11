@@ -17,22 +17,21 @@ import (
 type Dialer struct {
 	net.Dialer
 	Beginning time.Time
-	Handler   model.Handler
 }
 
 // NewDialer creates a new base dialer
-func NewDialer(beginning time.Time, handler model.Handler) Dialer {
+func NewDialer(beginning time.Time) Dialer {
 	return Dialer{
 		Dialer:    net.Dialer{},
 		Beginning: beginning,
-		Handler:   handler,
 	}
 }
 
 // DialHostPort is like net.DialContext but requires a separate host
 // and port and returns a measurable net.Conn-like struct.
 func (d *Dialer) DialHostPort(
-	ctx context.Context, network, onlyhost, onlyport string, connid int64,
+	ctx context.Context, handler model.Handler,
+	network, onlyhost, onlyport string, connid int64,
 ) (*connx.MeasuringConn, error) {
 	if net.ParseIP(onlyhost) == nil {
 		return nil, errors.New("dialerbase: you passed me a domain name")
@@ -41,7 +40,7 @@ func (d *Dialer) DialHostPort(
 	start := time.Now()
 	conn, err := d.Dialer.DialContext(ctx, network, address)
 	stop := time.Now()
-	d.Handler.OnMeasurement(model.Measurement{
+	handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
 			ConnID:        connid,
 			Duration:      stop.Sub(start),
@@ -58,7 +57,7 @@ func (d *Dialer) DialHostPort(
 	return &connx.MeasuringConn{
 		Conn:      conn,
 		Beginning: d.Beginning,
-		Handler:   d.Handler,
+		Handler:   handler,
 		ID:        connid,
 	}, nil
 }

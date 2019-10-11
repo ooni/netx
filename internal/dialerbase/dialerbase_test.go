@@ -11,10 +11,10 @@ import (
 
 func TestIntegrationSuccess(t *testing.T) {
 	dialer := dialerbase.NewDialer(
-		time.Now(), handlers.NoHandler,
+		time.Now(),
 	)
 	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "8.8.8.8", "53", 17,
+		context.Background(), handlers.NoHandler, "tcp", "8.8.8.8", "53", 17,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -24,10 +24,10 @@ func TestIntegrationSuccess(t *testing.T) {
 
 func TestIntegrationErrorDomain(t *testing.T) {
 	dialer := dialerbase.NewDialer(
-		time.Now(), handlers.NoHandler,
+		time.Now(),
 	)
 	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "dns.google.com", "53", 17,
+		context.Background(), handlers.NoHandler, "tcp", "dns.google.com", "53", 17,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -39,12 +39,12 @@ func TestIntegrationErrorDomain(t *testing.T) {
 
 func TestIntegrationErrorNoConnect(t *testing.T) {
 	dialer := dialerbase.NewDialer(
-		time.Now(), handlers.NoHandler,
+		time.Now(),
 	)
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()
 	conn, err := dialer.DialHostPort(
-		ctx, "tcp", "8.8.8.8", "53", 17,
+		ctx, handlers.NoHandler, "tcp", "8.8.8.8", "53", 17,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
