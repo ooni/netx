@@ -32,7 +32,7 @@ func ParseDNSConfigFromURL(URL string) (network string, address string, err erro
 }
 
 // New returns a new DNS resolver instance. The network and address arguments
-// are the same of next.ConfigureDNS.
+// are the same of netx.ConfigureDNS.
 func New(
 	beginning time.Time, network, address string,
 	newTransport func(beginning time.Time) http.RoundTripper,
