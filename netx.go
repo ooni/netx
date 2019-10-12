@@ -13,6 +13,7 @@ import (
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
+	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -117,4 +118,10 @@ func (d *Dialer) SetCABundle(path string) error {
 // ForceSpecificSNI forces using a specific SNI.
 func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return d.dialer.ForceSpecificSNI(sni)
+}
+
+// ParseNetworkAndAddressFromURL returns the network and address values you should pass
+// to resolver.New on success, and error on failure.
+func ParseNetworkAndAddressFromURL(URL string) (network string, address string, err error) {
+	return resolver.ParseNetworkAndAddressFromURL(URL)
 }

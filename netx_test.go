@@ -74,3 +74,19 @@ func TestForceSpecificSNI(t *testing.T) {
 		t.Fatal("expected nil conn here")
 	}
 }
+
+func TestParseNetworkAndAddressFromURL(t *testing.T) {
+	// simplified testing since here we're just exposing an API
+	network, address, err := netx.ParseNetworkAndAddressFromURL(
+		"system:///",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if network != "system" {
+		t.Fatal("expected different network")
+	}
+	if address != "" {
+		t.Fatal("expected different address")
+	}
+}

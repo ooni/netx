@@ -26,15 +26,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 
 	"github.com/m-lab/go/rtx"
+	"github.com/ooni/netx"
 	"github.com/ooni/netx/cmd/common"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
@@ -80,24 +79,9 @@ func mainfunc() (err error) {
 	ctx := context.Background()
 	ctx = httptracex.ContextWithHandler(ctx, handlers.StdoutHandler)
 
-	urlDNSServer, err := url.Parse(*flagDNSServer)
-	rtx.PanicOnError(err, "-dns-server argument is not a valid URL")
-
-	if urlDNSServer.Scheme == "system" {
-		err = client.ConfigureDNS("system", "")
-	} else if urlDNSServer.Scheme == "netgo" {
-		err = client.ConfigureDNS("netgo", "")
-	} else if urlDNSServer.Scheme == "udp" {
-		err = client.ConfigureDNS("udp", urlDNSServer.Host)
-	} else if urlDNSServer.Scheme == "tcp" {
-		err = client.ConfigureDNS("tcp", urlDNSServer.Host)
-	} else if urlDNSServer.Scheme == "dot" {
-		err = client.ConfigureDNS("dot", urlDNSServer.Host)
-	} else if urlDNSServer.Scheme == "https" {
-		err = client.ConfigureDNS("doh", urlDNSServer.String())
-	} else if *flagDNSServer != "" {
-		err = errors.New("invalid -dns-server argument")
-	}
+	network, address, err := netx.ParseNetworkAndAddressFromURL(*flagDNSServer)
+	rtx.PanicOnError(err, "-dns-server argument is not a valid")
+	err = client.ConfigureDNS(network, address)
 	rtx.PanicOnError(err, "cannot configure DNS server")
 	err = client.ForceSpecificSNI(*flagSNI)
 	rtx.PanicOnError(err, "cannot force specific SNI")

@@ -492,8 +492,24 @@ func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error)
 ```
 
 The arguments have the same meaning of `ConfigureDNS` and
-the will return an interface replacement for `net.Resolver`
+the function will return an interface replacement for `net.Resolver`
 as described below.
+
+This package also contains synactic sugar for parsing the `network` and
+`address` arguments for ConfigureDNS from a URL:
+
+```Go
+func ParseNetworkAndAddressFromURL(
+    URL string) (network string, address string, err error)
+```
+
+If the URL is not valid, this function returns an error. Otherwise, if scheme
+is `"https"`, it returns `"doh"` as `network` and the URL as `address`.
+Otherwise, it returns the URL scheme as the `network` and the URL host (possibly
+including the port) as `address`.
+
+The canonical URL representation of the `system` and `netgo` resolvers, for
+which the `address` is meaningless, is `system:///` and `netgo:///`.
 
 ### The github.com/ooni/netx/dnsx package
 
