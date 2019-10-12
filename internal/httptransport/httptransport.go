@@ -58,6 +58,12 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	outmethod := req.Method
 	outurl := req.URL.String()
 	tid := atomic.AddInt64(&nextTransactionID, 1)
+	handler.OnMeasurement(model.Measurement{
+		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
+			Time:          time.Now().Sub(t.Beginning),
+			TransactionID: tid,
+		},
+	})
 	outheaders := http.Header{}
 	var tlsHandshakeStart time.Time
 	var mutex sync.Mutex

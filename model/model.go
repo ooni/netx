@@ -127,6 +127,12 @@ type HTTPResponseDoneEvent struct {
 	TransactionID int64
 }
 
+// HTTPRoundTripStartEvent is emitted when we start a round trip.
+type HTTPRoundTripStartEvent struct {
+	Time          time.Duration
+	TransactionID int64
+}
+
 // ReadEvent is emitted when conn.Read returns.
 type ReadEvent struct {
 	ConnID   int64
@@ -202,6 +208,7 @@ type Measurement struct {
 	HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent `json:",omitempty"`
 	HTTPResponseBodyPart    *HTTPResponseBodyPartEvent    `json:",omitempty"`
 	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
+	HTTPRoundTripStart      *HTTPRoundTripStartEvent      `json:",omitempty"`
 	Read                    *ReadEvent                    `json:",omitempty"`
 	Resolve                 *ResolveEvent                 `json:",omitempty"`
 	TLSHandshake            *TLSHandshakeEvent            `json:",omitempty"`
