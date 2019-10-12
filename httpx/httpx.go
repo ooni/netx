@@ -4,18 +4,14 @@
 package httpx
 
 import (
-	"context"
-	"errors"
-	"net"
 	"net/http"
 	"time"
 
-	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialercontext"
 	"github.com/ooni/netx/internal/httptransport"
-	"github.com/ooni/netx/internal/oodns"
+	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/internal/tlsx"
-	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
@@ -40,6 +36,10 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	return t
 }
 
+func newRoundTripperWithoutHandler(beginning time.Time) http.RoundTripper {
+	return NewTransport(beginning, handlers.NoHandler)
+}
+
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -55,50 +55,15 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS behaves exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	if network == "system" {
-		t.dialer.LookupHost = (&net.Resolver{PreferGo: false}).LookupHost
-		return nil
+	reso, err := resolver.New(
+		t.transport.Beginning, network, address,
+		newRoundTripperWithoutHandler,
+	)
+	if err != nil {
+		return err
 	}
-	if network == "netgo" {
-		t.dialer.LookupHost = (&net.Resolver{
-			PreferGo: true,
-			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-				conn, _, _, err := t.dialer.DialContextEx(
-					ctx, tracing.ContextHandler(ctx), network, address, false,
-				)
-				// convince Go this is really a net.PacketConn
-				return &connx.DNSMeasuringConn{MeasuringConn: *conn}, err
-			},
-		}).LookupHost
-		return nil
-	}
-	if network == "doh" {
-		child := NewTransport(t.transport.Beginning, t.transport.Handler)
-		resolver := oodns.NewClient(oodns.NewTransportDoH(&http.Client{
-			Transport: child,
-		}, address))
-		t.dialer.LookupHost = resolver.LookupHost
-		return nil
-	}
-	if network == "udp" {
-		resolver := oodns.NewClient(oodns.NewTransportUDP(
-			address, dialercontext.NewDialer(t.transport.Beginning).DialContext,
-		))
-		t.dialer.LookupHost = resolver.LookupHost
-		return nil
-	}
-	if network == "tcp" {
-		resolver := oodns.NewClient(oodns.NewTransportTCP(
-			address, dialercontext.NewDialer(t.transport.Beginning).DialContext,
-		))
-		t.dialer.LookupHost = resolver.LookupHost
-		return nil
-	}
-	// TODO(bassosimone): here we should re-enable all DNS transports.
-	if network == "dot" {
-		return nil // laying!
-	}
-	return errors.New("not implemented")
+	t.dialer.LookupHost = reso.LookupHost
+	return nil
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

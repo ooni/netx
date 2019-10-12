@@ -1,4 +1,6 @@
 // Package dnsconf allows to configure a DNS resolver
+//
+// This package will eventually be replaced by resolver.
 package dnsconf
 
 import (
