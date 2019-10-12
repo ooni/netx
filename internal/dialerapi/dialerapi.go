@@ -1,5 +1,7 @@
 // Package dialerapi contains the dialer's API. The dialer defined
 // in here implements basic DNS, but that is overridable.
+//
+// This will be eventually replaced by dialerfull.
 package dialerapi
 
 import (
@@ -15,9 +17,6 @@ import (
 	"github.com/ooni/netx/internal/tlsx"
 	"github.com/ooni/netx/model"
 )
-
-// TODO(bassosimone): continue to refactor dialerapi such that it
-// becomes a tiny layer on top of dialercontext.
 
 // NextConnID returns the next connection ID.
 func NextConnID() int64 {
