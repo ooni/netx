@@ -96,8 +96,6 @@ func (d *Dialer) tlsHandshake(
 	err = tc.Handshake()
 	stop := time.Now()
 	state := tc.ConnectionState()
-	// Join the dialer's handler with the handler that was possibly
-	// passed as part of the current context and emit on both
 	tlsx.EmitTLSHandshakeEvent(
 		tracing.ContextHandler(ctx),
 		state,
