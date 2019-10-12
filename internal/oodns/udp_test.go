@@ -34,7 +34,7 @@ func TestIntegrationDialContextExFailure(t *testing.T) {
 	}
 }
 
-func TestIntegrationSetDeadlineError(t *testing.T) {
+func TestIntegrationUDPSetDeadlineError(t *testing.T) {
 	transport := &udpTransport{
 		address:     "9.9.9.9:53",
 		dialContext: (&net.Dialer{}).DialContext,
@@ -52,7 +52,7 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 	}
 }
 
-func TestIntegrationWriteError(t *testing.T) {
+func TestIntegrationUDPWriteError(t *testing.T) {
 	transport := &udpTransport{
 		address:     "9.9.9.9:53",
 		dialContext: (&net.Dialer{}).DialContext,

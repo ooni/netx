@@ -1,5 +1,7 @@
 // Package dnsovertcp implements DNS over TCP. It is possible to
 // use both plaintext TCP and TLS.
+//
+// This package will be eventually replaced by oodns.
 package dnsovertcp
 
 import (

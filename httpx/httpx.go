@@ -87,8 +87,15 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 		t.dialer.LookupHost = resolver.LookupHost
 		return nil
 	}
+	if network == "tcp" {
+		resolver := oodns.NewClient(oodns.NewTransportTCP(
+			address, dialercontext.NewDialer(t.transport.Beginning).DialContext,
+		))
+		t.dialer.LookupHost = resolver.LookupHost
+		return nil
+	}
 	// TODO(bassosimone): here we should re-enable all DNS transports.
-	if network == "dot" || network == "tcp" {
+	if network == "dot" {
 		return nil // laying!
 	}
 	return errors.New("not implemented")
