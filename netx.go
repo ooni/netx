@@ -120,8 +120,8 @@ func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return d.dialer.ForceSpecificSNI(sni)
 }
 
-// ParseNetworkAndAddressFromURL returns the network and address values you should pass
+// ParseDNSConfigFromURL returns the network and address values you should pass
 // to resolver.New on success, and error on failure.
-func ParseNetworkAndAddressFromURL(URL string) (network string, address string, err error) {
-	return resolver.ParseNetworkAndAddressFromURL(URL)
+func ParseDNSConfigFromURL(URL string) (network string, address string, err error) {
+	return resolver.ParseDNSConfigFromURL(URL)
 }

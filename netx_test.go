@@ -75,9 +75,9 @@ func TestForceSpecificSNI(t *testing.T) {
 	}
 }
 
-func TestParseNetworkAndAddressFromURL(t *testing.T) {
+func TestParseDNSConfigFromURL(t *testing.T) {
 	// simplified testing since here we're just exposing an API
-	network, address, err := netx.ParseNetworkAndAddressFromURL(
+	network, address, err := netx.ParseDNSConfigFromURL(
 		"system:///",
 	)
 	if err != nil {

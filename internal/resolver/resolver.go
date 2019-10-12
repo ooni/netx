@@ -18,9 +18,9 @@ import (
 	"github.com/ooni/netx/internal/tracing"
 )
 
-// ParseNetworkAndAddressFromURL returns the network and address values you should pass
+// ParseDNSConfigFromURL returns the network and address values you should pass
 // to resolver.New on success, and error on failure.
-func ParseNetworkAndAddressFromURL(URL string) (network string, address string, err error) {
+func ParseDNSConfigFromURL(URL string) (network string, address string, err error) {
 	parsed, err := url.Parse(URL)
 	if err != nil {
 		return "", "", err

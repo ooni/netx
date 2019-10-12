@@ -79,7 +79,7 @@ func mainfunc() (err error) {
 	ctx := context.Background()
 	ctx = httptracex.ContextWithHandler(ctx, handlers.StdoutHandler)
 
-	network, address, err := netx.ParseNetworkAndAddressFromURL(*flagDNSServer)
+	network, address, err := netx.ParseDNSConfigFromURL(*flagDNSServer)
 	rtx.PanicOnError(err, "-dns-server argument is not a valid")
 	err = client.ConfigureDNS(network, address)
 	rtx.PanicOnError(err, "cannot configure DNS server")

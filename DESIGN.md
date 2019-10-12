@@ -499,7 +499,7 @@ This package also contains synactic sugar for parsing the `network` and
 `address` arguments for ConfigureDNS from a URL:
 
 ```Go
-func ParseNetworkAndAddressFromURL(
+func ParseDNSConfigFromURL(
     URL string) (network string, address string, err error)
 ```
 

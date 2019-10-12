@@ -10,7 +10,7 @@ import (
 )
 
 func TestInvalidURL(t *testing.T) {
-	network, address, err := ParseNetworkAndAddressFromURL("\t")
+	network, address, err := ParseDNSConfigFromURL("\t")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
@@ -82,7 +82,7 @@ func TestDoH(t *testing.T) {
 }
 
 func testResolver(t *testing.T, URL string) *tracing.Saver {
-	network, address, err := ParseNetworkAndAddressFromURL(URL)
+	network, address, err := ParseDNSConfigFromURL(URL)
 	if err != nil {
 		t.Fatal(err)
 	}
