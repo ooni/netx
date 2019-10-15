@@ -20,6 +20,15 @@ type Dialer struct {
 	Handler   model.Handler
 }
 
+// NewDialer creates a new base dialer
+func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
+	return &Dialer{
+		Dialer:    net.Dialer{},
+		Beginning: beginning,
+		Handler:   handler,
+	}
+}
+
 // DialHostPort is like net.DialContext but requires a separate host
 // and port and returns a measurable net.Conn-like struct.
 func (d *Dialer) DialHostPort(

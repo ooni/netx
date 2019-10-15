@@ -25,7 +25,7 @@ type Client interface {
 	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
 }
 
-// RoundTripper represent an abstract DNS transport.
+// RoundTripper represents an abstract DNS transport.
 type RoundTripper interface {
 	// RoundTrip sends a DNS query and receives the reply.
 	RoundTrip(query []byte) (reply []byte, err error)

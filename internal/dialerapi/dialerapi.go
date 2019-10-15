@@ -37,33 +37,33 @@ type DialHostPortFunc func(
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
-	dialerbase.Dialer
+	Beginning             time.Time
 	DialHostPort          DialHostPortFunc
 	Handler               model.Handler
 	LookupHost            LookupHostFunc
 	StartTLSHandshakeHook func(net.Conn)
 	TLSConfig             *tls.Config
 	TLSHandshakeTimeout   time.Duration
+	dialer                *dialerbase.Dialer
 }
 
 // NewDialer creates a new Dialer.
 func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
 	d = &Dialer{
-		Dialer: dialerbase.Dialer{
-			Beginning: beginning,
-			Dialer:    net.Dialer{},
-			Handler:   handler,
-		},
+		Beginning:             beginning,
 		Handler:               handler,
 		TLSConfig:             &tls.Config{},
 		StartTLSHandshakeHook: func(net.Conn) {},
+		dialer: dialerbase.NewDialer(
+			beginning, handler,
+		),
 	}
 	// This is equivalent to ConfigureDNS("system", "...")
 	r := &net.Resolver{
 		PreferGo: false,
 	}
 	d.LookupHost = r.LookupHost
-	d.DialHostPort = d.Dialer.DialHostPort
+	d.DialHostPort = d.dialer.DialHostPort
 	return
 }
 

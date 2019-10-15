@@ -1,6 +1,6 @@
 // Package httpx contains OONI's net/http extensions. It defines the Client and
 // the Transport replacements that we should use in OONI. They emit measurements
-// collected at network and HTTP level on a specific channel.
+// collected at network and HTTP level using a specific handler.
 package httpx
 
 import (
@@ -20,8 +20,7 @@ type Transport struct {
 }
 
 // NewTransport creates a new Transport. The beginning argument is
-// the time to use as zero for computing the elapsed time. The ch
-// channel is where we'll emit Measurements.
+// the time to use as zero for computing the elapsed time.
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
 	t.dialer = dialerapi.NewDialer(beginning, handler)

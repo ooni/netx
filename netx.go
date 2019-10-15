@@ -60,12 +60,12 @@ func NewDialer(handler model.Handler) *Dialer {
 //
 // For example:
 //
-//   d.SetResolver("system", "")
-//   d.SetResolver("godns", "")
-//   d.SetResolver("udp", "8.8.8.8:53")
-//   d.SetResolver("tcp", "8.8.8.8:53")
-//   d.SetResolver("dot", "dns.quad9.net")
-//   d.SetResolver("doh", "https://cloudflare-dns.com/dns-query")
+//   d.ConfigureDNS("system", "")
+//   d.ConfigureDNS("godns", "")
+//   d.ConfigureDNS("udp", "8.8.8.8:53")
+//   d.ConfigureDNS("tcp", "8.8.8.8:53")
+//   d.ConfigureDNS("dot", "dns.quad9.net")
+//   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 //
 // ConfigureDNS is currently only executed when Go chooses to
 // use the pure Go implementation of the DNS. This means that it
@@ -108,7 +108,7 @@ func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle. This
-// function is not goroutine safe. Make sure you call it befor starting
+// function is not goroutine safe. Make sure you call it before starting
 // to use this specific dialer.
 func (d *Dialer) SetCABundle(path string) error {
 	return d.dialer.SetCABundle(path)
