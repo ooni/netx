@@ -60,12 +60,12 @@ func NewDialer(handler model.Handler) *Dialer {
 //
 // For example:
 //
-//   d.SetResolver("system", "")
-//   d.SetResolver("godns", "")
-//   d.SetResolver("udp", "8.8.8.8:53")
-//   d.SetResolver("tcp", "8.8.8.8:53")
-//   d.SetResolver("dot", "dns.quad9.net")
-//   d.SetResolver("doh", "https://cloudflare-dns.com/dns-query")
+//   d.ConfigureDNS("system", "")
+//   d.ConfigureDNS("godns", "")
+//   d.ConfigureDNS("udp", "8.8.8.8:53")
+//   d.ConfigureDNS("tcp", "8.8.8.8:53")
+//   d.ConfigureDNS("dot", "dns.quad9.net")
+//   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 //
 // ConfigureDNS is currently only executed when Go chooses to
 // use the pure Go implementation of the DNS. This means that it
