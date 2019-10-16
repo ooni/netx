@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
+	"time"
 
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/connx"
@@ -13,6 +15,8 @@ import (
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/internal/godns"
+	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/model"
 )
 
 // ConfigureDNS implements netx.Dialer.ConfigureDNS.
@@ -22,6 +26,21 @@ func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 		dialer.LookupHost = r.LookupHost
 	}
 	return err
+}
+
+func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
+	dialer := dialerapi.NewDialer(beginning, handler)
+	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
+	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
+	// an already well configured config that works for http2 (as explained in a
+	// comment there). Here we just use it because it's what we need.
+	dialer.TLSConfig = transport.TLSClientConfig
+	// Arrange the configuration such that we always use `dialer` for dialing.
+	transport.Dial = dialer.Dial
+	transport.DialContext = dialer.DialContext
+	transport.DialTLS = dialer.DialTLS
+	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
+	return &http.Client{Transport: transport}
 }
 
 // NewResolver returns a new resolver using this Dialer as dialer for
@@ -55,7 +74,7 @@ func NewResolver(
 	var transport dnsx.RoundTripper
 	if network == "doh" {
 		transport = dnsoverhttps.NewTransport(
-			dialer.Beginning, dialer.Handler, address,
+			newHTTPClientForDoH(dialer.Beginning, dialer.Handler), address,
 		)
 	} else if network == "dot" {
 		host, port, err := net.SplitHostPort(address)
