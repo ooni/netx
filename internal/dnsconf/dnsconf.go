@@ -31,8 +31,11 @@ func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
 	dialer := dialerapi.NewDialer(beginning, handler)
 	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
-	// Logic to make sure we'll use the dialer in the new HTTP transport
+	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
+	// an already well configured config that works for http2 (as explained in a
+	// comment there). Here we just use it because it's what we need.
 	dialer.TLSConfig = transport.TLSClientConfig
+	// Arrange the configuration such that we always use `dialer` for dialing.
 	transport.Dial = dialer.Dial
 	transport.DialContext = dialer.DialContext
 	transport.DialTLS = dialer.DialTLS
