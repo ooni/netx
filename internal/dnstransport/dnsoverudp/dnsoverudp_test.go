@@ -1,7 +1,6 @@
-package dnsoverudp_test
+package dnsoverudp
 
 import (
-	"context"
 	"errors"
 	"net"
 	"testing"
@@ -10,12 +9,11 @@ import (
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/connx"
-	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
-	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.NoHandler, "9.9.9.9:53",
+	transport := NewTransport(
+		net.Dial, "9.9.9.9:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -23,18 +21,32 @@ func TestIntegrationSuccess(t *testing.T) {
 	}
 }
 
-func TestIntegrationDialContextExFailure(t *testing.T) {
-	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.NoHandler, "9.9.9.9:53",
+func TestIntegrationSplitHostPortFailure(t *testing.T) {
+	transport := NewTransport(
+		net.Dial, "antani",
 	)
-	transport.DialContextEx = func(
-		ctx context.Context, network string, address string,
-		requireIP bool,
-	) (
-		conn *connx.MeasuringConn, onlyhost string,
-		onlyport string, err error,
-	) {
-		return nil, "", "", errors.New("mocked error")
+	err := threeRounds(transport)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestIntegrationParseIPFailure(t *testing.T) {
+	transport := NewTransport(
+		net.Dial, "antani:53",
+	)
+	err := threeRounds(transport)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestIntegrationDialFailure(t *testing.T) {
+	transport := NewTransport(
+		net.Dial, "9.9.9.9:53",
+	)
+	transport.dial = func(network, address string) (net.Conn, error) {
+		return nil, errors.New("mocked error")
 	}
 	err := threeRounds(transport)
 	if err == nil {
@@ -43,22 +55,16 @@ func TestIntegrationDialContextExFailure(t *testing.T) {
 }
 
 func TestIntegrationSetDeadlineError(t *testing.T) {
-	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.NoHandler, "9.9.9.9:53",
+	transport := NewTransport(
+		net.Dial, "9.9.9.9:53",
 	)
-	transport.DialContextEx = func(
-		ctx context.Context, network string, address string,
-		requireIP bool,
-	) (
-		conn *connx.MeasuringConn, onlyhost string,
-		onlyport string, err error,
-	) {
+	transport.dial = func(network, address string) (net.Conn, error) {
 		return &connx.MeasuringConn{
 			Conn: fakeconn{
 				setDeadlineError: errors.New("mocked error"),
 			},
 			Handler: handlers.NoHandler,
-		}, "", "", nil
+		}, nil
 	}
 	err := threeRounds(transport)
 	if err == nil {
@@ -67,22 +73,16 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 }
 
 func TestIntegrationWriteError(t *testing.T) {
-	transport := dnsoverudp.NewTransport(
-		time.Now(), handlers.NoHandler, "9.9.9.9:53",
+	transport := NewTransport(
+		net.Dial, "9.9.9.9:53",
 	)
-	transport.DialContextEx = func(
-		ctx context.Context, network string, address string,
-		requireIP bool,
-	) (
-		conn *connx.MeasuringConn, onlyhost string,
-		onlyport string, err error,
-	) {
+	transport.dial = func(network, address string) (net.Conn, error) {
 		return &connx.MeasuringConn{
 			Conn: fakeconn{
 				writeError: errors.New("mocked error"),
 			},
 			Handler: handlers.NoHandler,
-		}, "", "", nil
+		}, nil
 	}
 	err := threeRounds(transport)
 	if err == nil {
@@ -90,7 +90,7 @@ func TestIntegrationWriteError(t *testing.T) {
 	}
 }
 
-func threeRounds(transport *dnsoverudp.Transport) error {
+func threeRounds(transport *Transport) error {
 	err := roundTrip(transport, "ooni.io.")
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func threeRounds(transport *dnsoverudp.Transport) error {
 	return nil
 }
 
-func roundTrip(transport *dnsoverudp.Transport, domain string) error {
+func roundTrip(transport *Transport, domain string) error {
 	query := new(dns.Msg)
 	query.SetQuestion(domain, dns.TypeA)
 	data, err := query.Pack()

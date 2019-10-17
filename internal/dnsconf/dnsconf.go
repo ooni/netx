@@ -102,7 +102,7 @@ func NewResolver(
 		transport = dotTransport
 	} else if network == "udp" {
 		transport = dnsoverudp.NewTransport(
-			dialer.Beginning, dialer.Handler, address,
+			dialer.Dial, address,
 		)
 	}
 	if transport == nil {
