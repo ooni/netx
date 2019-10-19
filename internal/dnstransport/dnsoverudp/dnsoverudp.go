@@ -40,7 +40,9 @@ func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
 		return
 	}
 	defer conn.Close()
-	err = conn.SetDeadline(time.Now().Add(3 * time.Second))
+	// Use five seconds timeout like Bionic does. See
+	// https://labs.ripe.net/Members/baptiste_jonglez_1/persistent-dns-connections-for-reliability-and-performance
+	err = conn.SetDeadline(time.Now().Add(5 * time.Second))
 	if err != nil {
 		return
 	}
