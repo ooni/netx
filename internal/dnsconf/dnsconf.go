@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ooni/netx/dnsx"
@@ -43,6 +44,17 @@ func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Clien
 	return &http.Client{Transport: transport}
 }
 
+func withPort(address, port string) string {
+	// Handle the case where port was not specified. We have written in
+	// a bunch of places that we can just pass a domain in this case and
+	// so we need to gracefully ensure this is still possible.
+	_, _, err := net.SplitHostPort(address)
+	if err != nil && strings.Contains(err.Error(), "missing port in address") {
+		address = net.JoinHostPort(address, port)
+	}
+	return address
+}
+
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
 func NewResolver(
@@ -77,32 +89,24 @@ func NewResolver(
 			newHTTPClientForDoH(dialer.Beginning, dialer.Handler), address,
 		)
 	} else if network == "dot" {
-		host, port, err := net.SplitHostPort(address)
-		if err != nil {
-			transport = dnsovertcp.NewTransport(
-				dialer.Beginning, dialer.Handler, address,
-			)
-		} else {
-			dotTransport := dnsovertcp.NewTransport(
-				dialer.Beginning, dialer.Handler, host,
-			)
-			dotTransport.Port = port
-			transport = dotTransport
-		}
-	} else if network == "tcp" {
-		host, port, err := net.SplitHostPort(address)
-		if err != nil {
-			return nil, err
-		}
-		dotTransport := dnsovertcp.NewTransport(
-			dialer.Beginning, dialer.Handler, host,
+		transport = dnsovertcp.NewTransport(
+			// We need a child dialer here to avoid an endless loop where the
+			// dialer will ask us to resolve, we'll tell the dialer to dial, it
+			// will ask us to resolve, ...
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialTLS,
+			withPort(address, "853"),
 		)
-		dotTransport.Port = port
-		dotTransport.NoTLS = true
-		transport = dotTransport
+	} else if network == "tcp" {
+		transport = dnsovertcp.NewTransport(
+			// Same rationale as above: avoid possible endless loop
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).Dial,
+			withPort(address, "53"),
+		)
 	} else if network == "udp" {
 		transport = dnsoverudp.NewTransport(
-			dialer.Dial, address,
+			// Same rationale as above: avoid possible endless loop
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).Dial,
+			withPort(address, "53"),
 		)
 	}
 	if transport == nil {

@@ -2,9 +2,10 @@ package oodns_test
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"net"
 	"testing"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
@@ -13,11 +14,18 @@ import (
 	"github.com/ooni/netx/internal/oodns"
 )
 
+func newtransport() dnsx.RoundTripper {
+	return dnsovertcp.NewTransport(
+		func(network, address string) (net.Conn, error) {
+			return tls.Dial(network, address, nil)
+		},
+		"dns.quad9.net:853",
+	)
+}
+
 func TestLookupAddr(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")
 	if err == nil {
@@ -30,9 +38,7 @@ func TestLookupAddr(t *testing.T) {
 
 func TestLookupCNAME(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupCNAME(context.Background(), "www.ooni.io")
 	if err == nil {
@@ -45,9 +51,7 @@ func TestLookupCNAME(t *testing.T) {
 
 func TestLookupHost(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupHost(context.Background(), "www.google.com")
 	if err != nil {
@@ -60,9 +64,7 @@ func TestLookupHost(t *testing.T) {
 
 func TestLookupNonexistent(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupHost(context.Background(), "nonexistent.ooni.io")
 	if err == nil {
@@ -75,9 +77,7 @@ func TestLookupNonexistent(t *testing.T) {
 
 func TestLookupMX(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupMX(context.Background(), "ooni.io")
 	if err == nil {
@@ -90,9 +90,7 @@ func TestLookupMX(t *testing.T) {
 
 func TestLookupNS(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupNS(context.Background(), "ooni.io")
 	if err == nil {
@@ -105,9 +103,7 @@ func TestLookupNS(t *testing.T) {
 
 func TestRoundTripExPackFailure(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	_, err := client.RoundTripEx(
 		context.Background(), nil,
@@ -128,9 +124,7 @@ func TestRoundTripExPackFailure(t *testing.T) {
 
 func TestRoundTripExRoundTripFailure(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	_, err := client.RoundTripEx(
 		context.Background(), nil,
@@ -151,9 +145,7 @@ func TestRoundTripExRoundTripFailure(t *testing.T) {
 
 func TestRoundTripExUnpackFailure(t *testing.T) {
 	client := oodns.NewClient(
-		handlers.NoHandler, dnsovertcp.NewTransport(
-			time.Now(), handlers.NoHandler, "dns.quad9.net",
-		),
+		handlers.NoHandler, newtransport(),
 	)
 	_, err := client.RoundTripEx(
 		context.Background(), nil,

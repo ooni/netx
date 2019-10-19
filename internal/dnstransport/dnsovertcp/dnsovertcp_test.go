@@ -1,4 +1,4 @@
-package dnsovertcp_test
+package dnsovertcp
 
 import (
 	"crypto/tls"
@@ -8,88 +8,58 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 )
 
-func TestIntegrationSuccess(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
+func dialTLS(config *tls.Config) func(network, address string) (net.Conn, error) {
+	return func(network, address string) (net.Conn, error) {
+		return tls.Dial(network, address, config)
+	}
+}
+
+func dialTCP(network, address string) (net.Conn, error) {
+	return net.Dial(network, address)
+}
+
+func TestIntegrationSuccessTLS(t *testing.T) {
+	// "Dial interprets a nil configuration as equivalent to
+	// the zero configuration; see the documentation of Config
+	// for the defaults."
+	transport := NewTransport(dialTLS(nil), "dns.quad9.net:853")
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
-	transport = dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "9.9.9.9",
-	)
-	transport.NoTLS = true
+}
+
+func TestIntegrationSuccessTCP(t *testing.T) {
+	transport := NewTransport(dialTCP, "9.9.9.9:53")
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestIntegrationLookupHostError(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "antani.local",
-	)
+	transport := NewTransport(dialTCP, "antani.local")
 	if err := roundTrip(transport, "ooni.io."); err == nil {
 		t.Fatal("expected an error here")
 	}
 }
 
 func TestIntegrationCustomTLSConfig(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
-	transport.Dialer.TLSConfig = &tls.Config{
-		MinVersion: tls.VersionTLS12,
-	}
+	transport := NewTransport(dialTLS(&tls.Config{
+		MinVersion: tls.VersionTLS10,
+	}), "dns.quad9.net:853")
 	if err := roundTrip(transport, "ooni.io."); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestIntegrationDialFailure(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
-	transport.Port = "53" // should cause dial to fail
-	if err := roundTrip(transport, "ooni.io."); err == nil {
-		t.Fatal("expected an error here")
-	}
-}
-
-func TestIntegrationLookupHostFailure(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
-	transport.LookupHost = func(host string) ([]string, error) {
-		return nil, errors.New("mocked error")
-	}
-	if err := roundTrip(transport, "ooni.io."); err == nil {
-		t.Fatal("expected an error here")
-	}
-}
-
-func TestIntegrationEmptyLookupReply(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
-	transport.LookupHost = func(host string) ([]string, error) {
-		return nil, nil
-	}
-	if err := roundTrip(transport, "ooni.io."); err == nil {
-		t.Fatal("expected an error here")
-	}
-}
-
 func TestUnitRoundTripWithConnFailure(t *testing.T) {
-	transport := dnsovertcp.NewTransport(
-		time.Now(), handlers.NoHandler, "dns.quad9.net",
-	)
-	query := make([]byte, 1<<10)
 	// fakeconn will fail in the SetDeadline, therefore we will have
 	// an immediate error and we expect all errors the be alike
+	transport := NewTransport(func(network, address string) (net.Conn, error) {
+		return &fakeconn{}, nil
+	}, "8.8.8.8:53")
+	query := make([]byte, 1<<10)
 	reply, err := transport.RoundTripWithConn(&fakeconn{}, query)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -99,7 +69,7 @@ func TestUnitRoundTripWithConnFailure(t *testing.T) {
 	}
 }
 
-func threeRounds(transport *dnsovertcp.Transport) error {
+func threeRounds(transport *Transport) error {
 	err := roundTrip(transport, "ooni.io.")
 	if err != nil {
 		return err
@@ -115,7 +85,7 @@ func threeRounds(transport *dnsovertcp.Transport) error {
 	return nil
 }
 
-func roundTrip(transport *dnsovertcp.Transport, domain string) error {
+func roundTrip(transport *Transport, domain string) error {
 	query := new(dns.Msg)
 	query.SetQuestion(domain, dns.TypeA)
 	data, err := query.Pack()
