@@ -3,12 +3,12 @@ package dnsconf_test
 import (
 	"context"
 	"errors"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
 )
@@ -144,9 +144,9 @@ func TestGoDNSDialContextExFailure(t *testing.T) {
 	// Override the function used to established a connection so to return
 	// an error. This will cause the LookupHost to fail and allows us to
 	// fully cover the codepath where net.Resolver.Dial invoked.
-	d.DialHostPort = func(
-		ctx context.Context, network, onlyhost, onlyport string, connid int64,
-	) (*connx.MeasuringConn, error) {
+	d.DialContextDep = func(
+		ctx context.Context, network, address string,
+	) (net.Conn, error) {
 		return nil, errors.New("mocked error")
 	}
 	addrs, err := resolver.LookupHost(context.Background(), "www.google.com")

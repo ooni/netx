@@ -73,7 +73,7 @@ type pseudoConn struct {
 func NewPseudoConn(
 	beginning time.Time, handler model.Handler, transport dnsx.RoundTripper,
 ) net.Conn {
-	connid := dialerapi.NextConnID()
+	connid := dialerapi.NextConnIDDeprecatedDontUse()
 	conn := net.Conn(&connx.DNSMeasuringConn{
 		MeasuringConn: connx.MeasuringConn{
 			Conn: &pseudoConn{

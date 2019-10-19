@@ -72,7 +72,11 @@ func NewResolver(
 			Dial: func(
 				ctx context.Context, network, address string,
 			) (net.Conn, error) {
-				conn, _, _, err := dialer.DialContextEx(ctx, network, address, false)
+				// We will eventually dispose of this resolver, which does not
+				// work on all platforms, then DialInternalDontUse can go.
+				conn, _, _, err := dialer.DialInternalDontUse(
+					ctx, network, address, false,
+				)
 				if err != nil {
 					return nil, err
 				}

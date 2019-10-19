@@ -13,58 +13,48 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/connx"
-	"github.com/ooni/netx/internal/dialerbase"
 	"github.com/ooni/netx/model"
 )
 
 var nextConnID int64
 
-// NextConnID returns the next connection ID.
-func NextConnID() int64 {
+// NextConnIDDeprecatedDontUse is a deprecated function that
+// you should not be using in new code. When the godns code
+// will be removed (because unreliable), we'll be able to also
+// remove this public function from here.
+func NextConnIDDeprecatedDontUse() int64 {
 	return atomic.AddInt64(&nextConnID, 1)
 }
 
-// LookupHostFunc is the type of the function used to lookup
-// the addresses of a specific host.
-type LookupHostFunc func(context.Context, string) ([]string, error)
-
-// DialHostPortFunc is the type of the function that is actually
-// used to dial a connection to a specific host and port.
-type DialHostPortFunc func(
-	ctx context.Context, network, onlyhost, onlyport string, connid int64,
-) (*connx.MeasuringConn, error)
+func getNextConnID() int64 {
+	return atomic.AddInt64(&nextConnID, 1)
+}
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	Beginning             time.Time
-	DialHostPort          DialHostPortFunc
+	DialContextDep        func(context.Context, string, string) (net.Conn, error)
 	Handler               model.Handler
-	LookupHost            LookupHostFunc
-	StartTLSHandshakeHook func(net.Conn)
+	LookupHost            func(context.Context, string) ([]string, error)
 	TLSConfig             *tls.Config
 	TLSHandshakeTimeout   time.Duration
-	dialer                *dialerbase.Dialer
+	startTLSHandshakeHook func(net.Conn)
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
-	d = &Dialer{
-		Beginning:             beginning,
-		Handler:               handler,
+func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
+	return &Dialer{
+		Beginning:      beginning,
+		DialContextDep: (&net.Dialer{}).DialContext,
+		Handler:        handler,
+		LookupHost: (&net.Resolver{
+			// This is equivalent to ConfigureDNS("system", "...")
+			PreferGo: true,
+		}).LookupHost,
 		TLSConfig:             &tls.Config{},
-		StartTLSHandshakeHook: func(net.Conn) {},
-		dialer: dialerbase.NewDialer(
-			beginning, handler,
-		),
+		startTLSHandshakeHook: func(net.Conn) {},
 	}
-	// This is equivalent to ConfigureDNS("system", "...")
-	r := &net.Resolver{
-		PreferGo: false,
-	}
-	d.LookupHost = r.LookupHost
-	d.DialHostPort = d.dialer.DialHostPort
-	return
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
@@ -77,7 +67,7 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
-	conn, _, _, err = d.DialContextEx(ctx, network, address, false)
+	conn, _, _, err = d.flexibleDial(ctx, network, address, false)
 	if err != nil {
 		// This is necessary because we're converting from
 		// *measurement.Conn to net.Conn.
@@ -89,7 +79,7 @@ func (d *Dialer) DialContext(
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 	ctx := context.Background()
-	conn, onlyhost, _, err := d.DialContextEx(ctx, network, address, false)
+	conn, onlyhost, _, err := d.flexibleDial(ctx, network, address, false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,18 +101,25 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 	return tc, nil
 }
 
-// DialContextEx is an extended DialContext where we may also
-// optionally prevent processing of domain names.
-func (d *Dialer) DialContextEx(
+// DialInternalDontUse is an internal dial function that you should
+// not be using in new code. We currently need it in dnsconf.go. When
+// the code using it is removed, we'll make this func internal.
+func (d *Dialer) DialInternalDontUse(
+	ctx context.Context, network, address string, requireIP bool,
+) (conn *connx.MeasuringConn, onlyhost, onlyport string, err error) {
+	return d.flexibleDial(ctx, network, address, requireIP)
+}
+
+func (d *Dialer) flexibleDial(
 	ctx context.Context, network, address string, requireIP bool,
 ) (conn *connx.MeasuringConn, onlyhost, onlyport string, err error) {
 	onlyhost, onlyport, err = net.SplitHostPort(address)
 	if err != nil {
 		return
 	}
-	connid := NextConnID()
+	connid := getNextConnID()
 	if net.ParseIP(onlyhost) != nil {
-		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, connid)
+		conn, err = d.dialHostPort(ctx, network, onlyhost, onlyport, connid)
 		return
 	}
 	if requireIP == true {
@@ -147,7 +144,7 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	for _, addr := range addrs {
-		conn, err = d.DialHostPort(ctx, network, addr, onlyport, connid)
+		conn, err = d.dialHostPort(ctx, network, addr, onlyport, connid)
 		if err == nil {
 			return
 		}
@@ -167,7 +164,7 @@ func (d *Dialer) clonedTLSConfig() *tls.Config {
 func (d *Dialer) tlsHandshake(
 	config *tls.Config, timeout time.Duration, conn *connx.MeasuringConn,
 ) (*tls.Conn, error) {
-	d.StartTLSHandshakeHook(conn)
+	d.startTLSHandshakeHook(conn)
 	err := conn.SetDeadline(time.Now().Add(timeout))
 	if err != nil {
 		conn.Close()
@@ -234,4 +231,50 @@ func (d *Dialer) SetCABundle(path string) error {
 func (d *Dialer) ForceSpecificSNI(sni string) error {
 	d.TLSConfig.ServerName = sni
 	return nil
+}
+
+func (d *Dialer) dialHostPort(
+	ctx context.Context, network, onlyhost, onlyport string, connid int64,
+) (*connx.MeasuringConn, error) {
+	if net.ParseIP(onlyhost) == nil {
+		return nil, errors.New("dialerapi: you passed me a domain name")
+	}
+	address := net.JoinHostPort(onlyhost, onlyport)
+	start := time.Now()
+	conn, err := d.DialContextDep(ctx, network, address)
+	stop := time.Now()
+	d.Handler.OnMeasurement(model.Measurement{
+		Connect: &model.ConnectEvent{
+			ConnID:        connid,
+			Duration:      stop.Sub(start),
+			Error:         err,
+			LocalAddress:  safeLocalAddress(conn),
+			Network:       network,
+			RemoteAddress: safeRemoteAddress(conn),
+			Time:          stop.Sub(d.Beginning),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &connx.MeasuringConn{
+		Conn:      conn,
+		Beginning: d.Beginning,
+		Handler:   d.Handler,
+		ID:        connid,
+	}, nil
+}
+
+func safeLocalAddress(conn net.Conn) (s string) {
+	if conn != nil && conn.LocalAddr() != nil {
+		s = conn.LocalAddr().String()
+	}
+	return
+}
+
+func safeRemoteAddress(conn net.Conn) (s string) {
+	if conn != nil && conn.RemoteAddr() != nil {
+		s = conn.RemoteAddr().String()
+	}
+	return
 }
