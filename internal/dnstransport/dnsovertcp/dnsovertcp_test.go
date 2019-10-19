@@ -46,7 +46,7 @@ func TestIntegrationLookupHostError(t *testing.T) {
 
 func TestIntegrationCustomTLSConfig(t *testing.T) {
 	transport := NewTransport(dialTLS(&tls.Config{
-		MinVersion: tls.VersionTLS10,
+		MinVersion: tls.VersionTLS12,
 	}), "dns.quad9.net:853")
 	if err := roundTrip(transport, "ooni.io."); err != nil {
 		t.Fatal(err)
@@ -60,7 +60,8 @@ func TestUnitRoundTripWithConnFailure(t *testing.T) {
 		return &fakeconn{}, nil
 	}, "8.8.8.8:53")
 	query := make([]byte, 1<<10)
-	reply, err := transport.RoundTripWithConn(&fakeconn{}, query)
+	cache.putconn(transport, &fakeconn{}) // should reuse immediately
+	reply, err := transport.RoundTrip(query)
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
@@ -99,31 +100,76 @@ func roundTrip(transport *Transport, domain string) error {
 	return query.Unpack(data)
 }
 
-type fakeconn struct{}
+type fakeconn struct {
+	closed bool
+}
 
-func (fakeconn) Read(b []byte) (n int, err error) {
+func (*fakeconn) Read(b []byte) (n int, err error) {
 	n = len(b)
 	return
 }
-func (fakeconn) Write(b []byte) (n int, err error) {
+func (*fakeconn) Write(b []byte) (n int, err error) {
 	n = len(b)
 	return
 }
-func (fakeconn) Close() (err error) {
+func (c *fakeconn) Close() (err error) {
+	c.closed = true
 	return
 }
-func (fakeconn) LocalAddr() net.Addr {
+func (*fakeconn) LocalAddr() net.Addr {
 	return &net.TCPAddr{}
 }
-func (fakeconn) RemoteAddr() net.Addr {
+func (*fakeconn) RemoteAddr() net.Addr {
 	return &net.TCPAddr{}
 }
-func (fakeconn) SetDeadline(t time.Time) (err error) {
+func (*fakeconn) SetDeadline(t time.Time) (err error) {
 	return errors.New("cannot set deadline")
 }
-func (fakeconn) SetReadDeadline(t time.Time) (err error) {
+func (*fakeconn) SetReadDeadline(t time.Time) (err error) {
 	return
 }
-func (fakeconn) SetWriteDeadline(t time.Time) (err error) {
+func (*fakeconn) SetWriteDeadline(t time.Time) (err error) {
 	return
+}
+
+func TestGetconnStale(t *testing.T) {
+	var transport, other Transport
+	otherconn := &fakeconn{}
+	c := newCacheInfo()
+	c.mtx.Lock()
+	c.cache[&other] = &connInfo{
+		conn:   otherconn,
+		latest: time.Time{},
+	}
+	c.mtx.Unlock()
+	conn := c.getconn(&transport)
+	if conn != nil {
+		t.Fatal("expected null conn here")
+	}
+	if otherconn.closed != true {
+		t.Fatal("other conn not closed")
+	}
+}
+
+func TestPutconnStale(t *testing.T) {
+	var transport Transport
+	otherconn := &fakeconn{}
+	c := newCacheInfo()
+	c.mtx.Lock()
+	c.cache[&transport] = &connInfo{
+		conn:   otherconn,
+		latest: time.Time{},
+	}
+	c.mtx.Unlock()
+	newconn := &fakeconn{}
+	c.putconn(&transport, newconn)
+	if otherconn.closed != true {
+		t.Fatal("other conn not closed")
+	}
+	c.mtx.Lock()
+	ok := c.cache[&transport].conn == newconn
+	c.mtx.Unlock()
+	if !ok {
+		t.Fatal("wrong connection in cache")
+	}
 }
