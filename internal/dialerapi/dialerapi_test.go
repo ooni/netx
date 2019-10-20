@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"net"
 	"testing"
 	"time"
 
@@ -42,17 +41,11 @@ func TestIntegrationInvalidAddress(t *testing.T) {
 
 func TestIntegrationFlexibleDialIPAddress(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.flexibleDial(
+	conn, err := dialer.flexibleDial(
 		context.Background(), "tcp", "8.8.8.8:443", true,
 	)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if onlyhost != "8.8.8.8" {
-		t.Fatal("unexpected onlyhost value")
-	}
-	if onlyport != "443" {
-		t.Fatal("unexpected onlyport value")
 	}
 	if conn == nil {
 		t.Fatal("expected a non-nil conn here")
@@ -62,17 +55,11 @@ func TestIntegrationFlexibleDialIPAddress(t *testing.T) {
 
 func TestIntegrationUnexpectedDomain(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.flexibleDial(
+	conn, err := dialer.flexibleDial(
 		context.Background(), "tcp", "www.google.com:443", true,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
-	}
-	if onlyhost != "www.google.com" {
-		t.Fatal("unexpected onlyhost value")
-	}
-	if onlyport != "443" {
-		t.Fatal("unexpected onlyport value")
 	}
 	if conn != nil {
 		t.Fatal("expected a nil conn here")
@@ -81,17 +68,11 @@ func TestIntegrationUnexpectedDomain(t *testing.T) {
 
 func TestIntegrationLookupFailure(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.flexibleDial(
+	conn, err := dialer.flexibleDial(
 		context.Background(), "tcp", "antani.ooni.io:443", false,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
-	}
-	if onlyhost != "antani.ooni.io" {
-		t.Fatal("unexpected onlyhost value")
-	}
-	if onlyport != "443" {
-		t.Fatal("unexpected onlyport value")
 	}
 	if conn != nil {
 		t.Fatal("expected a nil conn here")
@@ -137,32 +118,6 @@ func TestIntegrationDialInvalidSNI(t *testing.T) {
 	dialer.TLSConfig = &tls.Config{
 		ServerName: "www.google.com",
 	}
-	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if conn != nil {
-		t.Fatal("expected a nil conn here")
-	}
-}
-
-func TestIntegrationTLSHandshakeSetDeadlineError(t *testing.T) {
-	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	dialer.startTLSHandshakeHook = func(c net.Conn) {
-		c.Close() // close the connection so SetDealine should fail
-	}
-	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if conn != nil {
-		t.Fatal("expected a nil conn here")
-	}
-}
-
-func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
-	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	dialer.TLSHandshakeTimeout = 1 // very small timeout
 	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -221,13 +176,22 @@ func TestForceSpecificSNI(t *testing.T) {
 	}
 }
 
-func TestIntegrationErrorDomain(t *testing.T) {
-	dialer := NewDialer(
-		time.Now(), handlers.NoHandler,
-	)
-	conn, err := dialer.dialHostPort(
-		context.Background(), "tcp", "dns.google.com", "53", 17,
-	)
+func TestFlexibleDialSplitHostPort(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	conn, err := dialer.flexibleDial(context.Background(), "tcp", "antani!", false)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected nil conn here")
+	}
+}
+
+func TestDialTLSContextFlexibleDialError(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // should then fail immediately
+	conn, err := dialer.DialTLSContext(ctx, "tcp", "www.google.com:443")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
