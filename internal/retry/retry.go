@@ -1,7 +1,7 @@
 // Package retry contains code to retry operations. This package
 // is still considered very experimental.
 //
-// We believe this code will probably be useful in oodns.
+// We believe this code will probably be useful in oodnsclient.
 package retry
 
 import (
