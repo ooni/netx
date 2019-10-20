@@ -2,8 +2,6 @@ package dnsconf_test
 
 import (
 	"context"
-	"errors"
-	"net"
 	"testing"
 	"time"
 
@@ -59,10 +57,6 @@ func TestIntegrationNewResolverUDPDomainNoPort(t *testing.T) {
 
 func TestIntegrationNewResolverSystem(t *testing.T) {
 	testresolverquick(t, "system", "")
-}
-
-func TestIntegrationNewResolverGoDNS(t *testing.T) {
-	testresolverquick(t, "godns", "")
 }
 
 func TestIntegrationNewResolverTCPAddress(t *testing.T) {
@@ -130,34 +124,6 @@ func testconfigurednsquick(t *testing.T, network, address string) {
 	conn.Close()
 }
 
-func TestGoDNSDialContextExFailure(t *testing.T) {
-	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
-	resolver, err := dnsconf.NewResolver(
-		d, "godns", "",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resolver == nil {
-		t.Fatal("expected non-nil resolver here")
-	}
-	// Override the function used to established a connection so to return
-	// an error. This will cause the LookupHost to fail and allows us to
-	// fully cover the codepath where net.Resolver.Dial invoked.
-	d.DialContextDep = func(
-		ctx context.Context, network, address string,
-	) (net.Conn, error) {
-		return nil, errors.New("mocked error")
-	}
-	addrs, err := resolver.LookupHost(context.Background(), "www.google.com")
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if len(addrs) != 0 {
-		t.Fatal("expected empty addrs here")
-	}
-}
-
-func TestIntegrationConfigureDNSGoDNS(t *testing.T) {
-	testconfigurednsquick(t, "godns", "")
+func TestIntegrationConfigureDNSSystem(t *testing.T) {
+	testconfigurednsquick(t, "system", "")
 }

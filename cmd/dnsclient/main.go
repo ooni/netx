@@ -3,7 +3,7 @@
 // Usage:
 //
 //   dnsclient -type Addr|CNAME|Host|MX|NS -name <name>
-//             -transport system|godns|tcp|udp|dot|doh
+//             -transport system|tcp|udp|dot|doh
 //             -endpoint <transport-specific-endpoint>
 //
 //   dnsclient -help
@@ -18,7 +18,6 @@
 // Examples:
 //
 //   ./dnsclient -transport system ...
-//   ./dnsclient -transport godns ...
 //   ./dnsclient -transport doh -endpoint https://cloudflare-dns.com/dns-query ...
 //   ./dnsclient -transport dot -endpoint dns.quad9.net ...
 //   ./dnsclient -transport dot -endpoint 1.1.1.1:853 ...
@@ -66,7 +65,6 @@ func mainWithContext(ctx context.Context) error {
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
 		fmt.Printf("%s\n", "  ./dnsclient -transport system ...")
-		fmt.Printf("%s\n", "  ./dnsclient -transport godns ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport doh -endpoint https://cloudflare-dns.com/dns-query ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport dot -endpoint dns.quad9.net ...")
 		fmt.Printf("%s\n", "  ./dnsclient -transport dot -endpoint 1.1.1.1:853 ...")

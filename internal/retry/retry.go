@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// TODO(ooni): we need to calibrate these parameters.
+// TODO(bassosimone): we need to calibrate these parameters.
 const (
 	initialMean = 0.5
 	finalMean   = 8.0

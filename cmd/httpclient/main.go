@@ -2,13 +2,12 @@
 //
 // Usage:
 //
-//   httpclient -dns-transport system|godns|tcp|udp|dot|doh -url <URL>
+//   httpclient -dns-server <URL> -url <URL>
 //
 //   httpclient -help
 //
-// The default is to use the system DNS. Use -dns-engine to force
-// a different type of DNS transport. We'll use a good default resolver
-// for the selected transport. This only works on Unix.
+// The default is to use the system DNS. Use different <URL>s to
+// configure using different DNS servers and transports.
 //
 // We emit JSONL messages on the stdout showing what we are
 // currently doing. We also print the final result on the stdout.
@@ -16,8 +15,7 @@
 // Examples:
 //
 //   ./httpclient -dns-server system:/// -url https://ooni.org/ ...
-//   ./httpclient -dns-server godns:/// -url https://ooni.org/ ...
-//   ./httpclient -dns-server https://cloudflare-dns.com/dns-query -url https://ooni.org/ ...
+//   ./httpclient -dns-server https://cloudflare-dns.com/dns-query ...
 //   ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...
 //   ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...
 //   ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...
@@ -68,9 +66,6 @@ func mainfunc() (err error) {
 			"  ./httpclient system:/// -url https://ooni.org/ ...",
 		)
 		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server godns:/// -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
 			"  ./httpclient -dns-server https://cloudflare-dns.com/dns-query "+
 				"-url https://ooni.org/ ...",
 		)
@@ -86,8 +81,7 @@ func mainfunc() (err error) {
 		fmt.Printf("%s\n",
 			"  ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...",
 		)
-		fmt.Printf("\nWe'll select a suitable backend for each transport. Note\n")
-		fmt.Printf("that this only works on Unix.\n")
+		fmt.Printf("\nWe'll select a suitable backend for each transport.\n")
 		return nil
 	}
 
@@ -96,8 +90,6 @@ func mainfunc() (err error) {
 
 	if urlDNSServer.Scheme == "system" {
 		err = client.ConfigureDNS("system", "")
-	} else if urlDNSServer.Scheme == "godns" {
-		err = client.ConfigureDNS("godns", "")
 	} else if urlDNSServer.Scheme == "udp" {
 		err = client.ConfigureDNS("udp", urlDNSServer.Host)
 	} else if urlDNSServer.Scheme == "tcp" {

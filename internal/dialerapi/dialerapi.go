@@ -18,14 +18,6 @@ import (
 
 var nextConnID int64
 
-// NextConnIDDeprecatedDontUse is a deprecated function that
-// you should not be using in new code. When the godns code
-// will be removed (because unreliable), we'll be able to also
-// remove this public function from here.
-func NextConnIDDeprecatedDontUse() int64 {
-	return atomic.AddInt64(&nextConnID, 1)
-}
-
 func getNextConnID() int64 {
 	return atomic.AddInt64(&nextConnID, 1)
 }
@@ -99,15 +91,6 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 	// Note that we cannot wrap `tc` because the HTTP code assumes
 	// a `*tls.Conn` when implementing ALPN.
 	return tc, nil
-}
-
-// DialInternalDontUse is an internal dial function that you should
-// not be using in new code. We currently need it in dnsconf.go. When
-// the code using it is removed, we'll make this func internal.
-func (d *Dialer) DialInternalDontUse(
-	ctx context.Context, network, address string, requireIP bool,
-) (conn *connx.MeasuringConn, onlyhost, onlyport string, err error) {
-	return d.flexibleDial(ctx, network, address, requireIP)
 }
 
 func (d *Dialer) flexibleDial(

@@ -30,17 +30,6 @@ func TestSystemTransport(t *testing.T) {
 	}
 }
 
-func TestGoDNSTransport(t *testing.T) {
-	*flagDNSServer = "godns:///"
-	defer func() {
-		*flagDNSServer = ""
-	}()
-	err := mainfunc()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestUDPTransport(t *testing.T) {
 	*flagDNSServer = "udp://1.1.1.1:53"
 	defer func() {

@@ -2,7 +2,6 @@
 package dnsconf
 
 import (
-	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -10,13 +9,12 @@ import (
 	"time"
 
 	"github.com/ooni/netx/dnsx"
-	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
-	"github.com/ooni/netx/internal/godns"
 	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/oodns"
 	"github.com/ooni/netx/model"
 )
 
@@ -59,33 +57,12 @@ func withPort(address, port string) string {
 // creating new network connections used for resolving.
 func NewResolver(
 	dialer *dialerapi.Dialer, network, address string,
-) (*net.Resolver, error) {
-	// Implementation note: system and godns need to be dealt with
-	// separately because they don't have any transport.
+) (dnsx.Client, error) {
+	// Implementation note: system dns goes first because doesn't have transport
 	if network == "system" {
 		return &net.Resolver{
 			PreferGo: false,
 		}, nil
-	} else if network == "godns" {
-		return &net.Resolver{
-			PreferGo: true,
-			Dial: func(
-				ctx context.Context, network, address string,
-			) (net.Conn, error) {
-				// We will eventually dispose of this resolver, which does not
-				// work on all platforms, then DialInternalDontUse can go.
-				conn, _, _, err := dialer.DialInternalDontUse(
-					ctx, network, address, false,
-				)
-				if err != nil {
-					return nil, err
-				}
-				// convince Go this is really a net.PacketConn
-				return &connx.DNSMeasuringConn{MeasuringConn: *conn}, nil
-			},
-		}, nil
-	} else {
-		// FALLTHROUGH
 	}
 	var transport dnsx.RoundTripper
 	if network == "doh" {
@@ -116,5 +93,5 @@ func NewResolver(
 	if transport == nil {
 		return nil, errors.New("dnsconf: unsupported network value")
 	}
-	return godns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
+	return oodns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
 }
