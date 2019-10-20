@@ -1,6 +1,7 @@
 package dnsovertcp
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
@@ -10,14 +11,18 @@ import (
 	"github.com/miekg/dns"
 )
 
-func dialTLS(config *tls.Config) func(network, address string) (net.Conn, error) {
-	return func(network, address string) (net.Conn, error) {
+func dialTLS(config *tls.Config) func(
+	ctx context.Context, network, address string) (net.Conn, error) {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		// One limitation when we use tls.DialTLS is that we don't have a way
+		// to propagate the context, so we may not be able to pass along the
+		// tracing.Info pointer that we're using to collect data.
 		return tls.Dial(network, address, config)
 	}
 }
 
-func dialTCP(network, address string) (net.Conn, error) {
-	return net.Dial(network, address)
+func dialTCP(ctx context.Context, network, address string) (net.Conn, error) {
+	return (&net.Dialer{}).DialContext(ctx, network, address)
 }
 
 func TestIntegrationSuccessTLS(t *testing.T) {
@@ -56,7 +61,8 @@ func TestIntegrationCustomTLSConfig(t *testing.T) {
 func TestUnitRoundTripWithConnFailure(t *testing.T) {
 	// fakeconn will fail in the SetDeadline, therefore we will have
 	// an immediate error and we expect all errors the be alike
-	transport := NewTransport(func(network, address string) (net.Conn, error) {
+	transport := NewTransport(func(
+		ctx context.Context, network, address string) (net.Conn, error) {
 		return &fakeconn{}, nil
 	}, "8.8.8.8:53")
 	query := make([]byte, 1<<10)

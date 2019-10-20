@@ -4,6 +4,7 @@ package dnsovertcp
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -14,14 +15,14 @@ import (
 
 // Transport is a DNS over TCP/TLS dnsx.RoundTripper.
 type Transport struct {
-	dial    func(network, address string) (net.Conn, error)
+	dial    func(ctx context.Context, network, address string) (net.Conn, error)
 	address string
 	mtx     sync.Mutex
 }
 
 // NewTransport creates a new Transport
 func NewTransport(
-	dial func(network, address string) (net.Conn, error),
+	dial func(ctx context.Context, network, address string) (net.Conn, error),
 	address string,
 ) *Transport {
 	return &Transport{
@@ -97,13 +98,20 @@ func (c *cacheInfo) putconn(t *Transport, conn net.Conn) {
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+	return t.RoundTripContext(context.Background(), query)
+}
+
+// RoundTripContext is like RoundTrip but with context.
+func (t *Transport) RoundTripContext(
+	ctx context.Context, query []byte,
+) (reply []byte, err error) {
 	// Implementation note: we serialize round trips because this
 	// allows to simplify reusing connections.
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
 	conn := cache.getconn(t)
 	if conn == nil {
-		conn, err = t.dial("tcp", t.address)
+		conn, err = t.dial(ctx, "tcp", t.address)
 		if err != nil {
 			return nil, err
 		}

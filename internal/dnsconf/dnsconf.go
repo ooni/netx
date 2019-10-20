@@ -75,19 +75,19 @@ func NewResolver(
 			// We need a child dialer here to avoid an endless loop where the
 			// dialer will ask us to resolve, we'll tell the dialer to dial, it
 			// will ask us to resolve, ...
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialTLS,
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialTLSContext,
 			withPort(address, "853"),
 		)
 	} else if network == "tcp" {
 		transport = dnsovertcp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).Dial,
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialContext,
 			withPort(address, "53"),
 		)
 	} else if network == "udp" {
 		transport = dnsoverudp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).Dial,
+			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialContext,
 			withPort(address, "53"),
 		)
 	}

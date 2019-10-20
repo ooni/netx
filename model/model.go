@@ -247,4 +247,7 @@ type DNSClient interface {
 type DNSRoundTripper interface {
 	// RoundTrip sends a DNS query and receives the reply.
 	RoundTrip(query []byte) (reply []byte, err error)
+
+	// RoundTripContext is like RoundTrip but with a context.
+	RoundTripContext(ctx context.Context, query []byte) (reply []byte, err error)
 }

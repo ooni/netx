@@ -14,7 +14,7 @@ import (
 
 func newtransport() dnsx.RoundTripper {
 	return dnsovertcp.NewTransport(
-		func(network, address string) (net.Conn, error) {
+		func(ctx context.Context, network, address string) (net.Conn, error) {
 			return tls.Dial(network, address, nil)
 		},
 		"dns.quad9.net:853",

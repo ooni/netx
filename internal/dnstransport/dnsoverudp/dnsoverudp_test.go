@@ -1,6 +1,7 @@
 package dnsoverudp
 
 import (
+	"context"
 	"errors"
 	"net"
 	"testing"
@@ -11,9 +12,11 @@ import (
 	"github.com/ooni/netx/internal/connx"
 )
 
+var dialfunc = (&net.Dialer{}).DialContext
+
 func TestIntegrationSuccessWithAddress(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		dialfunc, "9.9.9.9:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -23,7 +26,7 @@ func TestIntegrationSuccessWithAddress(t *testing.T) {
 
 func TestIntegrationSuccessWithDomain(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "dns.quad9.net:53",
+		dialfunc, "dns.quad9.net:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -33,9 +36,10 @@ func TestIntegrationSuccessWithDomain(t *testing.T) {
 
 func TestIntegrationDialFailure(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		dialfunc, "9.9.9.9:53",
 	)
-	transport.dial = func(network, address string) (net.Conn, error) {
+	transport.dial = func(
+		ctx context.Context, network, address string) (net.Conn, error) {
 		return nil, errors.New("mocked error")
 	}
 	err := threeRounds(transport)
@@ -46,9 +50,10 @@ func TestIntegrationDialFailure(t *testing.T) {
 
 func TestIntegrationSetDeadlineError(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		dialfunc, "9.9.9.9:53",
 	)
-	transport.dial = func(network, address string) (net.Conn, error) {
+	transport.dial = func(
+		ctx context.Context, network, address string) (net.Conn, error) {
 		return &connx.MeasuringConn{
 			Conn: fakeconn{
 				setDeadlineError: errors.New("mocked error"),
@@ -64,9 +69,10 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 
 func TestIntegrationWriteError(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		dialfunc, "9.9.9.9:53",
 	)
-	transport.dial = func(network, address string) (net.Conn, error) {
+	transport.dial = func(
+		ctx context.Context, network, address string) (net.Conn, error) {
 		return &connx.MeasuringConn{
 			Conn: fakeconn{
 				writeError: errors.New("mocked error"),

@@ -2,19 +2,20 @@
 package dnsoverudp
 
 import (
+	"context"
 	"net"
 	"time"
 )
 
 // Transport is a DNS over UDP dnsx.RoundTripper.
 type Transport struct {
-	dial    func(network, address string) (net.Conn, error)
+	dial    func(ctx context.Context, network, address string) (net.Conn, error)
 	address string
 }
 
 // NewTransport creates a new Transport
 func NewTransport(
-	dial func(network, address string) (net.Conn, error),
+	dial func(ctx context.Context, network, address string) (net.Conn, error),
 	address string,
 ) *Transport {
 	return &Transport{
@@ -25,7 +26,14 @@ func NewTransport(
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
-	conn, err := t.dial("udp", t.address)
+	return t.RoundTripContext(context.Background(), query)
+}
+
+// RoundTripContext is like RoundTrip but with context.
+func (t *Transport) RoundTripContext(
+	ctx context.Context, query []byte,
+) (reply []byte, err error) {
+	conn, err := t.dial(ctx, "udp", t.address)
 	if err != nil {
 		return
 	}
