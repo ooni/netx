@@ -5,31 +5,21 @@ import (
 	"context"
 	"errors"
 	"net"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
-	"github.com/ooni/netx/model"
 )
 
 // Client is OONI's DNS client. It is a simplistic client where we
 // manually create and submit queries. It can use all the transports
 // for DNS supported by this library, however.
 type Client struct {
-	beginning time.Time
-	handler   model.Handler
 	transport dnsx.RoundTripper
 }
 
 // New creates a new OONI DNS client instance.
-func New(
-	beginning time.Time, handler model.Handler, t dnsx.RoundTripper,
-) *Client {
-	return &Client{
-		beginning: beginning,
-		handler:   handler,
-		transport: t,
-	}
+func New(t dnsx.RoundTripper) *Client {
+	return &Client{transport: t}
 }
 
 var errNotImpl = errors.New("Not implemented")

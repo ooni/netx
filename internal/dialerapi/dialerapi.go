@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/dnsclient/emittingdnsclient"
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
@@ -40,7 +42,7 @@ func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
 		Beginning:      beginning,
 		DialContextDep: (&net.Dialer{}).DialContext,
 		Handler:        handler,
-		LookupHost: (&net.Resolver{
+		LookupHost: emittingdnsclient.New(&net.Resolver{
 			// This is equivalent to ConfigureDNS("system", "...")
 			PreferGo: true,
 		}).LookupHost,
@@ -109,20 +111,12 @@ func (d *Dialer) flexibleDial(
 		err = errors.New("dialerapi: you passed me a domain name")
 		return
 	}
-	start := time.Now()
 	var addrs []string
-	addrs, err = d.LookupHost(ctx, onlyhost)
-	stop := time.Now()
-	d.Handler.OnMeasurement(model.Measurement{
-		Resolve: &model.ResolveEvent{
-			Addresses: addrs,
-			ConnID:    connid,
-			Duration:  stop.Sub(start),
-			Error:     err,
-			Hostname:  onlyhost,
-			Time:      stop.Sub(d.Beginning),
-		},
-	})
+	addrs, err = d.LookupHost(tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: d.Beginning,
+		ConnID:    connid,
+		Handler:   d.Handler,
+	}), onlyhost)
 	if err != nil {
 		return
 	}

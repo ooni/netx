@@ -1,32 +1,20 @@
-// Package dnsx contains OONI's DNS extensions
+// Package dnsx contains OONI's DNS extensions.
+//
+// Because this package was often causing import loop headaches we
+// have moved everything inside of model. Specifically, adding to
+// this file functions such as NewResolver or NewTransport will be
+// conducive to such loops. As such, this file is unusable unless
+// we move the definition, say, to model, and we just keep here the
+// names originally defined by the design document.
 package dnsx
 
-import (
-	"context"
-	"net"
-)
+import "github.com/ooni/netx/model"
 
 // Client is a DNS client. The *net.Resolver used by Go implements
 // this interface, but other implementations are possible.
-type Client interface {
-	// LookupAddr performs a reverse lookup of an address.
-	LookupAddr(ctx context.Context, addr string) (names []string, err error)
+type Client model.DNSClient
 
-	// LookupCNAME returns the canonical name of a given host.
-	LookupCNAME(ctx context.Context, host string) (cname string, err error)
-
-	// LookupHost resolves a hostname to a list of IP addresses.
-	LookupHost(ctx context.Context, hostname string) (addrs []string, err error)
-
-	// LookupMX resolves the DNS MX records for a given domain name.
-	LookupMX(ctx context.Context, name string) ([]*net.MX, error)
-
-	// LookupNS resolves the DNS NS records for a given domain name.
-	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
-}
-
-// RoundTripper represents an abstract DNS transport.
-type RoundTripper interface {
-	// RoundTrip sends a DNS query and receives the reply.
-	RoundTrip(query []byte) (reply []byte, err error)
-}
+// RoundTripper represents an abstract DNS transport. This name
+// was not originally specified inside of the design document but
+// we've had it here for a while and may be useful later.
+type RoundTripper model.DNSRoundTripper

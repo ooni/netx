@@ -10,11 +10,12 @@ import (
 
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dnsclient/emittingdnsclient"
+	"github.com/ooni/netx/internal/dnsclient/oodnsclient"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/internal/httptransport"
-	"github.com/ooni/netx/internal/dnsclient/oodnsclient"
 	"github.com/ooni/netx/model"
 )
 
@@ -60,9 +61,9 @@ func NewResolver(
 ) (dnsx.Client, error) {
 	// Implementation note: system dns goes first because doesn't have transport
 	if network == "system" {
-		return &net.Resolver{
+		return emittingdnsclient.New(&net.Resolver{
 			PreferGo: false,
-		}, nil
+		}), nil
 	}
 	var transport dnsx.RoundTripper
 	if network == "doh" {
@@ -93,5 +94,5 @@ func NewResolver(
 	if transport == nil {
 		return nil, errors.New("dnsconf: unsupported network value")
 	}
-	return oodnsclient.New(dialer.Beginning, dialer.Handler, transport), nil
+	return emittingdnsclient.New(oodnsclient.New(transport)), nil
 }

@@ -6,11 +6,9 @@ import (
 	"errors"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/dnsx"
-	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 )
 
@@ -24,9 +22,7 @@ func newtransport() dnsx.RoundTripper {
 }
 
 func TestLookupAddr(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -37,9 +33,7 @@ func TestLookupAddr(t *testing.T) {
 }
 
 func TestLookupCNAME(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupCNAME(context.Background(), "www.ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -50,9 +44,7 @@ func TestLookupCNAME(t *testing.T) {
 }
 
 func TestLookupHost(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupHost(context.Background(), "www.google.com")
 	if err != nil {
 		t.Fatal(err)
@@ -63,9 +55,7 @@ func TestLookupHost(t *testing.T) {
 }
 
 func TestLookupNonexistent(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupHost(context.Background(), "nonexistent.ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -76,9 +66,7 @@ func TestLookupNonexistent(t *testing.T) {
 }
 
 func TestLookupMX(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupMX(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -89,9 +77,7 @@ func TestLookupMX(t *testing.T) {
 }
 
 func TestLookupNS(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	addrs, err := client.LookupNS(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -102,9 +88,7 @@ func TestLookupNS(t *testing.T) {
 }
 
 func TestDoRoundTripPackFailure(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	_, err := client.doRoundTrip(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {
@@ -123,9 +107,7 @@ func TestDoRoundTripPackFailure(t *testing.T) {
 }
 
 func TestDoRoundTripRoundTripFailure(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	_, err := client.doRoundTrip(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {
@@ -144,9 +126,7 @@ func TestDoRoundTripRoundTripFailure(t *testing.T) {
 }
 
 func TestDoRoundTripUnpackFailure(t *testing.T) {
-	client := New(
-		time.Now(), handlers.NoHandler, newtransport(),
-	)
+	client := New(newtransport())
 	_, err := client.doRoundTrip(
 		context.Background(), nil,
 		func(msg *dns.Msg) ([]byte, error) {

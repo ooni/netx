@@ -19,6 +19,8 @@
 package model
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"time"
 )
@@ -215,4 +217,34 @@ type Handler interface {
 	// or Client is returned. OnMeasurement may be called by background
 	// goroutines and OnMeasurement calls may happen concurrently.
 	OnMeasurement(Measurement)
+}
+
+// DNSClient is a DNS client. The *net.Resolver used by Go implements
+// this interface, but other implementations are possible.
+//
+// This structure is dnsx.Client according to the design document, but
+// having it here reduces the import loop headaches. We still export it
+// as dnsx.Client inside of the dnsx package.
+type DNSClient interface {
+	// LookupAddr performs a reverse lookup of an address.
+	LookupAddr(ctx context.Context, addr string) (names []string, err error)
+
+	// LookupCNAME returns the canonical name of a given host.
+	LookupCNAME(ctx context.Context, host string) (cname string, err error)
+
+	// LookupHost resolves a hostname to a list of IP addresses.
+	LookupHost(ctx context.Context, hostname string) (addrs []string, err error)
+
+	// LookupMX resolves the DNS MX records for a given domain name.
+	LookupMX(ctx context.Context, name string) ([]*net.MX, error)
+
+	// LookupNS resolves the DNS NS records for a given domain name.
+	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
+}
+
+// DNSRoundTripper represents an abstract DNS transport. Like DNSClient
+// this is also available in the dnsx package.
+type DNSRoundTripper interface {
+	// RoundTrip sends a DNS query and receives the reply.
+	RoundTrip(query []byte) (reply []byte, err error)
 }
