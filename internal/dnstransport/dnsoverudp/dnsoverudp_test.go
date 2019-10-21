@@ -11,7 +11,7 @@ import (
 	"github.com/ooni/netx/internal/connx"
 )
 
-func TestIntegrationSuccess(t *testing.T) {
+func TestIntegrationSuccessWithAddress(t *testing.T) {
 	transport := NewTransport(
 		net.Dial, "9.9.9.9:53",
 	)
@@ -21,23 +21,13 @@ func TestIntegrationSuccess(t *testing.T) {
 	}
 }
 
-func TestIntegrationSplitHostPortFailure(t *testing.T) {
+func TestIntegrationSuccessWithDomain(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "antani",
+		net.Dial, "dns.quad9.net:53",
 	)
 	err := threeRounds(transport)
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-}
-
-func TestIntegrationParseIPFailure(t *testing.T) {
-	transport := NewTransport(
-		net.Dial, "antani:53",
-	)
-	err := threeRounds(transport)
-	if err == nil {
-		t.Fatal("expected an error here")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -2,7 +2,6 @@
 package dnsoverudp
 
 import (
-	"errors"
 	"net"
 	"time"
 )
@@ -26,16 +25,7 @@ func NewTransport(
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
-	address, _, err := net.SplitHostPort(t.address)
-	if err != nil {
-		return
-	}
-	if net.ParseIP(address) == nil {
-		err = errors.New("dnsoverudp: d.address is not IPv4/IPv6")
-		return
-	}
-	var conn net.Conn
-	conn, err = t.dial("udp", t.address)
+	conn, err := t.dial("udp", t.address)
 	if err != nil {
 		return
 	}

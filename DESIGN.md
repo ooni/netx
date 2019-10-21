@@ -433,7 +433,9 @@ such as `Read` and `Write` events. We will also be able to
 record the DNS messages sent and received.
 
 * when `network` is `"udp"`, `address` must be a valid
-string following the `"<ip>:<port>"` pattern. This will
+string following the `"<ip_or_domain>(:<port>)*"` pattern. If
+`<ip_or_domain>` is IPv6, it must be quoted using `[]`. If
+`<port>` is omitted, we will use port `53`. This value will
 indicate the code to use the selected DNS server using
 UDP transport. We will be able to observe all events including
 DNS messages sent and received.
@@ -443,7 +445,8 @@ DNS messages sent and received.
 over TCP protocol with the configured server.
 
 * when `network` is `"dot"`, `address` must be a valid
-domain name of a DNS over TLS server to use. We will
+domain name, or IP address, of a DNS over TLS server to use. If
+the port is omitted, we'll use port `853`. We will
 observe all events, which of course include the results
 of the TLS handshake with the server, the DNS messages
 sent and received, etc.
