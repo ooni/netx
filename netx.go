@@ -13,18 +13,23 @@ import (
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
 // Dialer performs measurements while dialing.
 type Dialer struct {
-	dialer *dialerapi.Dialer
+	Beginning time.Time
+	Handler   model.Handler
+	dialer    *dialerapi.Dialer
 }
 
 // NewDialer returns a new Dialer instance.
 func NewDialer(handler model.Handler) *Dialer {
 	return &Dialer{
-		dialer: dialerapi.NewDialer(time.Now(), handler),
+		Beginning: time.Now(),
+		Handler:   handler,
+		dialer:    dialerapi.NewDialer(),
 	}
 }
 
@@ -61,12 +66,18 @@ func NewDialer(handler model.Handler) *Dialer {
 //   d.ConfigureDNS("dot", "dns.quad9.net")
 //   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 func (d *Dialer) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(d.dialer, network, address)
+	return dnsconf.ConfigureDNS(
+		d.dialer,
+		d.Beginning,
+		d.Handler,
+		network,
+		address,
+	)
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
 func (d *Dialer) Dial(network, address string) (net.Conn, error) {
-	return d.dialer.Dial(network, address)
+	return d.DialContext(context.Background(), network, address)
 }
 
 // DialContext is like Dial but the context allows to interrupt a
@@ -74,12 +85,22 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: d.Beginning,
+		Handler:   d.Handler,
+	})
 	return d.dialer.DialContext(ctx, network, address)
 }
 
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
-	return d.dialer.DialTLS(network, address)
+	// Setup tracing with current handler and start time
+	ctx := tracing.WithInfo(context.Background(), &tracing.Info{
+		Beginning: d.Beginning,
+		Handler:   d.Handler,
+	})
+	return d.dialer.DialTLSContext(ctx, network, address)
 }
 
 // NewResolver returns a new resolver using this Dialer as dialer for
@@ -89,7 +110,15 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // (e.g. creating a new connection) will use this Dialer. This is why
 // NewResolver is a method rather than being just a free function.
 func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
-	return dnsconf.NewResolver(d.dialer, network, address)
+	resolver, err := dnsconf.NewResolver(d.Beginning, d.Handler, network, address)
+	if err == nil {
+		resolver = &resolverWrapper{
+			beginning: d.Beginning,
+			handler:   d.Handler,
+			resolver:  resolver,
+		}
+	}
+	return resolver, err
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle. This
@@ -102,4 +131,70 @@ func (d *Dialer) SetCABundle(path string) error {
 // ForceSpecificSNI forces using a specific SNI.
 func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return d.dialer.ForceSpecificSNI(sni)
+}
+
+type resolverWrapper struct {
+	beginning time.Time
+	handler   model.Handler
+	resolver  dnsx.Client
+}
+
+// LookupAddr performs a reverse lookup of an address.
+func (r *resolverWrapper) LookupAddr(
+	ctx context.Context, addr string,
+) (names []string, err error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: r.beginning,
+		Handler:   r.handler,
+	})
+	return r.resolver.LookupAddr(ctx, addr)
+}
+
+// LookupCNAME returns the canonical name of a given host.
+func (r *resolverWrapper) LookupCNAME(
+	ctx context.Context, host string,
+) (cname string, err error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: r.beginning,
+		Handler:   r.handler,
+	})
+	return r.resolver.LookupCNAME(ctx, host)
+}
+
+// LookupHost resolves a hostname to a list of IP addresses.
+func (r *resolverWrapper) LookupHost(
+	ctx context.Context, hostname string,
+) (addrs []string, err error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: r.beginning,
+		Handler:   r.handler,
+	})
+	return r.resolver.LookupHost(ctx, hostname)
+}
+
+// LookupMX resolves the DNS MX records for a given domain name.
+func (r *resolverWrapper) LookupMX(
+	ctx context.Context, name string,
+) ([]*net.MX, error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: r.beginning,
+		Handler:   r.handler,
+	})
+	return r.resolver.LookupMX(ctx, name)
+}
+
+// LookupNS resolves the DNS NS records for a given domain name.
+func (r *resolverWrapper) LookupNS(
+	ctx context.Context, name string,
+) ([]*net.NS, error) {
+	// Setup tracing with current handler and start time
+	ctx = tracing.WithInfo(ctx, &tracing.Info{
+		Beginning: r.beginning,
+		Handler:   r.handler,
+	})
+	return r.resolver.LookupNS(ctx, name)
 }

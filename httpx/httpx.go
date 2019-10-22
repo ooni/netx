@@ -24,7 +24,7 @@ type Transport struct {
 // the time to use as zero for computing the elapsed time.
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
-	t.dialer = dialerapi.NewDialer(beginning, handler)
+	t.dialer = dialerapi.NewDialer()
 	t.transport = httptransport.NewTransport(beginning, handler)
 	// make sure HTTP uses our dialer
 	t.transport.DialContext = t.dialer.DialContext
@@ -46,7 +46,13 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(t.dialer, network, address)
+	return dnsconf.ConfigureDNS(
+		t.dialer,
+		t.transport.Beginning,
+		t.transport.Handler,
+		network,
+		address,
+	)
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

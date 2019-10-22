@@ -20,8 +20,11 @@ import (
 )
 
 // ConfigureDNS implements netx.Dialer.ConfigureDNS.
-func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
-	r, err := NewResolver(dialer, network, address)
+func ConfigureDNS(
+	dialer *dialerapi.Dialer, beginning time.Time, handler model.Handler,
+	network, address string,
+) error {
+	r, err := NewResolver(beginning, handler, network, address)
 	if err == nil {
 		dialer.LookupHost = r.LookupHost
 	}
@@ -29,9 +32,8 @@ func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 }
 
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
-	dialer := dialerapi.NewDialer(beginning, handler)
-	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
-	transport.DialContext = dialer.DialContext
+	transport := httptransport.NewTransport(beginning, handler)
+	transport.DialContext = dialerapi.NewDialer().DialContext
 	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
 	return &http.Client{Transport: transport}
 }
@@ -50,7 +52,7 @@ func withPort(address, port string) string {
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
 func NewResolver(
-	dialer *dialerapi.Dialer, network, address string,
+	beginning time.Time, handler model.Handler, network, address string,
 ) (dnsx.Client, error) {
 	// Implementation note: system dns goes first because doesn't have transport
 	if network == "system" {
@@ -61,26 +63,26 @@ func NewResolver(
 	var transport dnsx.RoundTripper
 	if network == "doh" {
 		transport = dnsoverhttps.NewTransport(
-			newHTTPClientForDoH(dialer.Beginning, dialer.Handler), address,
+			newHTTPClientForDoH(beginning, handler), address,
 		)
 	} else if network == "dot" {
 		transport = dnsovertcp.NewTransport(
 			// We need a child dialer here to avoid an endless loop where the
 			// dialer will ask us to resolve, we'll tell the dialer to dial, it
 			// will ask us to resolve, ...
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialTLSContext,
+			dialerapi.NewDialer().DialTLSContext,
 			withPort(address, "853"),
 		)
 	} else if network == "tcp" {
 		transport = dnsovertcp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialContext,
+			dialerapi.NewDialer().DialContext,
 			withPort(address, "53"),
 		)
 	} else if network == "udp" {
 		transport = dnsoverudp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(dialer.Beginning, dialer.Handler).DialContext,
+			dialerapi.NewDialer().DialContext,
 			withPort(address, "53"),
 		)
 	}

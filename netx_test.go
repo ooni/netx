@@ -1,16 +1,18 @@
-package netx_test
+package netx
 
 import (
 	"context"
 	"crypto/x509"
+	"net"
 	"testing"
+	"time"
 
-	"github.com/ooni/netx"
+	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
 )
 
 func TestIntegrationDialer(t *testing.T) {
-	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer := NewDialer(handlers.NoHandler)
 	err := dialer.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +37,7 @@ func TestIntegrationDialer(t *testing.T) {
 }
 
 func TestIntegrationResolver(t *testing.T) {
-	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer := NewDialer(handlers.NoHandler)
 	resolver, err := dialer.NewResolver("tcp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +52,7 @@ func TestIntegrationResolver(t *testing.T) {
 }
 
 func TestSetCABundle(t *testing.T) {
-	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer := NewDialer(handlers.NoHandler)
 	err := dialer.SetCABundle("testdata/cacert.pem")
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +60,7 @@ func TestSetCABundle(t *testing.T) {
 }
 
 func TestForceSpecificSNI(t *testing.T) {
-	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer := NewDialer(handlers.NoHandler)
 	err := dialer.ForceSpecificSNI("www.facebook.com")
 	if err != nil {
 		t.Fatal(err)
@@ -72,5 +74,68 @@ func TestForceSpecificSNI(t *testing.T) {
 	}
 	if conn != nil {
 		t.Fatal("expected nil conn here")
+	}
+}
+
+func newresolverwrapper() dnsx.Client {
+	return &resolverWrapper{
+		beginning: time.Now(),
+		handler:   handlers.NoHandler,
+		resolver:  &net.Resolver{},
+	}
+}
+
+func TestResolverWrapperLookupAddr(t *testing.T) {
+	resolver := newresolverwrapper()
+	names, err := resolver.LookupAddr(context.Background(), "8.8.8.8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if names == nil {
+		t.Fatal("result is nil")
+	}
+}
+
+func TestResolverWrapperLookupCNAME(t *testing.T) {
+	resolver := newresolverwrapper()
+	cname, err := resolver.LookupCNAME(context.Background(), "www.google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cname == "" {
+		t.Fatal("result is empty string")
+	}
+}
+
+func TestResolverWrapperLookupHost(t *testing.T) {
+	resolver := newresolverwrapper()
+	addrs, err := resolver.LookupHost(context.Background(), "www.google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addrs == nil {
+		t.Fatal("result is nil")
+	}
+}
+
+func TestResolverWrapperLookupMX(t *testing.T) {
+	resolver := newresolverwrapper()
+	records, err := resolver.LookupMX(context.Background(), "google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if records == nil {
+		t.Fatal("result is nil")
+	}
+}
+
+func TestResolverWrapperLookupNS(t *testing.T) {
+	resolver := newresolverwrapper()
+	records, err := resolver.LookupNS(context.Background(), "google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if records == nil {
+		t.Fatal("result is nil")
 	}
 }

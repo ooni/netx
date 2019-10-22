@@ -11,8 +11,8 @@ import (
 )
 
 func testresolverquick(t *testing.T, network, address string) {
-	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
-	resolver, err := dnsconf.NewResolver(d, network, address)
+	resolver, err := dnsconf.NewResolver(
+		time.Now(), handlers.NoHandler, network, address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,9 +94,9 @@ func TestIntegrationNewResolverDoH(t *testing.T) {
 }
 
 func TestIntegrationNewResolverInvalid(t *testing.T) {
-	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	resolver, err := dnsconf.NewResolver(
-		d, "antani", "https://cloudflare-dns.com/dns-query",
+		time.Now(), handlers.NoHandler,
+		"antani", "https://cloudflare-dns.com/dns-query",
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -107,12 +107,16 @@ func TestIntegrationNewResolverInvalid(t *testing.T) {
 }
 
 func testconfigurednsquick(t *testing.T, network, address string) {
-	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
-	err := dnsconf.ConfigureDNS(d, network, address)
+	d := dialerapi.NewDialer()
+	err := dnsconf.ConfigureDNS(
+		d, time.Now(), handlers.NoHandler, network, address,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn, err := d.DialTLS("tcp", "www.google.com:443")
+	conn, err := d.DialTLSContext(
+		context.Background(), "tcp", "www.google.com:443",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

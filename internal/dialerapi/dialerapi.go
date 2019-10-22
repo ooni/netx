@@ -8,7 +8,6 @@ import (
 	"errors"
 	"net"
 	"sync/atomic"
-	"time"
 
 	"github.com/ooni/netx/internal/connector"
 	"github.com/ooni/netx/internal/connector/emittingconnector"
@@ -19,7 +18,6 @@ import (
 	"github.com/ooni/netx/internal/tlshandshaker/emittingtlshandshaker"
 	"github.com/ooni/netx/internal/tlshandshaker/ootlshandshaker"
 	"github.com/ooni/netx/internal/tracing"
-	"github.com/ooni/netx/model"
 )
 
 var nextConnID int64
@@ -31,20 +29,16 @@ func getNextConnID() int64 {
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
-	Beginning  time.Time
 	Connector  connector.Model
-	Handler    model.Handler
 	Handshaker tlshandshaker.Model
 	LookupHost func(context.Context, string) ([]string, error)
 	TLSConfig  *tls.Config
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
+func NewDialer() *Dialer {
 	return &Dialer{
-		Beginning:  beginning,
 		Connector:  emittingconnector.New(ooconnector.New()),
-		Handler:    handler,
 		Handshaker: emittingtlshandshaker.New(ootlshandshaker.New()),
 		LookupHost: emittingdnsclient.New(&net.Resolver{
 			// This is equivalent to ConfigureDNS("system", "...")
@@ -54,43 +48,21 @@ func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
 	}
 }
 
-// Dial creates a TCP or UDP connection. See net.Dial docs.
-func (d *Dialer) Dial(network, address string) (net.Conn, error) {
-	return d.DialContext(context.Background(), network, address)
-}
-
 // DialContext is like Dial but the context allows to interrupt a
 // pending connection attempt at any time.
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
-	if info := tracing.ContextInfo(ctx); info == nil {
-		ctx = tracing.WithInfo(ctx, &tracing.Info{
-			Beginning: d.Beginning,
-			Handler:   d.Handler,
-		})
-	}
 	return d.flexibleDial(ctx, network, address, false)
 }
 
-// DialTLS is like Dial, but creates TLS connections.
-func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
-	return d.DialTLSContext(context.Background(), network, address)
-}
-
-// DialTLSContext is like DialTLS but with context.
+// DialTLSContext dials a TLS connection with context
 func (d *Dialer) DialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
 	domain, _, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
-	}
-	if info := tracing.ContextInfo(ctx); info == nil {
-		ctx = tracing.WithInfo(ctx, &tracing.Info{
-			Beginning: d.Beginning,
-			Handler:   d.Handler,
-		})
 	}
 	conn, err := d.flexibleDial(ctx, network, address, false)
 	if err != nil {
