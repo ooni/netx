@@ -22,15 +22,11 @@ var nextTransactionID int64
 // measurement events as they happen.
 type Transport struct {
 	http.Transport
-	Handler   model.Handler
-	Beginning time.Time
 }
 
 // NewTransport creates a new Transport.
-func NewTransport(beginning time.Time, handler model.Handler) *Transport {
+func NewTransport() *Transport {
 	transport := &Transport{
-		Beginning: beginning,
-		Handler:   handler,
 		Transport: http.Transport{
 			ExpectContinueTimeout: 1 * time.Second,
 			IdleConnTimeout:       90 * time.Second,
@@ -55,107 +51,102 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	outurl := req.URL.String()
 	tid := atomic.AddInt64(&nextTransactionID, 1)
 	ctx := req.Context()
-	// For now, let's create and force a new context for every new
-	// transaction. This will make each transaction different.
-	//
-	// We may want in the future to link to the parent transaction.
-	tracingInfo := &tracing.Info{
-		Beginning:     t.Beginning,
-		Handler:       t.Handler,
-		TransactionID: tid,
+	tracingInfo := tracing.ContextInfo(ctx)
+	if tracingInfo != nil {
+		tracingInfo = tracingInfo.CloneWithTransactionID(tid)
+		req = req.WithContext(tracing.WithInfo(ctx, tracingInfo))
+		outheaders := http.Header{}
+		var mutex sync.Mutex
+		tracer := &httptrace.ClientTrace{
+			GotConn: func(info httptrace.GotConnInfo) {
+				tracingInfo.Handler.OnMeasurement(model.Measurement{
+					HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
+						LocalAddress:  info.Conn.LocalAddr().String(),
+						Network:       info.Conn.LocalAddr().Network(),
+						RemoteAddress: info.Conn.RemoteAddr().String(),
+						Time:          time.Now().Sub(tracingInfo.Beginning),
+						TransactionID: tid,
+					},
+				})
+			},
+			TLSHandshakeStart: func() {
+				tracingInfo.EmitTLSHandshakeStart(t.TLSClientConfig)
+			},
+			TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+				tracingInfo.EmitTLSHandshakeDone(&state, err)
+			},
+			WroteHeaderField: func(key string, values []string) {
+				mutex.Lock()
+				outheaders[key] = values
+				mutex.Unlock()
+			},
+			WroteHeaders: func() {
+				mutex.Lock()
+				m := model.Measurement{
+					HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
+						Headers:       outheaders,
+						Method:        outmethod,
+						Time:          time.Now().Sub(tracingInfo.Beginning),
+						TransactionID: tid,
+						URL:           outurl,
+					},
+				}
+				mutex.Unlock()
+				tracingInfo.Handler.OnMeasurement(m)
+			},
+			WroteRequest: func(info httptrace.WroteRequestInfo) {
+				tracingInfo.Handler.OnMeasurement(model.Measurement{
+					HTTPRequestDone: &model.HTTPRequestDoneEvent{
+						Time:          time.Now().Sub(tracingInfo.Beginning),
+						TransactionID: tid,
+					},
+				})
+			},
+			GotFirstResponseByte: func() {
+				tracingInfo.Handler.OnMeasurement(model.Measurement{
+					HTTPResponseStart: &model.HTTPResponseStartEvent{
+						Time:          time.Now().Sub(tracingInfo.Beginning),
+						TransactionID: tid,
+					},
+				})
+			},
+		}
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
 	}
-	req = req.WithContext(tracing.WithInfo(ctx, tracingInfo))
-	outheaders := http.Header{}
-	var mutex sync.Mutex
-	tracer := &httptrace.ClientTrace{
-		GotConn: func(info httptrace.GotConnInfo) {
-			t.Handler.OnMeasurement(model.Measurement{
-				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
-					LocalAddress:  info.Conn.LocalAddr().String(),
-					Network:       info.Conn.LocalAddr().Network(),
-					RemoteAddress: info.Conn.RemoteAddr().String(),
-					Time:          time.Now().Sub(t.Beginning),
-					TransactionID: tid,
-				},
-			})
-		},
-		TLSHandshakeStart: func() {
-			tracingInfo.EmitTLSHandshakeStart(t.TLSClientConfig)
-		},
-		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
-			tracingInfo.EmitTLSHandshakeDone(&state, err)
-		},
-		WroteHeaderField: func(key string, values []string) {
-			mutex.Lock()
-			outheaders[key] = values
-			mutex.Unlock()
-		},
-		WroteHeaders: func() {
-			mutex.Lock()
-			m := model.Measurement{
-				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
-					Headers:       outheaders,
-					Method:        outmethod,
-					Time:          time.Now().Sub(t.Beginning),
-					TransactionID: tid,
-					URL:           outurl,
-				},
-			}
-			mutex.Unlock()
-			t.Handler.OnMeasurement(m)
-		},
-		WroteRequest: func(info httptrace.WroteRequestInfo) {
-			t.Handler.OnMeasurement(model.Measurement{
-				HTTPRequestDone: &model.HTTPRequestDoneEvent{
-					Time:          time.Now().Sub(t.Beginning),
-					TransactionID: tid,
-				},
-			})
-		},
-		GotFirstResponseByte: func() {
-			t.Handler.OnMeasurement(model.Measurement{
-				HTTPResponseStart: &model.HTTPResponseStartEvent{
-					Time:          time.Now().Sub(t.Beginning),
-					TransactionID: tid,
-				},
-			})
-		},
-	}
-	req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
 	resp, err = t.Transport.RoundTrip(req)
 	if err != nil {
 		return
 	}
-	t.Handler.OnMeasurement(model.Measurement{
-		HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
-			Headers:       resp.Header,
-			StatusCode:    int64(resp.StatusCode),
-			Time:          time.Now().Sub(t.Beginning),
-			TransactionID: tid,
-		},
-	})
-	// "The http Client and Transport guarantee that Body is always
-	//  non-nil, even on responses without a body or responses with
-	//  a zero-length body." (from the docs)
-	resp.Body = &bodyWrapper{
-		ReadCloser: resp.Body,
-		t:          t,
-		tid:        tid,
+	if tracingInfo != nil {
+		tracingInfo.Handler.OnMeasurement(model.Measurement{
+			HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
+				Headers:       resp.Header,
+				StatusCode:    int64(resp.StatusCode),
+				Time:          time.Now().Sub(tracingInfo.Beginning),
+				TransactionID: tid,
+			},
+		})
+		// "The http Client and Transport guarantee that Body is always
+		//  non-nil, even on responses without a body or responses with
+		//  a zero-length body." (from the docs)
+		resp.Body = &bodyWrapper{
+			ReadCloser:  resp.Body,
+			tracingInfo: tracingInfo,
+		}
 	}
 	return
 }
 
 type bodyWrapper struct {
 	io.ReadCloser
-	t   *Transport
-	tid int64
+	tracingInfo *tracing.Info
 }
 
 func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = bw.ReadCloser.Read(b)
 	stop := time.Now()
-	bw.t.Handler.OnMeasurement(model.Measurement{
+	bw.tracingInfo.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
 			// "Read reads up to len(p) bytes into p. It returns the number of
 			// bytes read (0 <= n <= len(p)) and any error encountered."
@@ -163,8 +154,8 @@ func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 			Duration:      stop.Sub(start),
 			Error:         err,
 			NumBytes:      int64(n),
-			Time:          stop.Sub(bw.t.Beginning),
-			TransactionID: bw.tid,
+			Time:          stop.Sub(bw.tracingInfo.Beginning),
+			TransactionID: bw.tracingInfo.TransactionID,
 		},
 	})
 	return
@@ -172,10 +163,10 @@ func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
-	bw.t.Handler.OnMeasurement(model.Measurement{
+	bw.tracingInfo.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseDone: &model.HTTPResponseDoneEvent{
-			Time:          time.Now().Sub(bw.t.Beginning),
-			TransactionID: bw.tid,
+			Time:          time.Now().Sub(bw.tracingInfo.Beginning),
+			TransactionID: bw.tracingInfo.TransactionID,
 		},
 	})
 	return

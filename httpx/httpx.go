@@ -11,21 +11,27 @@ import (
 	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/tlsconf"
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
 
 // Transport performs measurements during HTTP round trips.
 type Transport struct {
+	beginning time.Time
 	dialer    *dialerapi.Dialer
+	handler   model.Handler
 	transport *httptransport.Transport
 }
 
 // NewTransport creates a new Transport. The beginning argument is
 // the time to use as zero for computing the elapsed time.
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
-	t := new(Transport)
+	t := &Transport{
+		beginning: beginning,
+		handler:   handler,
+	}
 	t.dialer = dialerapi.NewDialer()
-	t.transport = httptransport.NewTransport(beginning, handler)
+	t.transport = httptransport.NewTransport()
 	// make sure HTTP uses our dialer
 	t.transport.DialContext = t.dialer.DialContext
 	return t
@@ -34,7 +40,12 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.transport.RoundTrip(req)
+	// Setup tracing with current handler and start time
+	ctx := tracing.WithInfo(req.Context(), &tracing.Info{
+		Beginning: t.beginning,
+		Handler:   t.handler,
+	})
+	return t.transport.RoundTrip(req.WithContext(ctx))
 }
 
 // CloseIdleConnections closes any connections which were previously connected
@@ -46,13 +57,7 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(
-		t.dialer,
-		t.transport.Beginning,
-		t.transport.Handler,
-		network,
-		address,
-	)
+	return dnsconf.ConfigureDNS(t.dialer, network, address)
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

@@ -3,16 +3,13 @@ package dnsconf_test
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
 )
 
 func testresolverquick(t *testing.T, network, address string) {
-	resolver, err := dnsconf.NewResolver(
-		time.Now(), handlers.NoHandler, network, address)
+	resolver, err := dnsconf.NewResolver(network, address)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +92,6 @@ func TestIntegrationNewResolverDoH(t *testing.T) {
 
 func TestIntegrationNewResolverInvalid(t *testing.T) {
 	resolver, err := dnsconf.NewResolver(
-		time.Now(), handlers.NoHandler,
 		"antani", "https://cloudflare-dns.com/dns-query",
 	)
 	if err == nil {
@@ -108,9 +104,7 @@ func TestIntegrationNewResolverInvalid(t *testing.T) {
 
 func testconfigurednsquick(t *testing.T, network, address string) {
 	d := dialerapi.NewDialer()
-	err := dnsconf.ConfigureDNS(
-		d, time.Now(), handlers.NoHandler, network, address,
-	)
+	err := dnsconf.ConfigureDNS(d, network, address)
 	if err != nil {
 		t.Fatal(err)
 	}

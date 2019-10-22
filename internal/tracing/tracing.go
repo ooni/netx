@@ -20,6 +20,15 @@ type Info struct {
 	TransactionID int64
 }
 
+// CloneWithTransactionID clones Info with new transaction ID
+func (info *Info) CloneWithTransactionID(tid int64) *Info {
+	return &Info{
+		Beginning:     info.Beginning,
+		Handler:       info.Handler,
+		TransactionID: tid,
+	}
+}
+
 // EmitTLSHandshakeStart emits the TLSHandshakeStartEvent event
 func (info *Info) EmitTLSHandshakeStart(config *tls.Config) {
 	info.Handler.OnMeasurement(model.Measurement{

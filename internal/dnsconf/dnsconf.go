@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/dialerapi"
@@ -16,23 +15,19 @@ import (
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/internal/httptransport"
-	"github.com/ooni/netx/model"
 )
 
 // ConfigureDNS implements netx.Dialer.ConfigureDNS.
-func ConfigureDNS(
-	dialer *dialerapi.Dialer, beginning time.Time, handler model.Handler,
-	network, address string,
-) error {
-	r, err := NewResolver(beginning, handler, network, address)
+func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
+	r, err := NewResolver(network, address)
 	if err == nil {
 		dialer.LookupHost = r.LookupHost
 	}
 	return err
 }
 
-func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
-	transport := httptransport.NewTransport(beginning, handler)
+func newHTTPClientForDoH() *http.Client {
+	transport := httptransport.NewTransport()
 	transport.DialContext = dialerapi.NewDialer().DialContext
 	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
 	return &http.Client{Transport: transport}
@@ -51,9 +46,7 @@ func withPort(address, port string) string {
 
 // NewResolver returns a new resolver using this Dialer as dialer for
 // creating new network connections used for resolving.
-func NewResolver(
-	beginning time.Time, handler model.Handler, network, address string,
-) (dnsx.Client, error) {
+func NewResolver(network, address string) (dnsx.Client, error) {
 	// Implementation note: system dns goes first because doesn't have transport
 	if network == "system" {
 		return emittingdnsclient.New(&net.Resolver{
@@ -63,7 +56,7 @@ func NewResolver(
 	var transport dnsx.RoundTripper
 	if network == "doh" {
 		transport = dnsoverhttps.NewTransport(
-			newHTTPClientForDoH(beginning, handler), address,
+			newHTTPClientForDoH(), address,
 		)
 	} else if network == "dot" {
 		transport = dnsovertcp.NewTransport(

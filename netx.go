@@ -66,13 +66,7 @@ func NewDialer(handler model.Handler) *Dialer {
 //   d.ConfigureDNS("dot", "dns.quad9.net")
 //   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 func (d *Dialer) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(
-		d.dialer,
-		d.Beginning,
-		d.Handler,
-		network,
-		address,
-	)
+	return dnsconf.ConfigureDNS(d.dialer, network, address)
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
@@ -110,7 +104,7 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // (e.g. creating a new connection) will use this Dialer. This is why
 // NewResolver is a method rather than being just a free function.
 func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
-	resolver, err := dnsconf.NewResolver(d.Beginning, d.Handler, network, address)
+	resolver, err := dnsconf.NewResolver(network, address)
 	if err == nil {
 		resolver = &resolverWrapper{
 			beginning: d.Beginning,
