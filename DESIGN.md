@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-20   |
+| Last-Updated | 2019-10-22   |
 | Status       | approved     |
 
 ## Introduction
@@ -179,7 +179,8 @@ type Measurement struct {
     HTTPResponseDone        *HTTPResponseDoneEvent
     Read                    *ReadEvent
     Resolve                 *ResolveEvent
-    TLSHandshake            *TLSHandshakeEvent
+    TLSHandshakeStart       *TLSHandshakeStartEvent
+    TLSHandshakeDone        *TLSHandshakeDoneEvent
     Write                   *WriteEvent
 }
 ```

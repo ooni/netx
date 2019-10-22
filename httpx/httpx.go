@@ -10,6 +10,7 @@ import (
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/tlsconf"
 	"github.com/ooni/netx/model"
 )
 
@@ -25,12 +26,8 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
 	t.dialer = dialerapi.NewDialer(beginning, handler)
 	t.transport = httptransport.NewTransport(beginning, handler)
-	// make sure we use an http2 ready TLS config
-	t.dialer.TLSConfig = t.transport.TLSClientConfig
 	// make sure HTTP uses our dialer
-	t.transport.Dial = t.dialer.Dial
 	t.transport.DialContext = t.dialer.DialContext
-	t.transport.DialTLS = t.dialer.DialTLS
 	return t
 }
 
@@ -55,12 +52,12 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 // SetCABundle internally calls netx.Dialer.SetCABundle and
 // therefore it has the same caveats and limitations.
 func (t *Transport) SetCABundle(path string) error {
-	return t.dialer.SetCABundle(path)
+	return tlsconf.SetCABundle(t.transport.TLSClientConfig, path)
 }
 
 // ForceSpecificSNI forces using a specific SNI.
 func (t *Transport) ForceSpecificSNI(sni string) error {
-	return t.dialer.ForceSpecificSNI(sni)
+	return tlsconf.ForceSpecificSNI(t.transport.TLSClientConfig, sni)
 }
 
 // Client is a replacement for http.Client.

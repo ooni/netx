@@ -3,6 +3,7 @@
 package httptransport
 
 import (
+	"crypto/tls"
 	"io"
 	"net/http"
 	"net/http/httptrace"
@@ -10,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
 )
@@ -52,6 +54,17 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	outmethod := req.Method
 	outurl := req.URL.String()
 	tid := atomic.AddInt64(&nextTransactionID, 1)
+	ctx := req.Context()
+	// For now, let's create and force a new context for every new
+	// transaction. This will make each transaction different.
+	//
+	// We may want in the future to link to the parent transaction.
+	tracingInfo := &tracing.Info{
+		Beginning:     t.Beginning,
+		Handler:       t.Handler,
+		TransactionID: tid,
+	}
+	req = req.WithContext(tracing.WithInfo(ctx, tracingInfo))
 	outheaders := http.Header{}
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
@@ -65,6 +78,12 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 					TransactionID: tid,
 				},
 			})
+		},
+		TLSHandshakeStart: func() {
+			tracingInfo.EmitTLSHandshakeStart(t.TLSClientConfig)
+		},
+		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+			tracingInfo.EmitTLSHandshakeDone(&state, err)
 		},
 		WroteHeaderField: func(key string, values []string) {
 			mutex.Lock()

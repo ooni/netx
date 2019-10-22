@@ -169,14 +169,19 @@ type TLSConnectionState struct {
 	Version                    uint16
 }
 
-// TLSHandshakeEvent is emitted when conn.Handshake returns.
-type TLSHandshakeEvent struct {
-	Config          TLSConfig
-	ConnectionState TLSConnectionState
+// TLSHandshakeDoneEvent is emitted when conn.Handshake returns.
+type TLSHandshakeDoneEvent struct {
 	ConnID          int64
-	Duration        time.Duration
+	ConnectionState *TLSConnectionState
 	Error           error
 	Time            time.Duration
+}
+
+// TLSHandshakeStartEvent is emitted when conn.Handshake starts.
+type TLSHandshakeStartEvent struct {
+	ConnID int64
+	Config TLSConfig
+	Time   time.Duration
 }
 
 // WriteEvent is emitted when conn.Write returns.
@@ -206,7 +211,8 @@ type Measurement struct {
 	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
 	Read                    *ReadEvent                    `json:",omitempty"`
 	Resolve                 *ResolveEvent                 `json:",omitempty"`
-	TLSHandshake            *TLSHandshakeEvent            `json:",omitempty"`
+	TLSHandshakeStart       *TLSHandshakeStartEvent       `json:",omitempty"`
+	TLSHandshakeDone        *TLSHandshakeDoneEvent        `json:",omitempty"`
 	Write                   *WriteEvent                   `json:",omitempty"`
 }
 

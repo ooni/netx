@@ -5,9 +5,7 @@ package dialerapi
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
-	"io/ioutil"
 	"net"
 	"sync/atomic"
 	"time"
@@ -16,6 +14,7 @@ import (
 	"github.com/ooni/netx/internal/connector/emittingconnector"
 	"github.com/ooni/netx/internal/connector/ooconnector"
 	"github.com/ooni/netx/internal/dnsclient/emittingdnsclient"
+	"github.com/ooni/netx/internal/tlsconf"
 	"github.com/ooni/netx/internal/tlshandshaker"
 	"github.com/ooni/netx/internal/tlshandshaker/emittingtlshandshaker"
 	"github.com/ooni/netx/internal/tlshandshaker/ootlshandshaker"
@@ -145,18 +144,10 @@ func (d *Dialer) flexibleDial(
 
 // SetCABundle configures the dialer to use a specific CA bundle.
 func (d *Dialer) SetCABundle(path string) error {
-	cert, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(cert)
-	d.TLSConfig.RootCAs = pool
-	return nil
+	return tlsconf.SetCABundle(d.TLSConfig, path)
 }
 
 // ForceSpecificSNI forces using a specific SNI.
 func (d *Dialer) ForceSpecificSNI(sni string) error {
-	d.TLSConfig.ServerName = sni
-	return nil
+	return tlsconf.ForceSpecificSNI(d.TLSConfig, sni)
 }

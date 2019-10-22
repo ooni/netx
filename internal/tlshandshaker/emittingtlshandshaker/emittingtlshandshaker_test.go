@@ -31,8 +31,8 @@ func TestIntegrationSuccess(t *testing.T) {
 		t.Fatal("expected non-nil tslconn")
 	}
 	tlsconn.Close()
-	if info.Handler.(*counthandler.Handler).Count < 0 {
-		t.Fatal("no measurements saved")
+	if info.Handler.(*counthandler.Handler).Count != 2 {
+		t.Fatal("wrong number of measurements saved")
 	}
 }
 
@@ -56,8 +56,8 @@ func TestIntegrationTLSHandshakeFailure(t *testing.T) {
 		t.Fatal("expected non-nil tslconn")
 	}
 	tlsconn.Close()
-	if info.Handler.(*counthandler.Handler).Count < 0 {
-		t.Fatal("no measurements saved")
+	if info.Handler.(*counthandler.Handler).Count != 2 {
+		t.Fatal("wrong number of measurements saved")
 	}
 }
 
@@ -82,7 +82,7 @@ func TestIntegrationContextDeadline(t *testing.T) {
 	if tlsconn != nil {
 		t.Fatal("expected nil tslconn")
 	}
-	if info.Handler.(*counthandler.Handler).Count != 0 {
-		t.Fatal("measurements saved")
+	if info.Handler.(*counthandler.Handler).Count != 2 {
+		t.Fatal("wrong number of measurements saved")
 	}
 }
