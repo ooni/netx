@@ -5,14 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
 )
 
 func testresolverquick(t *testing.T, network, address string) {
-	var resolver dnsx.Client
 	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
 	resolver, err := dnsconf.NewResolver(d, network, address)
 	if err != nil {
