@@ -4,6 +4,7 @@ package emittingconnector
 import (
 	"context"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/internal/connector"
@@ -11,6 +12,8 @@ import (
 	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
+
+var connID int64
 
 // Connector is a connector emitting events
 type Connector struct {
@@ -26,38 +29,28 @@ func New(connector connector.Model) *Connector {
 func (c *Connector) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
+	cid := atomic.AddInt64(&connID, 1)
 	start := time.Now()
 	conn, err := c.connector.DialContext(ctx, network, address)
 	stop := time.Now()
 	if info := tracing.ContextInfo(ctx); info != nil {
+		info.ConnID = cid
 		info.Handler.OnMeasurement(model.Measurement{
 			Connect: &model.ConnectEvent{
-				ConnID:        info.ConnID,
-				Duration:      stop.Sub(start),
+				SyscallEvent: model.SyscallEvent{
+					BaseEvent:   info.BaseEvent(),
+					BlockedTime: stop.Sub(start),
+				},
 				Error:         err,
-				LocalAddress:  safeLocalAddress(conn),
 				Network:       network,
 				RemoteAddress: safeRemoteAddress(conn),
-				Time:          stop.Sub(info.Beginning),
 			},
 		})
 		if conn != nil {
-			conn = &connx.MeasuringConn{
-				Beginning: info.Beginning,
-				Conn:      conn,
-				Handler:   info.Handler,
-				ID:        info.ConnID,
-			}
+			conn = connx.NewMeasuringConn(conn, info)
 		}
 	}
 	return conn, err
-}
-
-func safeLocalAddress(conn net.Conn) (s string) {
-	if conn != nil && conn.LocalAddr() != nil {
-		s = conn.LocalAddr().String()
-	}
-	return
 }
 
 func safeRemoteAddress(conn net.Conn) (s string) {

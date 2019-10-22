@@ -113,7 +113,7 @@ e.g. fetching a URL. After the measurement task
 is completed, the experiment code will include the
 low-level events into the measurement result object,
 and will walk through the stream of events to determine
-in a more precise way what could have gone wrong.
+in a more precise way what has gone wrong.
 
 ## Implementation
 
@@ -128,7 +128,7 @@ of existing fields unless that is necessary.
 This package will contain the definition of low-level
 events. We are interested in knowing the following:
 
-1. the timing and result of each I/O operation.
+1. the timing and result of I/O operations.
 
 2. the timing of HTTP events occurring during the
 lifecycle of an HTTP request.
@@ -160,15 +160,31 @@ Every replacement that we write will call the
 `OnMeasurement` method of the handler wherever
 there is a measurement event.
 
+This package also contains the definition of more
+interfaces that are useful to handle code in an
+abstract way. They are out of this document's scope.
+
 In turn, the `Measurement` event will be defined
 as follows:
 
 ```Go
 type Measurement struct {
-    Close                   *CloseEvent
-    Connect                 *ConnectEvent
+    // DNS
+    ResolveStart            *ResolveStartEvent
     DNSQuery                *DNSQueryEvent
     DNSReply                *DNSReplyEvent
+    ResolveDone             *ResolveDoneEvent
+
+    // network
+    Connect                 *ConnectEvent
+    Read                    *ReadEvent
+    Write                   *WriteEvent
+
+    // TLS
+    TLSHandshakeStart       *TLSHandshakeStartEvent
+    TLSHandshakeDone        *TLSHandshakeDoneEvent
+
+    // HTTP
     HTTPConnectionReady     *HTTPConnectionReadyEvent
     HTTPRequestStart        *HTTPRequestStartEvent
     HTTPRequestHeadersDone  *HTTPRequestHeadersDoneEvent
@@ -177,11 +193,6 @@ type Measurement struct {
     HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent
     HTTPResponseBodyPart    *HTTPResponseBodyPartEvent
     HTTPResponseDone        *HTTPResponseDoneEvent
-    Read                    *ReadEvent
-    Resolve                 *ResolveEvent
-    TLSHandshakeStart       *TLSHandshakeStartEvent
-    TLSHandshakeDone        *TLSHandshakeDoneEvent
-    Write                   *WriteEvent
 }
 ```
 
@@ -190,61 +201,99 @@ that we support. The events processing code will
 check what pointer or pointers are not `nil` to
 known which event or events have occurred.
 
-The following network-level events will be defined:
-
-1. `CloseEvent`, indicating when a socket is closed
-2. `ConnectEvent`, indicating the result of connecting
-3. `ReadEvent`, indicating when a `read` completes
-4. `ResolveEvent`, indicating when a name resolution completes
-5. `WriteEvent`, indicating when a `write` completes
-
-The following DNS-level events will be defined:
-
-1. `DNSQueryEvent`, containing the query data
-2. `DNSReplyEvent`, containing the reply data
-
-The following HTTP-level events will be defined:
-
-1. `HTTPConnectionReadyEvent`, indicating when the connection
-is ready to be used by HTTP code
-
-2. `HTTPRequestStartEvent`, indicating when we start sending the request
-
-3. `HTTPRequestHeadersDoneEvent`, indicating when we have sent the
-request headers, and containing the sent headers
-
-4. `HTTPRequestDoneEvent`, indicating when the whole request has been sent
-
-5. `HTTPResponseStartEvent`, indicacting when we receive the first
-byte of the HTTP response
-
-6. `HTTPResponseHeadersDoneEvent`, indicating when we have received the
-response headers, and containing headers and status code
-
-7. `HTTPResponseBodyPartEvent`, indicating when we have received a
-part of the response body, or an error reading it
-
-8. `HTTPResponseDoneEvent`, indicating when we have received the
-response body
-
-Every event will include at the minimum this field:
+Every event will include at the minimum these field:
 
 ```Go
-    Time     time.Duration
+    ConnID          int64
+    ElapsedTime     time.Duration
+    HTTPRoundTripID int64
+    ResolveID       int64
 ```
 
-This will be the time when the event occurred, relative to
-a configured "zero" time. If an event pertains to a blocking
-operation (i.e. `Read`), it will also contain this field:
+where:
 
-```Go
-    Duration time.Duration
-```
+- `ConnID` is a nonzero connection ID or zero if this
+event is not bound to a specific connection;
 
-This will be the amount time we have been waiting for
-the event to occur. That is, in the case of `Read` the
-amount of time we've been blocking waiting for the `Read`
-operation to return a value or an error.
+- `ElapsedTime` is the elapsed time in nanosecond
+since a predefined zero, measured using a monotonic clock;
+
+- `HTTPRoundTripID` is a nonzero round-trip ID, or zero
+if this event is not bound to an HTTP round-trip;
+
+- `ResolveID` is a nonzero resolve ID, or zero if this
+event is not bound to a DNS resolution.
+
+For a successful HTTP round trip the sequence of emitted
+events should be the following:
+
+- `ResolveStart` with `ResolveID` set to, say, `n` and
+`HTTPRoundTripID` equal to, say, `m`.
+
+- Zero or more events describing the name resolution
+with `ResolveID` equal to `n` (whether or not these
+events are emitted depends on the DNS that we're using)
+and `HTTPRoundTripID` equal to `m`
+
+- `ResolveDone` with `ResolveID` equal to `n`,
+`HTTPRoundTripID` equal to `m`, and with `Error`
+indicating the result.
+
+- One or more `Connect` events with `HTTPRoundTripID`
+equal to `m`, differen `ConnID` and `Error` indicating
+the result of each connect. If a connect has been
+successful, its `ConnID`, say, `k` will be used later.
+
+- If we're using TLS, a `TLSHandshakeStart` event where
+`HTTPRoundTripID` is `m` and `ConnID` is `k`.
+
+- A few `Read` and `Write` events with `HTTPRoundTripID`
+equal to `m` and `ConnID` equal to `k` while the TLS
+handshake is in progress. Note that these `Read`s and
+`Writes`, and all the following, will always be network
+socket level events, even when we're using TLS.
+
+- A `TLSHandshakeDone` event with `HTTPRoundTripID` equal
+to `m` and `ConnID` equal to `k` where `Error` indicates
+whether we have been successful or not.
+
+- A `HTTPConnectionReady` event with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we start
+serializing the request headers.
+
+- Zero or more `Write`s and possibly `Read`s with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we're sending the
+request headers.
+
+- A `HTTPRequestHeadersDone` event with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we know for
+sure what headers have been serialized.
+
+- Zero or more `Write`s and possibly `Read`s with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we're sending
+the body and possibly the remainder of the headers.
+
+- A `HTTPResponseStart` event with the correct `HTTPRoundTripID`
+and `ConnID`, emitted when we receive the first byte of the response.
+
+- Zero or more `Read`s and possibly `Writes`s with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we're receiving
+the response headers.
+
+- A `HTTPResponseHeadersDone` event with the correct `HTTPRoundTripID`
+and `ConnID`, emitted when we've received the headers.
+
+- Zero or more `Read`s and possibly `Writes`s with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we're receiving
+the response body.
+
+- Zero or more `HTTPResponseBodyPart` again with the correct
+`HTTPRoundTripID` and `ConnID`, emitted with real body chunks
+after (possibly) encryption and decompression.
+
+- A `HTTPResponseDone` event again with the correct
+`HTTPRoundTripID` and `ConnID`, emitted when we've finished
+reading the HTTP response.
 
 Every operation that can fail will have a field
 
@@ -259,54 +308,6 @@ that is meaningful to the event itself. Since this is likely
 to change as we improve our understanding of what could
 be measured, as stated above, please see the current documentation
 for more information on the structure of each event.
-
-Every network event will be additionally identified by
-
-```Go
-    ConnID   int64
-```
-
-Where `ConnID` is the identifier of the connection and is
-unique within a specific set of measurements.
-
-Likewise, HTTP events will have their
-
-```Go
-    TransactionID int64
-```
-
-which will uniquely identify the round trip within a specific
-set of measurements.
-
-Because in this first PoC it has been deemed complex to access
-the `ConnID` from the HTTP code, we have determined that we
-will be using the five-tuple to join network and HTTP
-events. Accordingly, both the `ConnectEvent` and
-`HTTPConnectionReadyEvent` structures will thus include:
-
-```Go
-    LocalAddress  string
-    Network       string
-    RemoteAddress string
-```
-
-The problem of joining together network and HTTP level
-measurements is currently not solved by this library. If
-we perform a measurement at a time, however, this may
-not be a big issue, because all the low-level events will
-necessarily pertain to a single measurement, e.g., to
-the fetching of a specific URL.
-
-A subsequent revision of this specification will see
-whether we can join measurements in a better way.
-
-(As a contextual note, the problem of knowing the ID
-of a connection is that we cannot wrap `*tls.Conn`
-with a ConnID-aware-replacement that is compatible with `net.Conn`,
-because that will confuse `net/http` and prevent using
-`http2`. We could solve the problem to join automatically network
-and lower-level events by implementing a goroutine
-safe cache mapping the five tuple to a `ConnID`.)
 
 ### The github.com/ooni/netx/httpx package
 
@@ -475,14 +476,3 @@ type Client interface {
     LookupNS(ctx context.Context, name string) ([]*net.NS, error)
 }
 ```
-
-## Future work
-
-The current revision of this specification does not specify a
-programmatic way of joining measurements occurring at different
-levels (e.g. network and HTTP). This has been done under the
-assumption that we will probably be able to understand the
-sequence of events anyway, by looking at the timing, if we're
-measuring a single URL at a time. We will implement and
-deploy code conformant with this specification and see whether
-this assumption is correct, or we need something else.

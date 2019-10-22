@@ -4,11 +4,13 @@ package emittingdnsclient
 import (
 	"context"
 	"net"
-	"time"
+	"sync/atomic"
 
 	"github.com/ooni/netx/internal/tracing"
 	"github.com/ooni/netx/model"
 )
+
+var resolveID int64
 
 // Client is a DNS client that emits events
 type Client struct {
@@ -32,19 +34,24 @@ func (c *Client) LookupCNAME(ctx context.Context, host string) (string, error) {
 
 // LookupHost returns the IP addresses of a host
 func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, error) {
-	start := time.Now()
-	var addrs []string
+	rid := atomic.AddInt64(&resolveID, 1)
+	if info := tracing.ContextInfo(ctx); info != nil {
+		info = info.CloneWithNewResolveID("emittingdnsclient.go", rid)
+		info.Handler.OnMeasurement(model.Measurement{
+			ResolveStart: &model.ResolveStartEvent{
+				BaseEvent: info.BaseEvent(),
+				Hostname:  hostname,
+			},
+		})
+		ctx = tracing.WithInfo(ctx, info)
+	}
 	addrs, err := c.client.LookupHost(ctx, hostname)
-	stop := time.Now()
 	if info := tracing.ContextInfo(ctx); info != nil {
 		info.Handler.OnMeasurement(model.Measurement{
-			Resolve: &model.ResolveEvent{
+			ResolveDone: &model.ResolveDoneEvent{
 				Addresses: addrs,
-				ConnID:    info.ConnID,
-				Duration:  stop.Sub(start),
+				BaseEvent: info.BaseEvent(),
 				Error:     err,
-				Hostname:  hostname,
-				Time:      stop.Sub(info.Beginning),
 			},
 		})
 	}

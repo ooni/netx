@@ -13,9 +13,9 @@ import (
 
 func TestIntegrationDial(t *testing.T) {
 	dialer := NewDialer()
-	ctx := tracing.WithInfo(context.Background(), &tracing.Info{
-		Handler: handlers.NoHandler,
-	})
+	ctx := tracing.WithInfo(context.Background(), tracing.NewInfo(
+		"dialerapi_test.go", time.Now(), handlers.NoHandler,
+	))
 	conn, err := dialer.DialContext(ctx, "tcp", "www.google.com:80")
 	if err != nil {
 		t.Fatal(err)

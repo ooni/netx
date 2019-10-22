@@ -80,20 +80,18 @@ func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: d.Beginning,
-		Handler:   d.Handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:DialContext", d.Beginning, d.Handler,
+	))
 	return d.dialer.DialContext(ctx, network, address)
 }
 
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 	// Setup tracing with current handler and start time
-	ctx := tracing.WithInfo(context.Background(), &tracing.Info{
-		Beginning: d.Beginning,
-		Handler:   d.Handler,
-	})
+	ctx := tracing.WithInfo(context.Background(), tracing.NewInfo(
+		"netx.go:DialTLS", d.Beginning, d.Handler,
+	))
 	return d.dialer.DialTLSContext(ctx, network, address)
 }
 
@@ -138,10 +136,9 @@ func (r *resolverWrapper) LookupAddr(
 	ctx context.Context, addr string,
 ) (names []string, err error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: r.beginning,
-		Handler:   r.handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:LookupAddr", r.beginning, r.handler,
+	))
 	return r.resolver.LookupAddr(ctx, addr)
 }
 
@@ -150,10 +147,9 @@ func (r *resolverWrapper) LookupCNAME(
 	ctx context.Context, host string,
 ) (cname string, err error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: r.beginning,
-		Handler:   r.handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:LookupCNAME", r.beginning, r.handler,
+	))
 	return r.resolver.LookupCNAME(ctx, host)
 }
 
@@ -162,10 +158,9 @@ func (r *resolverWrapper) LookupHost(
 	ctx context.Context, hostname string,
 ) (addrs []string, err error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: r.beginning,
-		Handler:   r.handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:LookupHost", r.beginning, r.handler,
+	))
 	return r.resolver.LookupHost(ctx, hostname)
 }
 
@@ -174,10 +169,9 @@ func (r *resolverWrapper) LookupMX(
 	ctx context.Context, name string,
 ) ([]*net.MX, error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: r.beginning,
-		Handler:   r.handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:LookupMX", r.beginning, r.handler,
+	))
 	return r.resolver.LookupMX(ctx, name)
 }
 
@@ -186,9 +180,8 @@ func (r *resolverWrapper) LookupNS(
 	ctx context.Context, name string,
 ) ([]*net.NS, error) {
 	// Setup tracing with current handler and start time
-	ctx = tracing.WithInfo(ctx, &tracing.Info{
-		Beginning: r.beginning,
-		Handler:   r.handler,
-	})
+	ctx = tracing.WithInfo(ctx, tracing.NewInfo(
+		"netx.go:LookupNS", r.beginning, r.handler,
+	))
 	return r.resolver.LookupNS(ctx, name)
 }

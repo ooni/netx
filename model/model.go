@@ -1,21 +1,4 @@
-// Package model contains the data model. Network events are tagged
-// using a unique int64 ConnID. HTTP events also have a unique int64
-// ID, TransactionID. These IDs are never reused.
-//
-// To join network events and HTTP events, use the LocalAddress and
-// RemoteAddress that are included both in the ConnectEvent and in
-// the HTTPConnectionReadyEvent.
-//
-// All events also have a Time. This is always the time in which
-// an event has been emitted. We use a monotonic clock. Hence, the
-// Time is relative to a predefined zero in time.
-//
-// Duration, where present, indicates for how long the code
-// has been waiting for an event to happen. For example,
-// ReadEvent.Duration indicates for how long the code has
-// been blocked inside Read().
-//
-// When an operation may fail, we also include the Error.
+// Package model contains the data model.
 package model
 
 import (
@@ -25,23 +8,45 @@ import (
 	"time"
 )
 
-// CloseEvent is emitted when conn.Close returns.
-type CloseEvent struct {
-	ConnID   int64
-	Duration time.Duration
-	Error    error
-	Time     time.Duration
+// BaseEvent is the base event.
+type BaseEvent struct {
+	// ConnID is the ID of the connection we're using or zero
+	// if we're not operating on a connection. Note that the
+	// connection IDs are never reused.
+	ConnID int64 `json:",omitempty"`
+
+	// ElapsedTime is the moment where the event was fired measured
+	// as elapsed nanoseconds since a zero moment in time. We use
+	// a monotonic clock to compute the ElapsedTime.
+	ElapsedTime time.Duration
+
+	// HTTPRoundTripID is the ID of the current HTTP round trip
+	// or zero if we're not doing an HTTP round trip. Note that the
+	// we will not reuse round trip IDs.
+	HTTPRoundTripID int64 `json:",omitempty"`
+
+	// ResolveID is the ID of the resolve currently in progress
+	// or zero if we're not currently doing a resolve. Note
+	// that we will not reuse resolve IDs.
+	ResolveID int64 `json:",omitempty"`
+}
+
+// SyscallEvent is an event describing a syscall.
+type SyscallEvent struct {
+	BaseEvent
+
+	// BlockedTime is the number of nanoseconds we were blocked
+	// waiting for the syscall to complete. We use a monotonic
+	// block to compute how much time we were blocked.
+	BlockedTime time.Duration
 }
 
 // ConnectEvent is emitted when connect() returns.
 type ConnectEvent struct {
-	ConnID        int64
-	Duration      time.Duration
+	SyscallEvent
 	Error         error
-	LocalAddress  string
 	Network       string
 	RemoteAddress string
-	Time          time.Duration
 }
 
 // DNSMessage is a DNS message.
@@ -51,60 +56,49 @@ type DNSMessage struct {
 
 // DNSQueryEvent is emitted when we send a DNS query
 type DNSQueryEvent struct {
-	ConnID  int64
+	BaseEvent
 	Message DNSMessage
-	Time    time.Duration
 }
 
 // DNSReplyEvent is emitted when we receive a DNS reply
 type DNSReplyEvent struct {
-	ConnID  int64
+	BaseEvent
 	Message DNSMessage
-	Time    time.Duration
 }
 
 // HTTPConnectionReadyEvent is emitted when a connection is ready for HTTP.
 type HTTPConnectionReadyEvent struct {
-	LocalAddress  string
-	Network       string
-	RemoteAddress string
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
 }
 
 // HTTPRequestStartEvent is emitted when we start sending the request.
 type HTTPRequestStartEvent struct {
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
 }
 
 // HTTPRequestHeadersDoneEvent is emitted when we have written the headers.
 type HTTPRequestHeadersDoneEvent struct {
-	Headers       http.Header
-	Method        string
-	Time          time.Duration
-	TransactionID int64
-	URL           string
+	BaseEvent
+	Headers http.Header
+	Method  string
+	URL     string
 }
 
 // HTTPRequestDoneEvent is emitted when we have sent the body.
 type HTTPRequestDoneEvent struct {
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
 }
 
 // HTTPResponseStartEvent is emitted when we receive the first response byte.
 type HTTPResponseStartEvent struct {
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
 }
 
 // HTTPResponseHeadersDoneEvent is emitted after we have received the headers.
 type HTTPResponseHeadersDoneEvent struct {
-	Headers       http.Header
-	StatusCode    int64
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
+	Headers    http.Header
+	StatusCode int64
 }
 
 // HTTPResponseBodyPartEvent is emitted after we have received
@@ -115,37 +109,35 @@ type HTTPResponseHeadersDoneEvent struct {
 // is the reason why we also want to record the error here rather
 // than just recording the error in ReadEvent.
 type HTTPResponseBodyPartEvent struct {
-	Error         error
-	Data          []byte
-	Duration      time.Duration
-	NumBytes      int64
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
+	Error    error
+	Data     []byte
+	NumBytes int64
 }
 
 // HTTPResponseDoneEvent is emitted after we have received the body.
 type HTTPResponseDoneEvent struct {
-	Time          time.Duration
-	TransactionID int64
+	BaseEvent
 }
 
 // ReadEvent is emitted when conn.Read returns.
 type ReadEvent struct {
-	ConnID   int64
-	Duration time.Duration
+	SyscallEvent
 	Error    error
 	NumBytes int64
-	Time     time.Duration
 }
 
-// ResolveEvent is emitted when resolver.LookupHost returns.
-type ResolveEvent struct {
+// ResolveStartEvent is emitted when resolver.LookupHost starts.
+type ResolveStartEvent struct {
+	BaseEvent
+	Hostname string
+}
+
+// ResolveDoneEvent is emitted when resolver.LookupHost returns.
+type ResolveDoneEvent struct {
+	BaseEvent
 	Addresses []string
-	ConnID    int64
-	Duration  time.Duration
 	Error     error
-	Hostname  string
-	Time      time.Duration
 }
 
 // TLSConfig contains TLS configurations.
@@ -171,33 +163,28 @@ type TLSConnectionState struct {
 
 // TLSHandshakeDoneEvent is emitted when conn.Handshake returns.
 type TLSHandshakeDoneEvent struct {
-	ConnID          int64
+	BaseEvent
 	ConnectionState *TLSConnectionState
 	Error           error
-	Time            time.Duration
 }
 
 // TLSHandshakeStartEvent is emitted when conn.Handshake starts.
 type TLSHandshakeStartEvent struct {
-	ConnID int64
+	BaseEvent
 	Config TLSConfig
-	Time   time.Duration
 }
 
 // WriteEvent is emitted when conn.Write returns.
 type WriteEvent struct {
-	ConnID   int64
-	Duration time.Duration
+	SyscallEvent
 	Error    error
 	NumBytes int64
-	Time     time.Duration
 }
 
 // Measurement contains zero or more events. Do not assume that at any
 // time a Measurement will only contain a single event. When a Measurement
 // contains an event, the corresponding pointer is non nil.
 type Measurement struct {
-	Close                   *CloseEvent                   `json:",omitempty"`
 	Connect                 *ConnectEvent                 `json:",omitempty"`
 	DNSQuery                *DNSQueryEvent                `json:",omitempty"`
 	DNSReply                *DNSReplyEvent                `json:",omitempty"`
@@ -210,7 +197,8 @@ type Measurement struct {
 	HTTPResponseBodyPart    *HTTPResponseBodyPartEvent    `json:",omitempty"`
 	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
 	Read                    *ReadEvent                    `json:",omitempty"`
-	Resolve                 *ResolveEvent                 `json:",omitempty"`
+	ResolveStart            *ResolveStartEvent            `json:",omitempty"`
+	ResolveDone             *ResolveDoneEvent             `json:",omitempty"`
 	TLSHandshakeStart       *TLSHandshakeStartEvent       `json:",omitempty"`
 	TLSHandshakeDone        *TLSHandshakeDoneEvent        `json:",omitempty"`
 	Write                   *WriteEvent                   `json:",omitempty"`

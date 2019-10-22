@@ -41,10 +41,9 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Setup tracing with current handler and start time
-	ctx := tracing.WithInfo(req.Context(), &tracing.Info{
-		Beginning: t.beginning,
-		Handler:   t.handler,
-	})
+	ctx := tracing.WithInfo(req.Context(), tracing.NewInfo(
+		"httpx.go", t.beginning, t.handler,
+	))
 	return t.transport.RoundTrip(req.WithContext(ctx))
 }
 

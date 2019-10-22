@@ -3,6 +3,7 @@ package emittingconnector
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ooni/netx/internal/connector/ooconnector"
 	"github.com/ooni/netx/internal/handlers/counthandler"
@@ -10,9 +11,10 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	info := &tracing.Info{
-		Handler: &counthandler.Handler{},
-	}
+	info := tracing.NewInfo(
+		"emttingconnector_test.go", time.Now(),
+		&counthandler.Handler{},
+	)
 	ctx := tracing.WithInfo(context.Background(), info)
 	connector := New(ooconnector.New())
 	conn, err := connector.DialContext(ctx, "tcp", "8.8.8.8:53")

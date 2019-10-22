@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/handlers/counthandler"
 	"github.com/ooni/netx/internal/handlers/savinghandler"
 	"github.com/ooni/netx/model"
@@ -115,5 +116,132 @@ func TestEmitTLSHandshakeDoneWithState(t *testing.T) {
 	cert := evt.ConnectionState.PeerCertificates[0]
 	if !bytes.Equal(cert.Data, []byte("0xdeadbeef")) {
 		t.Fatal("incorrectly saved certificate info")
+	}
+}
+
+func newinfo() *Info {
+	return &Info{
+		Beginning:       time.Now(),
+		ConnID:          1,
+		Handler:         handlers.StdoutHandler,
+		HTTPRoundTripID: 2,
+		ResolveID:       3,
+	}
+}
+
+func TestCloneWithNewConnID(t *testing.T) {
+	info := newinfo()
+	cloned := info.CloneWithNewConnID("tracing_test.go", 11)
+	if info.Beginning != cloned.Beginning {
+		t.Fatal("Beginning differs")
+	}
+	if cloned.ConnID != 11 {
+		t.Fatal("Unexpected conn ID")
+	}
+	if info.Handler != cloned.Handler {
+		t.Fatal("Handler differs")
+	}
+	if info.HTTPRoundTripID != cloned.HTTPRoundTripID {
+		t.Fatal("HTTPRoundTripID differs")
+	}
+	if info.ResolveID != cloned.ResolveID {
+		t.Fatal("ResolveID differs")
+	}
+}
+
+func TestCloneWithNewHTTPRoundTripID(t *testing.T) {
+	info := newinfo()
+	cloned := info.CloneWithNewHTTPRoundTripID("tracing_test.go", 11)
+	if info.Beginning != cloned.Beginning {
+		t.Fatal("Beginning differs")
+	}
+	if info.ConnID != cloned.ConnID {
+		t.Fatal("ConnID differs")
+	}
+	if info.Handler != cloned.Handler {
+		t.Fatal("Handler differs")
+	}
+	if cloned.HTTPRoundTripID != 11 {
+		t.Fatal("unexpected HTTPRoundTripID")
+	}
+	if info.ResolveID != cloned.ResolveID {
+		t.Fatal("ResolveID differs")
+	}
+}
+
+func TestCloneWithNewResolveID(t *testing.T) {
+	info := newinfo()
+	cloned := info.CloneWithNewResolveID("tracing_test.go", 11)
+	if info.Beginning != cloned.Beginning {
+		t.Fatal("Beginning differs")
+	}
+	if info.ConnID != cloned.ConnID {
+		t.Fatal("ConnID differs")
+	}
+	if info.Handler != cloned.Handler {
+		t.Fatal("Handler differs")
+	}
+	if info.HTTPRoundTripID != cloned.HTTPRoundTripID {
+		t.Fatal("HTTPRoundTripID differs")
+	}
+	if cloned.ResolveID != 11 {
+		t.Fatal("unexpected ResolveID")
+	}
+}
+
+func TestClone(t *testing.T) {
+	info := newinfo()
+	cloned := info.Clone("tracing_test.go")
+	if info.Beginning != cloned.Beginning {
+		t.Fatal("Beginning differs")
+	}
+	if info.ConnID != cloned.ConnID {
+		t.Fatal("ConnID differs")
+	}
+	if info.Handler != cloned.Handler {
+		t.Fatal("Handler differs")
+	}
+	if info.HTTPRoundTripID != cloned.HTTPRoundTripID {
+		t.Fatal("HTTPRoundTripID differs")
+	}
+	if cloned.ResolveID != info.ResolveID {
+		t.Fatal("unexpected ResolveID")
+	}
+}
+
+func TestNewInfo(t *testing.T) {
+	now := time.Now()
+	info := NewInfo("tracing_test.go", now, handlers.NoHandler)
+	if info.Beginning != now {
+		t.Fatal("Beginning is wrong")
+	}
+	if info.ConnID != 0 {
+		t.Fatal("ConnID is wrong")
+	}
+	if info.Handler != handlers.NoHandler {
+		t.Fatal("Handler is wrong")
+	}
+	if info.HTTPRoundTripID != 0 {
+		t.Fatal("HTTPRoundTripID is wrong")
+	}
+	if info.ResolveID != 0 {
+		t.Fatal("ResolveID s wrong")
+	}
+}
+
+func TestBaseEvent(t *testing.T) {
+	info := newinfo()
+	ev := info.BaseEvent()
+	if ev.ConnID != info.ConnID {
+		t.Fatal("ConnID differs")
+	}
+	if ev.ElapsedTime > time.Millisecond {
+		t.Fatal("Suspicious ElapsedTime")
+	}
+	if ev.HTTPRoundTripID != info.HTTPRoundTripID {
+		t.Fatal("HTTPRoundTripID differs")
+	}
+	if ev.ResolveID != info.ResolveID {
+		t.Fatal("ResolveID differs")
 	}
 }

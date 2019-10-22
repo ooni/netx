@@ -16,8 +16,10 @@ func TestIntegration(t *testing.T) {
 	go func() {
 		handler.OnMeasurement(model.Measurement{
 			HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
-				Time:          4,
-				TransactionID: 155,
+				BaseEvent: model.BaseEvent{
+					ElapsedTime:     4,
+					HTTPRoundTripID: 155,
+				},
 			},
 		})
 		wg.Done()
@@ -30,7 +32,7 @@ func TestIntegration(t *testing.T) {
 		t.Fatal("specific event is missing")
 	}
 	evt := handler.All[0].HTTPConnectionReady
-	if evt.Time != 4 || evt.TransactionID != 155 {
+	if evt.ElapsedTime != 4 || evt.HTTPRoundTripID != 155 {
 		t.Fatal("specific event is corrupt")
 	}
 }

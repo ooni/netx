@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/http2"
 )
 
-var nextTransactionID int64
+var nextRoundTripID int64
 
 // Transport performs single HTTP transactions and emits
 // measurement events as they happen.
@@ -49,11 +49,11 @@ func NewTransport() *Transport {
 func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	outmethod := req.Method
 	outurl := req.URL.String()
-	tid := atomic.AddInt64(&nextTransactionID, 1)
+	tid := atomic.AddInt64(&nextRoundTripID, 1)
 	ctx := req.Context()
 	tracingInfo := tracing.ContextInfo(ctx)
 	if tracingInfo != nil {
-		tracingInfo = tracingInfo.CloneWithTransactionID(tid)
+		tracingInfo = tracingInfo.CloneWithNewHTTPRoundTripID("httptransport.go", tid)
 		req = req.WithContext(tracing.WithInfo(ctx, tracingInfo))
 		outheaders := http.Header{}
 		var mutex sync.Mutex
@@ -61,11 +61,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 			GotConn: func(info httptrace.GotConnInfo) {
 				tracingInfo.Handler.OnMeasurement(model.Measurement{
 					HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
-						LocalAddress:  info.Conn.LocalAddr().String(),
-						Network:       info.Conn.LocalAddr().Network(),
-						RemoteAddress: info.Conn.RemoteAddr().String(),
-						Time:          time.Now().Sub(tracingInfo.Beginning),
-						TransactionID: tid,
+						BaseEvent: tracingInfo.BaseEvent(),
 					},
 				})
 			},
@@ -84,11 +80,10 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 				mutex.Lock()
 				m := model.Measurement{
 					HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
-						Headers:       outheaders,
-						Method:        outmethod,
-						Time:          time.Now().Sub(tracingInfo.Beginning),
-						TransactionID: tid,
-						URL:           outurl,
+						BaseEvent: tracingInfo.BaseEvent(),
+						Headers:   outheaders,
+						Method:    outmethod,
+						URL:       outurl,
 					},
 				}
 				mutex.Unlock()
@@ -97,16 +92,14 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 			WroteRequest: func(info httptrace.WroteRequestInfo) {
 				tracingInfo.Handler.OnMeasurement(model.Measurement{
 					HTTPRequestDone: &model.HTTPRequestDoneEvent{
-						Time:          time.Now().Sub(tracingInfo.Beginning),
-						TransactionID: tid,
+						BaseEvent: tracingInfo.BaseEvent(),
 					},
 				})
 			},
 			GotFirstResponseByte: func() {
 				tracingInfo.Handler.OnMeasurement(model.Measurement{
 					HTTPResponseStart: &model.HTTPResponseStartEvent{
-						Time:          time.Now().Sub(tracingInfo.Beginning),
-						TransactionID: tid,
+						BaseEvent: tracingInfo.BaseEvent(),
 					},
 				})
 			},
@@ -120,10 +113,9 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	if tracingInfo != nil {
 		tracingInfo.Handler.OnMeasurement(model.Measurement{
 			HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
-				Headers:       resp.Header,
-				StatusCode:    int64(resp.StatusCode),
-				Time:          time.Now().Sub(tracingInfo.Beginning),
-				TransactionID: tid,
+				BaseEvent:  tracingInfo.BaseEvent(),
+				Headers:    resp.Header,
+				StatusCode: int64(resp.StatusCode),
 			},
 		})
 		// "The http Client and Transport guarantee that Body is always
@@ -143,19 +135,15 @@ type bodyWrapper struct {
 }
 
 func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
-	start := time.Now()
 	n, err = bw.ReadCloser.Read(b)
-	stop := time.Now()
 	bw.tracingInfo.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
+			BaseEvent: bw.tracingInfo.BaseEvent(),
 			// "Read reads up to len(p) bytes into p. It returns the number of
 			// bytes read (0 <= n <= len(p)) and any error encountered."
-			Data:          b[:n],
-			Duration:      stop.Sub(start),
-			Error:         err,
-			NumBytes:      int64(n),
-			Time:          stop.Sub(bw.tracingInfo.Beginning),
-			TransactionID: bw.tracingInfo.TransactionID,
+			Data:     b[:n],
+			Error:    err,
+			NumBytes: int64(n),
 		},
 	})
 	return
@@ -165,8 +153,7 @@ func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
 	bw.tracingInfo.Handler.OnMeasurement(model.Measurement{
 		HTTPResponseDone: &model.HTTPResponseDoneEvent{
-			Time:          time.Now().Sub(bw.tracingInfo.Beginning),
-			TransactionID: bw.tracingInfo.TransactionID,
+			BaseEvent: bw.tracingInfo.BaseEvent(),
 		},
 	})
 	return

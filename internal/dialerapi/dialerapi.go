@@ -7,7 +7,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
-	"sync/atomic"
 
 	"github.com/ooni/netx/internal/connector"
 	"github.com/ooni/netx/internal/connector/emittingconnector"
@@ -19,12 +18,6 @@ import (
 	"github.com/ooni/netx/internal/tlshandshaker/ootlshandshaker"
 	"github.com/ooni/netx/internal/tracing"
 )
-
-var nextConnID int64
-
-func getNextConnID() int64 {
-	return atomic.AddInt64(&nextConnID, 1)
-}
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
@@ -53,11 +46,35 @@ func NewDialer() *Dialer {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
+	return d.dialWithNewInfo(ctx, network, address, d.dialContext)
+}
+
+func (d *Dialer) dialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
 	return d.flexibleDial(ctx, network, address, false)
+}
+
+func (d *Dialer) dialWithNewInfo(
+	ctx context.Context, network, address string,
+	dial func(context.Context, string, string) (net.Conn, error),
+) (net.Conn, error) {
+	// Because we're about to create a new connection, we need to have
+	// a fresh context with everything pertaining to such connection
+	if info := tracing.ContextInfo(ctx); info != nil {
+		ctx = tracing.WithInfo(ctx, info.Clone("dialerapi.go"))
+	}
+	return dial(ctx, network, address)
 }
 
 // DialTLSContext dials a TLS connection with context
 func (d *Dialer) DialTLSContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return d.dialWithNewInfo(ctx, network, address, d.dialTLSContext)
+}
+
+func (d *Dialer) dialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
 	domain, _, err := net.SplitHostPort(address)
@@ -84,9 +101,6 @@ func (d *Dialer) flexibleDial(
 	onlyhost, onlyport, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
-	}
-	if info := tracing.ContextInfo(ctx); info != nil {
-		info.ConnID = getNextConnID()
 	}
 	if net.ParseIP(onlyhost) != nil {
 		conn, err := d.Connector.DialContext(ctx, network, address)

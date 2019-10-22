@@ -10,6 +10,7 @@ import (
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/tracing"
 )
 
 var dialfunc = (&net.Dialer{}).DialContext
@@ -54,12 +55,14 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 	)
 	transport.dial = func(
 		ctx context.Context, network, address string) (net.Conn, error) {
-		return &connx.MeasuringConn{
-			Conn: fakeconn{
+		return connx.NewMeasuringConn(
+			fakeconn{
 				setDeadlineError: errors.New("mocked error"),
 			},
-			Handler: handlers.NoHandler,
-		}, nil
+			tracing.NewInfo(
+				"dnsoverudp_test.go", time.Now(), handlers.NoHandler,
+			),
+		), nil
 	}
 	err := threeRounds(transport)
 	if err == nil {
@@ -73,12 +76,14 @@ func TestIntegrationWriteError(t *testing.T) {
 	)
 	transport.dial = func(
 		ctx context.Context, network, address string) (net.Conn, error) {
-		return &connx.MeasuringConn{
-			Conn: fakeconn{
+		return connx.NewMeasuringConn(
+			fakeconn{
 				writeError: errors.New("mocked error"),
 			},
-			Handler: handlers.NoHandler,
-		}, nil
+			tracing.NewInfo(
+				"dnsoverudp_test.go", time.Now(), handlers.NoHandler,
+			),
+		), nil
 	}
 	err := threeRounds(transport)
 	if err == nil {

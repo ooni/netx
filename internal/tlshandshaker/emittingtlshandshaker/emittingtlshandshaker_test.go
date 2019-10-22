@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/ooni/netx/internal/handlers/counthandler"
 	"github.com/ooni/netx/internal/tlshandshaker/ootlshandshaker"
@@ -12,9 +13,10 @@ import (
 )
 
 func TestIntegrationSuccess(t *testing.T) {
-	info := &tracing.Info{
-		Handler: &counthandler.Handler{},
-	}
+	info := tracing.NewInfo(
+		"emittingtlshandshaker_test.go", time.Now(),
+		&counthandler.Handler{},
+	)
 	ctx := tracing.WithInfo(context.Background(), info)
 	handshaker := New(ootlshandshaker.New())
 	conn, err := (&net.Dialer{}).Dial("tcp", "www.google.com:443")
@@ -37,9 +39,10 @@ func TestIntegrationSuccess(t *testing.T) {
 }
 
 func TestIntegrationTLSHandshakeFailure(t *testing.T) {
-	info := &tracing.Info{
-		Handler: &counthandler.Handler{},
-	}
+	info := tracing.NewInfo(
+		"emittingtlshandshaker_test.go", time.Now(),
+		&counthandler.Handler{},
+	)
 	ctx := tracing.WithInfo(context.Background(), info)
 	handshaker := New(ootlshandshaker.New())
 	conn, err := (&net.Dialer{}).Dial("tcp", "www.google.com:443")
@@ -62,9 +65,10 @@ func TestIntegrationTLSHandshakeFailure(t *testing.T) {
 }
 
 func TestIntegrationContextDeadline(t *testing.T) {
-	info := &tracing.Info{
-		Handler: &counthandler.Handler{},
-	}
+	info := tracing.NewInfo(
+		"emittingtlshandshaker_test.go", time.Now(),
+		&counthandler.Handler{},
+	)
 	ctx := tracing.WithInfo(context.Background(), info)
 	handshaker := New(ootlshandshaker.New())
 	conn, err := (&net.Dialer{}).Dial("tcp", "www.google.com:443")
