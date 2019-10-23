@@ -33,7 +33,9 @@ type CloseEvent struct {
 
 // ConnectEvent is emitted when connect() returns.
 type ConnectEvent struct {
+	ConnHash      string
 	ConnID        int64
+	DialID        int64
 	Duration      time.Duration
 	Error         error
 	LocalAddress  string
@@ -63,6 +65,8 @@ type DNSReplyEvent struct {
 
 // HTTPConnectionReadyEvent is emitted when a connection is ready for HTTP.
 type HTTPConnectionReadyEvent struct {
+	ConnHash      string
+	DoHDialID     int64
 	LocalAddress  string
 	Network       string
 	RemoteAddress string
@@ -87,6 +91,7 @@ type HTTPRequestHeadersDoneEvent struct {
 
 // HTTPRequestDoneEvent is emitted when we have sent the body.
 type HTTPRequestDoneEvent struct {
+	Error         error
 	Time          time.Duration
 	TransactionID int64
 }
@@ -99,6 +104,7 @@ type HTTPResponseStartEvent struct {
 
 // HTTPResponseHeadersDoneEvent is emitted after we have received the headers.
 type HTTPResponseHeadersDoneEvent struct {
+	Error         error
 	Headers       http.Header
 	StatusCode    int64
 	Time          time.Duration
@@ -129,7 +135,9 @@ type HTTPResponseDoneEvent struct {
 
 // ReadEvent is emitted when conn.Read returns.
 type ReadEvent struct {
+	ConnHash string
 	ConnID   int64
+	Data     []byte
 	Duration time.Duration
 	Error    error
 	NumBytes int64
@@ -140,6 +148,7 @@ type ReadEvent struct {
 type ResolveEvent struct {
 	Addresses []string
 	ConnID    int64
+	DialID    int64
 	Duration  time.Duration
 	Error     error
 	Hostname  string
@@ -169,6 +178,7 @@ type TLSConnectionState struct {
 
 // TLSHandshakeEvent is emitted when conn.Handshake returns.
 type TLSHandshakeEvent struct {
+	ConnHash        string
 	Config          TLSConfig
 	ConnectionState TLSConnectionState
 	ConnID          int64
@@ -179,7 +189,9 @@ type TLSHandshakeEvent struct {
 
 // WriteEvent is emitted when conn.Write returns.
 type WriteEvent struct {
+	ConnHash string
 	ConnID   int64
+	Data     []byte
 	Duration time.Duration
 	Error    error
 	NumBytes int64
