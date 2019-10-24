@@ -61,7 +61,7 @@ func TestUnitRoundTripWithConnFailure(t *testing.T) {
 		return &fakeconn{}, nil
 	}, "8.8.8.8:53")
 	query := make([]byte, 1<<10)
-	reply, err := transport.RoundTripWithConn(&fakeconn{}, query)
+	reply, err := transport.doWithConn(&fakeconn{}, query)
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
