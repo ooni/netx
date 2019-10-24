@@ -42,7 +42,7 @@ func TestIntegrationInvalidAddress(t *testing.T) {
 
 func TestIntegrationDialContextExIPAddress(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.DialContextEx(
+	conn, onlyhost, onlyport, _, err := dialer.DialContextEx(
 		context.Background(), "tcp", "8.8.8.8:443", true,
 	)
 	if err != nil {
@@ -62,7 +62,7 @@ func TestIntegrationDialContextExIPAddress(t *testing.T) {
 
 func TestIntegrationUnexpectedDomain(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.DialContextEx(
+	conn, onlyhost, onlyport, _, err := dialer.DialContextEx(
 		context.Background(), "tcp", "www.google.com:443", true,
 	)
 	if err == nil {
@@ -81,7 +81,7 @@ func TestIntegrationUnexpectedDomain(t *testing.T) {
 
 func TestIntegrationLookupFailure(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	conn, onlyhost, onlyport, err := dialer.DialContextEx(
+	conn, onlyhost, onlyport, _, err := dialer.DialContextEx(
 		context.Background(), "tcp", "antani.ooni.io:443", false,
 	)
 	if err == nil {

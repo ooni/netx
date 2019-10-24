@@ -4,7 +4,6 @@ package dialerbase
 
 import (
 	"context"
-	"errors"
 	"net"
 	"time"
 
@@ -15,43 +14,51 @@ import (
 // Dialer is a net.Dialer that is only able to connect to
 // remote TCP/UDP endpoints. DNS is not supported.
 type Dialer struct {
-	net.Dialer
-	Beginning time.Time
-	Handler   model.Handler
+	dialer    model.Dialer
+	beginning time.Time
+	handler   model.Handler
+	dialID    int64
+	connID    int64
 }
 
-// NewDialer creates a new base dialer
-func NewDialer(beginning time.Time, handler model.Handler) *Dialer {
-	return &Dialer{
-		Dialer:    net.Dialer{},
-		Beginning: beginning,
-		Handler:   handler,
-	}
-}
-
-// DialHostPort is like net.DialContext but requires a separate host
-// and port and returns a measurable net.Conn-like struct.
-func (d *Dialer) DialHostPort(
-	ctx context.Context, network, onlyhost, onlyport string,
+// New creates a new dialer
+func New(
+	beginning time.Time,
+	handler model.Handler,
+	dialer model.Dialer,
 	dialID, connID int64,
-) (*connx.MeasuringConn, error) {
-	if net.ParseIP(onlyhost) == nil {
-		return nil, errors.New("dialerbase: you passed me a domain name")
+) *Dialer {
+	return &Dialer{
+		dialer:    dialer,
+		beginning: beginning,
+		handler:   handler,
+		dialID:    dialID,
+		connID:    connID,
 	}
-	address := net.JoinHostPort(onlyhost, onlyport)
+}
+
+// Dial creates a TCP or UDP connection. See net.Dial docs.
+func (d *Dialer) Dial(network, address string) (net.Conn, error) {
+	return d.DialContext(context.Background(), network, address)
+}
+
+// DialContext dials a new connection with context.
+func (d *Dialer) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
 	start := time.Now()
-	conn, err := d.Dialer.DialContext(ctx, network, address)
+	conn, err := d.dialer.DialContext(ctx, network, address)
 	stop := time.Now()
-	d.Handler.OnMeasurement(model.Measurement{
+	d.handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
-			ConnID:        connID,
-			DialID:        dialID,
+			ConnID:        d.connID,
+			DialID:        d.dialID,
 			Duration:      stop.Sub(start),
 			Error:         err,
 			LocalAddress:  safeLocalAddress(conn),
 			Network:       network,
 			RemoteAddress: safeRemoteAddress(conn),
-			Time:          stop.Sub(d.Beginning),
+			Time:          stop.Sub(d.beginning),
 		},
 	})
 	if err != nil {
@@ -59,9 +66,9 @@ func (d *Dialer) DialHostPort(
 	}
 	return &connx.MeasuringConn{
 		Conn:      conn,
-		Beginning: d.Beginning,
-		Handler:   d.Handler,
-		ID:        connID,
+		Beginning: d.beginning,
+		Handler:   d.handler,
+		ID:        d.connID,
 	}, nil
 }
 

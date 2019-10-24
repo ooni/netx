@@ -2,49 +2,28 @@ package dialerbase
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/model"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
-	dialer := NewDialer(
-		time.Now(), handlers.NoHandler,
-	)
-	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "8.8.8.8", "53", 17, 17,
-	)
+	dialer := newdialer()
+	conn, err := dialer.Dial("tcp", "8.8.8.8:53")
 	if err != nil {
 		t.Fatal(err)
 	}
 	conn.Close()
 }
 
-func TestIntegrationErrorDomain(t *testing.T) {
-	dialer := NewDialer(
-		time.Now(), handlers.NoHandler,
-	)
-	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "dns.google.com", "53", 17, 17,
-	)
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if conn != nil {
-		t.Fatal("expected nil conn here")
-	}
-}
-
 func TestIntegrationErrorNoConnect(t *testing.T) {
-	dialer := NewDialer(
-		time.Now(), handlers.NoHandler,
-	)
+	dialer := newdialer()
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()
-	conn, err := dialer.DialHostPort(
-		ctx, "tcp", "8.8.8.8", "53", 17, 17,
-	)
+	conn, err := dialer.DialContext(ctx, "tcp", "8.8.8.8:53")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
@@ -54,4 +33,11 @@ func TestIntegrationErrorNoConnect(t *testing.T) {
 	if conn != nil {
 		t.Fatal("expected nil conn here")
 	}
+}
+
+// see whether we implement the interface
+func newdialer() model.Dialer {
+	return New(
+		time.Now(), handlers.NoHandler, new(net.Dialer), 17, 17,
+	)
 }
