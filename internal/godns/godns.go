@@ -192,6 +192,6 @@ func (c *pseudoConn) lookup(b []byte) {
 }
 
 func (c *pseudoConn) do(query []byte) (r godnsResult) {
-	r.reply, r.err = c.t.RoundTrip(query)
+	r.reply, r.err = c.t.RoundTrip(context.Background(), query)
 	return r
 }

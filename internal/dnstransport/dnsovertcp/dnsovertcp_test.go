@@ -1,6 +1,7 @@
 package dnsovertcp
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
@@ -92,7 +93,7 @@ func roundTrip(transport *Transport, domain string) error {
 	if err != nil {
 		return err
 	}
-	data, err = transport.RoundTrip(data)
+	data, err = transport.RoundTrip(context.Background(), data)
 	if err != nil {
 		return err
 	}

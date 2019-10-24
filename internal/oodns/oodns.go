@@ -125,7 +125,9 @@ func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg,
 			return msg.Pack()
 		},
 		func(t dnsx.RoundTripper, query []byte) (reply []byte, err error) {
-			return t.RoundTrip(query)
+			// Pass ctx to round tripper for cancellation as well
+			// as to propagate context information
+			return t.RoundTrip(ctx, query)
 		},
 		func(msg *dns.Msg, data []byte) (err error) {
 			return msg.Unpack(data)

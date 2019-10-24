@@ -4,6 +4,7 @@ package dnsovertcp
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net"
 	"time"
@@ -32,7 +33,7 @@ func NewTransport(
 }
 
 // RoundTrip sends a request and receives a response.
-func (t *Transport) RoundTrip(query []byte) ([]byte, error) {
+func (t *Transport) RoundTrip(ctx context.Context, query []byte) ([]byte, error) {
 	conn, err := t.dial("tcp", t.address)
 	if err != nil {
 		return nil, err

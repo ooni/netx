@@ -2,6 +2,7 @@
 package dnsoverudp
 
 import (
+	"context"
 	"net"
 	"time"
 )
@@ -24,7 +25,7 @@ func NewTransport(
 }
 
 // RoundTrip sends a request and receives a response.
-func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, err error) {
 	conn, err := t.dial("udp", t.address)
 	if err != nil {
 		return

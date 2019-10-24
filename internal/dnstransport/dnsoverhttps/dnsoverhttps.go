@@ -2,6 +2,7 @@
 package dnsoverhttps
 
 import (
+	"context"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -26,14 +27,14 @@ func NewTransport(client *http.Client, URL string) *Transport {
 }
 
 // RoundTrip sends a request and receives a response.
-func (t *Transport) RoundTrip(query []byte) (reply []byte, err error) {
+func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, err error) {
 	req, err := http.NewRequest("POST", t.url, bytes.NewReader(query))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("content-type", "application/dns-message")
 	var resp *http.Response
-	resp, err = t.clientDo(req)
+	resp, err = t.clientDo(req.WithContext(ctx))
 	if err != nil {
 		return
 	}

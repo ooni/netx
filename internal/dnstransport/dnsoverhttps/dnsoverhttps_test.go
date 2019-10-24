@@ -1,6 +1,7 @@
 package dnsoverhttps
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -98,7 +99,7 @@ func roundTrip(transport *Transport, domain string) error {
 	if err != nil {
 		return err
 	}
-	data, err = transport.RoundTrip(data)
+	data, err = transport.RoundTrip(context.Background(), data)
 	if err != nil {
 		return err
 	}
