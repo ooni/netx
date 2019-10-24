@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"net"
 	"testing"
 	"time"
 
@@ -30,6 +29,17 @@ func TestIntegrationDialTLS(t *testing.T) {
 }
 
 func TestIntegrationInvalidAddress(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	conn, err := dialer.Dial("tcp", "www.google.com")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
+}
+
+func TestIntegrationInvalidAddressTLS(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.DialTLS("tcp", "www.google.com")
 	if err == nil {
@@ -137,32 +147,6 @@ func TestIntegrationDialInvalidSNI(t *testing.T) {
 	dialer.TLSConfig = &tls.Config{
 		ServerName: "www.google.com",
 	}
-	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if conn != nil {
-		t.Fatal("expected a nil conn here")
-	}
-}
-
-func TestIntegrationTLSHandshakeSetDeadlineError(t *testing.T) {
-	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	dialer.StartTLSHandshakeHook = func(c net.Conn) {
-		c.Close() // close the connection so SetDealine should fail
-	}
-	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if conn != nil {
-		t.Fatal("expected a nil conn here")
-	}
-}
-
-func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
-	dialer := NewDialer(time.Now(), handlers.NoHandler)
-	dialer.TLSHandshakeTimeout = 1 // very small timeout
 	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {
 		t.Fatal("expected an error here")
