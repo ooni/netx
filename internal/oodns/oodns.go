@@ -73,12 +73,10 @@ func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, err
 			}
 		}
 	}
-	return LookupHostResult(addrs, errA, errAAAA)
+	return lookupHostResult(addrs, errA, errAAAA)
 }
 
-// LookupHostResult computes the final result of LookupHost. You generally
-// only care about this function when writing tests.
-func LookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
+func lookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
 	if len(addrs) > 0 {
 		return addrs, nil
 	}
@@ -113,7 +111,7 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 }
 
 func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
-	return c.RoundTripEx(
+	return c.mockableRoundTrip(
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
 		},
@@ -128,9 +126,7 @@ func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg,
 	)
 }
 
-// RoundTripEx is a mockable implementation of the piece
-// of code that performs the DNS round trip.
-func (c *Client) RoundTripEx(
+func (c *Client) mockableRoundTrip(
 	ctx context.Context,
 	query *dns.Msg,
 	pack func(msg *dns.Msg) ([]byte, error),
