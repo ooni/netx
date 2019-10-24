@@ -14,10 +14,7 @@ import (
 
 	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/httptransport"
-	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverhttps"
-	"github.com/ooni/netx/internal/resolver/dnstransport/dnsovertcp"
-	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverudp"
-	"github.com/ooni/netx/internal/resolver/ooniresolver"
+	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -135,36 +132,35 @@ func NewResolver(
 			PreferGo: false,
 		}, nil
 	}
-	var transport model.DNSRoundTripper
 	if network == "doh" {
-		transport = dnsoverhttps.NewTransport(
-			newHTTPClientForDoH(beginning, handler), address,
-		)
-	} else if network == "dot" {
-		transport = dnsovertcp.NewTransport(
-			// We need a child dialer here to avoid an endless loop where the
-			// dialer will ask us to resolve, we'll tell the dialer to dial, it
-			// will ask us to resolve, ...
-			dnsovertcp.NewTLSDialerAdapter(
-				NewDialer(beginning, handler),
-			),
+		return resolver.NewResolverHTTPS(
+			beginning, handler, newHTTPClientForDoH(beginning, handler), address,
+		), nil
+	}
+	if network == "dot" {
+		// We need a child dialer here to avoid an endless loop where the
+		// dialer will ask us to resolve, we'll tell the dialer to dial, it
+		// will ask us to resolve, ...
+		return resolver.NewResolverTLS(
+			beginning, handler, NewDialer(beginning, handler),
 			withPort(address, "853"),
-		)
-	} else if network == "tcp" {
-		transport = dnsovertcp.NewTransport(
+		), nil
+	}
+	if network == "tcp" {
+		return resolver.NewResolverTCP(
+			beginning, handler,
 			// Same rationale as above: avoid possible endless loop
 			NewDialer(beginning, handler),
 			withPort(address, "53"),
-		)
-	} else if network == "udp" {
-		transport = dnsoverudp.NewTransport(
+		), nil
+	}
+	if network == "udp" {
+		return resolver.NewResolverUDP(
+			beginning, handler,
 			// Same rationale as above: avoid possible endless loop
 			NewDialer(beginning, handler),
 			withPort(address, "53"),
-		)
+		), nil
 	}
-	if transport == nil {
-		return nil, errors.New("resolver.New: unsupported network value")
-	}
-	return ooniresolver.New(beginning, handler, transport), nil
+	return nil, errors.New("resolver.New: unsupported network value")
 }
