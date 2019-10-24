@@ -1,8 +1,7 @@
-// Package toptripper contains the top HTTP round tripper.
-package toptripper
+// Package tracetripper contains the tracing round tripper
+package tracetripper
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptrace"
 	"sync"
@@ -12,8 +11,7 @@ import (
 	"github.com/ooni/netx/model"
 )
 
-// Transport performs single HTTP transactions and emits
-// measurement events as they happen.
+// Transport performs single HTTP transactions.
 type Transport struct {
 	beginning    time.Time
 	handler      model.Handler
@@ -34,7 +32,7 @@ func New(
 
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
-func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	outmethod := req.Method
 	outurl := req.URL.String()
 	tid := transactioner.ContextTransactionID(req.Context())
@@ -89,27 +87,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 		},
 	}
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
-	resp, err = t.roundTripper.RoundTrip(req)
-	if err != nil {
-		return
-	}
-	t.handler.OnMeasurement(model.Measurement{
-		HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
-			Headers:       resp.Header,
-			StatusCode:    int64(resp.StatusCode),
-			Time:          time.Now().Sub(t.beginning),
-			TransactionID: tid,
-		},
-	})
-	// "The http Client and Transport guarantee that Body is always
-	//  non-nil, even on responses without a body or responses with
-	//  a zero-length body." (from the docs)
-	resp.Body = &bodyWrapper{
-		ReadCloser: resp.Body,
-		t:          t,
-		tid:        tid,
-	}
-	return
+	return t.roundTripper.RoundTrip(req)
 }
 
 // CloseIdleConnections closes the idle connections.
@@ -121,40 +99,4 @@ func (t *Transport) CloseIdleConnections() {
 	if tr, ok := t.roundTripper.(closeIdler); ok {
 		tr.CloseIdleConnections()
 	}
-}
-
-type bodyWrapper struct {
-	io.ReadCloser
-	t   *Transport
-	tid int64
-}
-
-func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
-	start := time.Now()
-	n, err = bw.ReadCloser.Read(b)
-	stop := time.Now()
-	bw.t.handler.OnMeasurement(model.Measurement{
-		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
-			// "Read reads up to len(p) bytes into p. It returns the number of
-			// bytes read (0 <= n <= len(p)) and any error encountered."
-			Data:          b[:n],
-			Duration:      stop.Sub(start),
-			Error:         err,
-			NumBytes:      int64(n),
-			Time:          stop.Sub(bw.t.beginning),
-			TransactionID: bw.tid,
-		},
-	})
-	return
-}
-
-func (bw *bodyWrapper) Close() (err error) {
-	err = bw.ReadCloser.Close()
-	bw.t.handler.OnMeasurement(model.Measurement{
-		HTTPResponseDone: &model.HTTPResponseDoneEvent{
-			Time:          time.Now().Sub(bw.t.beginning),
-			TransactionID: bw.tid,
-		},
-	})
-	return
 }

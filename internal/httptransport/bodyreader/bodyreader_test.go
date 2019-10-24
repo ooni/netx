@@ -1,4 +1,4 @@
-package toptripper
+package bodyreader
 
 import (
 	"io/ioutil"

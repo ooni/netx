@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ooni/netx/internal/httptransport/toptripper"
+	"github.com/ooni/netx/internal/httptransport/bodyreader"
+	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/internal/httptransport/transactioner"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
@@ -36,8 +37,10 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 			TLSHandshakeTimeout:   10 * time.Second,
 		},
 	}
-	transport.roundTripper = transactioner.New(toptripper.New(
-		beginning, handler, transport.Transport,
+	transport.roundTripper = transactioner.New(bodyreader.New(
+		beginning, handler, tracetripper.New(
+			beginning, handler, transport.Transport,
+		),
 	))
 	// Configure h2 and make sure that the custom TLSConfig we use for dialing
 	// is actually compatible with upgrading to h2. (This mainly means we
