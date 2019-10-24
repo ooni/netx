@@ -9,13 +9,8 @@ import (
 	"time"
 
 	"github.com/ooni/netx/model"
-	"github.com/ooni/netx/x/dialer"
+	"github.com/ooni/netx/x/internal"
 )
-
-// Generic is a generic TLS dialer
-type Generic interface {
-	DialTLS(network, address string) (net.Conn, error)
-}
 
 // TLSDialer is the TLS dialer
 type TLSDialer struct {
@@ -23,7 +18,7 @@ type TLSDialer struct {
 	TLSHandshakeTimeout time.Duration // default: 10 second
 	beginning           time.Time
 	config              *tls.Config
-	dialer              dialer.Generic
+	dialer              model.Dialer
 	handler             model.Handler
 	setDeadline         func(net.Conn, time.Time) error
 }
@@ -32,7 +27,7 @@ type TLSDialer struct {
 func New(
 	beginning time.Time,
 	handler model.Handler,
-	dialer dialer.Generic,
+	dialer model.Dialer,
 	config *tls.Config,
 ) *TLSDialer {
 	return &TLSDialer{
@@ -80,7 +75,7 @@ func (d *TLSDialer) DialTLS(network, address string) (net.Conn, error) {
 	stop := time.Now()
 	m := model.Measurement{
 		TLSHandshake: &model.TLSHandshakeEvent{
-			ConnHash: dialer.ConnHash(conn),
+			ConnHash: internal.ConnHash(conn),
 			Config: model.TLSConfig{
 				NextProtos: config.NextProtos,
 				ServerName: config.ServerName,

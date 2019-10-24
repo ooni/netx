@@ -19,6 +19,8 @@
 package model
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"time"
 )
@@ -227,4 +229,24 @@ type Handler interface {
 	// or Client is returned. OnMeasurement may be called by background
 	// goroutines and OnMeasurement calls may happen concurrently.
 	OnMeasurement(Measurement)
+}
+
+// Resolver is a generic resolver.
+type Resolver interface {
+	// LookupHost behaves like net.Dialer.LookupHost
+	LookupHost(ctx context.Context, hostname string) ([]string, error)
+}
+
+// Dialer is a generic dialer
+type Dialer interface {
+	// Dial behaves like net.Dialer.Dial
+	Dial(network, address string) (net.Conn, error)
+
+	// DialContext behaves like net.Dialer.DialContext
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+// TLSDialer is a generic TLS dialer
+type TLSDialer interface {
+	DialTLS(network, address string) (net.Conn, error)
 }

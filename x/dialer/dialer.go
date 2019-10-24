@@ -3,49 +3,29 @@ package dialer
 
 import (
 	"context"
-	"crypto/sha256"
-	"fmt"
 	"net"
-	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/model"
-	"github.com/ooni/netx/x/resolver"
+	"github.com/ooni/netx/x/dialid"
+	"github.com/ooni/netx/x/internal"
 )
-
-var nextDialID int64
-
-// ConnHash computes the connection ID
-func ConnHash(conn net.Conn) string {
-	local := conn.LocalAddr()
-	remote := conn.RemoteAddr()
-	network := local.Network()
-	slug := network + local.String() + remote.String()
-	sum := sha256.Sum256([]byte(slug))
-	return fmt.Sprintf("%x", sum)
-}
-
-// Generic is a generic dialer
-type Generic interface {
-	Dial(network, address string) (net.Conn, error)
-	DialContext(ctx context.Context, network, address string) (net.Conn, error)
-}
 
 // Dialer is a dialer
 type Dialer struct {
 	beginning   time.Time
-	dialer      Generic
+	dialer      model.Dialer
 	handler     model.Handler
 	includeData bool
-	resolver    resolver.Generic
+	resolver    model.Resolver
 }
 
 // New returns a new Dialer
 func New(
 	beginning time.Time,
 	handler model.Handler,
-	dialer Generic,
-	resolver resolver.Generic,
+	dialer model.Dialer,
+	resolver model.Resolver,
 	includeData bool,
 ) *Dialer {
 	return &Dialer{
@@ -84,11 +64,9 @@ func (d *Dialer) DialContext(
 	if err != nil {
 		return nil, err
 	}
-	dialID := atomic.AddInt64(&nextDialID, 1)
+	// Modify context to propagate the dialID
+	ctx = dialid.WithDialID(ctx)
 	if net.ParseIP(host) == nil {
-		// The resolver needs to know far what dial it's
-		// about to do the resolving work
-		ctx = resolver.WithDialID(ctx, dialID)
 		addrs, err = d.resolver.LookupHost(ctx, host)
 	} else {
 		addrs, err = append(addrs, host), nil
@@ -105,7 +83,7 @@ func (d *Dialer) DialContext(
 		m := model.Measurement{
 			Connect: &model.ConnectEvent{
 				ConnHash:      "",
-				DialID:        dialID,
+				DialID:        dialid.ContextDialID(ctx),
 				Duration:      stop.Sub(start),
 				Error:         err,
 				Network:       network,
@@ -114,7 +92,7 @@ func (d *Dialer) DialContext(
 			},
 		}
 		if err == nil {
-			m.Connect.ConnHash = ConnHash(conn)
+			m.Connect.ConnHash = internal.ConnHash(conn)
 			conn = newConnWrapper(
 				conn, d.beginning, d.handler, d.includeData, m.Connect.ConnHash,
 			)
