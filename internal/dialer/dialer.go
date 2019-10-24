@@ -15,7 +15,29 @@ import (
 	"github.com/ooni/netx/model"
 )
 
-var nextDialID, nextConnID int64
+// New creates a new model.Dialer
+func New(
+	beginning time.Time,
+	handler model.Handler,
+	resolver model.DNSResolver,
+	dialer model.Dialer,
+) *dnsdialer.Dialer {
+	return dnsdialer.New(
+		beginning, handler, resolver, dialer,
+	)
+}
+
+// NewTLS creates a new model.TLSDialer
+func NewTLS(
+	beginning time.Time,
+	handler model.Handler,
+	dialer model.Dialer,
+	config *tls.Config,
+) *tlsdialer.TLSDialer {
+	return tlsdialer.New(
+		beginning, handler, dialer, config,
+	)
+}
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
@@ -48,10 +70,9 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
-	dialer := dnsdialer.New(
+	return New(
 		d.Beginning, d.Handler, d.Resolver, new(net.Dialer),
-	)
-	return dialer.DialContext(ctx, network, address)
+	).DialContext(ctx, network, address)
 }
 
 // DialTLS is like Dial, but creates TLS connections.
@@ -64,10 +85,17 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 func (d *Dialer) DialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
-	dialer := tlsdialer.New(
-		d.Beginning, d.Handler, d, d.TLSConfig,
-	)
-	return dialer.DialTLSContext(ctx, network, address)
+	return NewTLS(
+		d.Beginning,
+		d.Handler,
+		New(
+			d.Beginning,
+			d.Handler,
+			d.Resolver,
+			new(net.Dialer),
+		),
+		d.TLSConfig,
+	).DialTLSContext(ctx, network, address)
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle.
