@@ -17,17 +17,13 @@ import (
 	"github.com/ooni/netx/model"
 )
 
-var nextConnID int64
-
-// NextConnID returns the next connection ID.
-func NextConnID() int64 {
-	return atomic.AddInt64(&nextConnID, 1)
-}
+var nextDialID, nextConnID int64
 
 // DialHostPortFunc is the type of the function that is actually
 // used to dial a connection to a specific host and port.
 type DialHostPortFunc func(
-	ctx context.Context, network, onlyhost, onlyport string, connid int64,
+	ctx context.Context, network, onlyhost, onlyport string,
+	dialID, connID int64,
 ) (*connx.MeasuringConn, error)
 
 // Dialer defines the dialer API. We implement the most basic form
@@ -121,9 +117,10 @@ func (d *Dialer) DialContextEx(
 	if err != nil {
 		return
 	}
-	connid := NextConnID()
+	dialID := atomic.AddInt64(&nextDialID, 1)
+	connID := atomic.AddInt64(&nextConnID, 1)
 	if net.ParseIP(onlyhost) != nil {
-		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, connid)
+		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, dialID, connID)
 		return
 	}
 	if requireIP == true {
@@ -137,7 +134,7 @@ func (d *Dialer) DialContextEx(
 	d.Handler.OnMeasurement(model.Measurement{
 		Resolve: &model.ResolveEvent{
 			Addresses: addrs,
-			ConnID:    connid,
+			DialID:    dialID,
 			Duration:  stop.Sub(start),
 			Error:     err,
 			Hostname:  onlyhost,
@@ -148,10 +145,11 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	for _, addr := range addrs {
-		conn, err = d.DialHostPort(ctx, network, addr, onlyport, connid)
+		conn, err = d.DialHostPort(ctx, network, addr, onlyport, dialID, connID)
 		if err == nil {
 			return
 		}
+		connID = atomic.AddInt64(&nextConnID, 1)
 	}
 	err = &net.OpError{
 		Op:  "dial",
