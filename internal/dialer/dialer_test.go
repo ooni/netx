@@ -1,4 +1,4 @@
-package dialerapi_test
+package dialer
 
 import (
 	"context"
@@ -9,11 +9,10 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dialerapi"
 )
 
 func TestIntegrationDial(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.Dial("tcp", "www.google.com:80")
 	if err != nil {
 		t.Fatal(err)
@@ -22,7 +21,7 @@ func TestIntegrationDial(t *testing.T) {
 }
 
 func TestIntegrationDialTLS(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.DialTLS("tcp", "www.google.com:443")
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +30,7 @@ func TestIntegrationDialTLS(t *testing.T) {
 }
 
 func TestIntegrationInvalidAddress(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.DialTLS("tcp", "www.google.com")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -42,7 +41,7 @@ func TestIntegrationInvalidAddress(t *testing.T) {
 }
 
 func TestIntegrationDialContextExIPAddress(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, onlyhost, onlyport, err := dialer.DialContextEx(
 		context.Background(), "tcp", "8.8.8.8:443", true,
 	)
@@ -62,7 +61,7 @@ func TestIntegrationDialContextExIPAddress(t *testing.T) {
 }
 
 func TestIntegrationUnexpectedDomain(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, onlyhost, onlyport, err := dialer.DialContextEx(
 		context.Background(), "tcp", "www.google.com:443", true,
 	)
@@ -81,7 +80,7 @@ func TestIntegrationUnexpectedDomain(t *testing.T) {
 }
 
 func TestIntegrationLookupFailure(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, onlyhost, onlyport, err := dialer.DialContextEx(
 		context.Background(), "tcp", "antani.ooni.io:443", false,
 	)
@@ -103,7 +102,7 @@ func TestIntegrationDialTCPFailure(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	// The port is unreachable and filtered. The timeout is here
 	// to make sure that we don't run for too much time.
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
@@ -118,7 +117,7 @@ func TestIntegrationDialTCPFailure(t *testing.T) {
 }
 
 func TestDialDNSFailure(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	// The insane timeout is such that the DNS resolver fails because it
 	// times out when trying to dial for the default server. (This is
 	// a test that only makes sense on Unix.)
@@ -134,7 +133,7 @@ func TestDialDNSFailure(t *testing.T) {
 }
 
 func TestIntegrationDialInvalidSNI(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	dialer.TLSConfig = &tls.Config{
 		ServerName: "www.google.com",
 	}
@@ -148,7 +147,7 @@ func TestIntegrationDialInvalidSNI(t *testing.T) {
 }
 
 func TestIntegrationTLSHandshakeSetDeadlineError(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	dialer.StartTLSHandshakeHook = func(c net.Conn) {
 		c.Close() // close the connection so SetDealine should fail
 	}
@@ -162,7 +161,7 @@ func TestIntegrationTLSHandshakeSetDeadlineError(t *testing.T) {
 }
 
 func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	dialer.TLSHandshakeTimeout = 1 // very small timeout
 	conn, err := dialer.DialTLS("tcp", "ooni.io:443")
 	if err == nil {
@@ -174,7 +173,7 @@ func TestIntegrationTLSHandshakeTimeout(t *testing.T) {
 }
 
 func TestSetCABundleExisting(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	err := dialer.SetCABundle("../../testdata/cacert.pem")
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +181,7 @@ func TestSetCABundleExisting(t *testing.T) {
 }
 
 func TestSetCABundleNonexisting(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	err := dialer.SetCABundle("../../testdata/cacert-nonexistent.pem")
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -190,7 +189,7 @@ func TestSetCABundleNonexisting(t *testing.T) {
 }
 
 func TestSetCABundleWAI(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	err := dialer.SetCABundle("../../testdata/cacert.pem")
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +207,7 @@ func TestSetCABundleWAI(t *testing.T) {
 }
 
 func TestForceSpecificSNI(t *testing.T) {
-	dialer := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	err := dialer.ForceSpecificSNI("www.facebook.com")
 	conn, err := dialer.DialTLS("tcp", "www.google.com:443")
 	if err == nil {

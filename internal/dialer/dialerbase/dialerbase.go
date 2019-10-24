@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ooni/netx/internal/connx"
+	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/model"
 )
 

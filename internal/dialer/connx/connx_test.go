@@ -1,4 +1,4 @@
-package connx_test
+package connx
 
 import (
 	"net"
@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/connx"
 )
 
 func TestIntegrationMeasuringConn(t *testing.T) {
-	conn := net.Conn(&connx.MeasuringConn{
+	conn := net.Conn(&MeasuringConn{
 		Conn:    fakeconn{},
 		Handler: handlers.NoHandler,
 	})

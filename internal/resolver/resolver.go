@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverhttps"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverudp"
@@ -18,7 +18,7 @@ import (
 )
 
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
-	dialer := dialerapi.NewDialer(beginning, handler)
+	dialer := dialer.NewDialer(beginning, handler)
 	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
 	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
 	// an already well configured config that works for http2 (as explained in a
@@ -66,20 +66,20 @@ func New(
 			// dialer will ask us to resolve, we'll tell the dialer to dial, it
 			// will ask us to resolve, ...
 			dnsovertcp.NewTLSDialerAdapter(
-				dialerapi.NewDialer(beginning, handler),
+				dialer.NewDialer(beginning, handler),
 			),
 			withPort(address, "853"),
 		)
 	} else if network == "tcp" {
 		transport = dnsovertcp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(beginning, handler),
+			dialer.NewDialer(beginning, handler),
 			withPort(address, "53"),
 		)
 	} else if network == "udp" {
 		transport = dnsoverudp.NewTransport(
 			// Same rationale as above: avoid possible endless loop
-			dialerapi.NewDialer(beginning, handler),
+			dialer.NewDialer(beginning, handler),
 			withPort(address, "53"),
 		)
 	}
