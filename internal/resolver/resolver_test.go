@@ -2,20 +2,17 @@ package resolver
 
 import (
 	"context"
+	"crypto/tls"
+	"net"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/model"
 )
 
-func testresolverquick(t *testing.T, network, address string) {
-	resolver, err := New(time.Now(), handlers.NoHandler, network, address)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resolver == nil {
-		t.Fatal("expected non-nil resolver here")
-	}
+func testresolverquick(t *testing.T, resolver model.DNSResolver) {
 	addrs, err := resolver.LookupHost(context.Background(), "dns.google.com")
 	if err != nil {
 		t.Fatal(err)
@@ -35,70 +32,49 @@ func testresolverquick(t *testing.T, network, address string) {
 }
 
 func TestIntegrationNewResolverUDPAddress(t *testing.T) {
-	testresolverquick(t, "udp", "8.8.8.8:53")
-}
-
-func TestIntegrationNewResolverUDPAddressNoPort(t *testing.T) {
-	testresolverquick(t, "udp", "8.8.8.8")
+	testresolverquick(t, NewResolverUDP(
+		time.Now(), handlers.NoHandler, new(net.Dialer), "8.8.8.8:53"))
 }
 
 func TestIntegrationNewResolverUDPDomain(t *testing.T) {
-	testresolverquick(t, "udp", "dns.google.com:53")
-}
-
-func TestIntegrationNewResolverUDPDomainNoPort(t *testing.T) {
-	testresolverquick(t, "udp", "dns.google.com")
-}
-
-func TestIntegrationNewResolverSystem(t *testing.T) {
-	testresolverquick(t, "system", "")
+	testresolverquick(t, NewResolverUDP(
+		time.Now(), handlers.NoHandler, new(net.Dialer), "dns.google.com:53"))
 }
 
 func TestIntegrationNewResolverTCPAddress(t *testing.T) {
-	testresolverquick(t, "tcp", "8.8.8.8:53")
-}
-
-func TestIntegrationNewResolverTCPAddressNoPort(t *testing.T) {
-	testresolverquick(t, "tcp", "8.8.8.8")
+	testresolverquick(t, NewResolverTCP(
+		time.Now(), handlers.NoHandler, new(net.Dialer), "8.8.8.8:53"))
 }
 
 func TestIntegrationNewResolverTCPDomain(t *testing.T) {
-	testresolverquick(t, "tcp", "dns.google.com:53")
-}
-
-func TestIntegrationNewResolverTCPDomainNoPort(t *testing.T) {
-	testresolverquick(t, "tcp", "dns.google.com")
+	testresolverquick(t, NewResolverTCP(
+		time.Now(), handlers.NoHandler, new(net.Dialer), "dns.google.com:53"))
 }
 
 func TestIntegrationNewResolverDoTAddress(t *testing.T) {
-	testresolverquick(t, "dot", "9.9.9.9:853")
-}
-
-func TestIntegrationNewResolverDoTAddressNoPort(t *testing.T) {
-	testresolverquick(t, "dot", "9.9.9.9")
+	testresolverquick(t, NewResolverTLS(
+		time.Now(), handlers.NoHandler, &tlsdialer{}, "9.9.9.9:853"))
 }
 
 func TestIntegrationNewResolverDoTDomain(t *testing.T) {
-	testresolverquick(t, "dot", "dns.quad9.net:853")
-}
-
-func TestIntegrationNewResolverDoTDomainNoPort(t *testing.T) {
-	testresolverquick(t, "dot", "dns.quad9.net")
+	testresolverquick(t, NewResolverTLS(
+		time.Now(), handlers.NoHandler, &tlsdialer{}, "dns.quad9.net:853"))
 }
 
 func TestIntegrationNewResolverDoH(t *testing.T) {
-	testresolverquick(t, "doh", "https://cloudflare-dns.com/dns-query")
+	testresolverquick(t, NewResolverHTTPS(
+		time.Now(), handlers.NoHandler, http.DefaultClient,
+		"https://cloudflare-dns.com/dns-query"))
 }
 
-func TestIntegrationNewResolverInvalid(t *testing.T) {
-	resolver, err := New(
-		time.Now(), handlers.StdoutHandler,
-		"antani", "https://cloudflare-dns.com/dns-query",
-	)
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if resolver != nil {
-		t.Fatal("expected a nil resolver here")
-	}
+type tlsdialer struct{}
+
+func (*tlsdialer) DialTLS(network, address string) (net.Conn, error) {
+	return tls.Dial(network, address, new(tls.Config))
+}
+
+func (*tlsdialer) DialTLSContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return tls.Dial(network, address, new(tls.Config))
 }
