@@ -39,11 +39,10 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) ([]byte, error)
 		return nil, err
 	}
 	defer conn.Close()
-	return t.RoundTripWithConn(conn, query)
+	return t.doWithConn(conn, query)
 }
 
-// RoundTripWithConn performs the DNS round trip with a connection.
-func (t *Transport) RoundTripWithConn(conn net.Conn, query []byte) (reply []byte, err error) {
+func (t *Transport) doWithConn(conn net.Conn, query []byte) (reply []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			reply = nil // we already got the error just clear the reply
