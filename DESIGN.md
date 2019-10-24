@@ -259,7 +259,13 @@ to change as we improve our understanding of what could
 be measured, as stated above, please see the current documentation
 for more information on the structure of each event.
 
-Every network event will be additionally identified by
+Every dialing operation will be identified by
+
+```Go
+    DialID   int64
+```
+
+Every network connection will be additionally identified by
 
 ```Go
     ConnID   int64

@@ -36,6 +36,7 @@ type CloseEvent struct {
 // ConnectEvent is emitted when connect() returns.
 type ConnectEvent struct {
 	ConnID        int64
+	DialID        int64
 	Duration      time.Duration
 	Error         error
 	LocalAddress  string
@@ -141,7 +142,7 @@ type ReadEvent struct {
 // ResolveEvent is emitted when resolver.LookupHost returns.
 type ResolveEvent struct {
 	Addresses []string
-	ConnID    int64
+	DialID    int64
 	Duration  time.Duration
 	Error     error
 	Hostname  string

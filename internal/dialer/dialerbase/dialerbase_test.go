@@ -13,7 +13,7 @@ func TestIntegrationSuccess(t *testing.T) {
 		time.Now(), handlers.NoHandler,
 	)
 	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "8.8.8.8", "53", 17,
+		context.Background(), "tcp", "8.8.8.8", "53", 17, 17,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ func TestIntegrationErrorDomain(t *testing.T) {
 		time.Now(), handlers.NoHandler,
 	)
 	conn, err := dialer.DialHostPort(
-		context.Background(), "tcp", "dns.google.com", "53", 17,
+		context.Background(), "tcp", "dns.google.com", "53", 17, 17,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -43,7 +43,7 @@ func TestIntegrationErrorNoConnect(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
 	defer cancel()
 	conn, err := dialer.DialHostPort(
-		ctx, "tcp", "8.8.8.8", "53", 17,
+		ctx, "tcp", "8.8.8.8", "53", 17, 17,
 	)
 	if err == nil {
 		t.Fatal("expected an error here")
