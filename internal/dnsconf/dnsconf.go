@@ -13,7 +13,7 @@ import (
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/internal/httptransport"
-	"github.com/ooni/netx/internal/oodns"
+	"github.com/ooni/netx/internal/resolver/ooniresolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -95,5 +95,5 @@ func NewResolver(
 	if transport == nil {
 		return nil, errors.New("dnsconf: unsupported network value")
 	}
-	return oodns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
+	return ooniresolver.New(dialer.Beginning, dialer.Handler, transport), nil
 }

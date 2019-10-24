@@ -1,4 +1,4 @@
-package oodns
+package ooniresolver
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func newtransport() model.DNSRoundTripper {
 }
 
 func TestLookupAddr(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")
@@ -31,7 +31,7 @@ func TestLookupAddr(t *testing.T) {
 }
 
 func TestLookupCNAME(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupCNAME(context.Background(), "www.ooni.io")
@@ -44,7 +44,7 @@ func TestLookupCNAME(t *testing.T) {
 }
 
 func TestLookupHost(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupHost(context.Background(), "www.google.com")
@@ -57,7 +57,7 @@ func TestLookupHost(t *testing.T) {
 }
 
 func TestLookupNonexistent(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupHost(context.Background(), "nonexistent.ooni.io")
@@ -70,7 +70,7 @@ func TestLookupNonexistent(t *testing.T) {
 }
 
 func TestLookupMX(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupMX(context.Background(), "ooni.io")
@@ -83,7 +83,7 @@ func TestLookupMX(t *testing.T) {
 }
 
 func TestLookupNS(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	addrs, err := client.LookupNS(context.Background(), "ooni.io")
@@ -96,7 +96,7 @@ func TestLookupNS(t *testing.T) {
 }
 
 func TestRoundTripExPackFailure(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	_, err := client.mockableRoundTrip(
@@ -117,7 +117,7 @@ func TestRoundTripExPackFailure(t *testing.T) {
 }
 
 func TestRoundTripExRoundTripFailure(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	_, err := client.mockableRoundTrip(
@@ -138,7 +138,7 @@ func TestRoundTripExRoundTripFailure(t *testing.T) {
 }
 
 func TestRoundTripExUnpackFailure(t *testing.T) {
-	client := NewClient(
+	client := New(
 		time.Now(), handlers.NoHandler, newtransport(),
 	)
 	_, err := client.mockableRoundTrip(
