@@ -9,7 +9,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
+	"github.com/ooni/netx/internal/resolver/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/model"
 )
 
