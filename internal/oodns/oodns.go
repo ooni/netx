@@ -1,17 +1,11 @@
 // Package oodns is OONI's DNS client.
-//
-// This is currently experimental code that is not wired into the
-// rest of the code. We want to understand if we can always use the
-// github.com/miekg/dns client to implement model.DNSResolver.
-//
-// If that is possible, then maybe we can fully replace the current
-// situation in which we monkey patch Go's +netgo DNS client.
 package oodns
 
 import (
 	"context"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/model"
@@ -26,7 +20,7 @@ type Client struct {
 }
 
 // NewClient creates a new OONI DNS client instance.
-func NewClient(handler model.Handler, t model.DNSRoundTripper) *Client {
+func NewClient(beginning time.Time, handler model.Handler, t model.DNSRoundTripper) *Client {
 	return &Client{
 		handler:   handler,
 		transport: t,
@@ -49,8 +43,8 @@ func (c *Client) LookupCNAME(ctx context.Context, host string) (cname string, er
 
 // LookupHost returns the IP addresses of a host
 func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, error) {
-	// TODO(ooni): wrap errors as net.DNSError
-	// TODO(ooni): emit DNS messages
+	// TODO(bassosimone): wrap errors as net.DNSError
+	// TODO(bassosimone): emit DNS messages
 	var addrs []string
 	var reply *dns.Msg
 	reply, errA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
@@ -143,7 +137,6 @@ func (c *Client) RoundTripEx(
 	roundTrip func(t model.DNSRoundTripper, query []byte) (reply []byte, err error),
 	unpack func(msg *dns.Msg, data []byte) (err error),
 ) (reply *dns.Msg, err error) {
-	// TODO(ooni): we are ignoring the context here
 	var (
 		querydata []byte
 		replydata []byte

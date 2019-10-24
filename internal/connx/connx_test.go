@@ -32,46 +32,6 @@ func TestIntegrationMeasuringConn(t *testing.T) {
 	}
 }
 
-func TestIntegrationDNSMeasuringConn(t *testing.T) {
-	conn := net.Conn(&connx.DNSMeasuringConn{
-		MeasuringConn: connx.MeasuringConn{
-			Conn:    fakeconn{},
-			Handler: handlers.NoHandler,
-		},
-	})
-	defer conn.Close()
-	data := make([]byte, 1<<17)
-	n, err := conn.Read(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != len(data) {
-		t.Fatal("invalid number of bytes read")
-	}
-	n, err = conn.Write(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != len(data) {
-		t.Fatal("invalid number of bytes written")
-	}
-	packetconn := conn.(net.PacketConn)
-	n, _, err = packetconn.ReadFrom(data)
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if n != 0 {
-		t.Fatal("expected zero here")
-	}
-	n, err = packetconn.WriteTo(data, &net.TCPAddr{})
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if n != 0 {
-		t.Fatal("expected zero here")
-	}
-}
-
 type fakeconn struct{}
 
 func (fakeconn) Read(b []byte) (n int, err error) {
