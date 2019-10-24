@@ -16,6 +16,7 @@ import (
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
+	"golang.org/x/net/http2"
 )
 
 // Dialer defines the dialer API. We implement the most basic form
@@ -105,16 +106,7 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 }
 
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
-	dialer := NewDialer(beginning, handler)
-	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
-	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
-	// an already well configured config that works for http2 (as explained in a
-	// comment there). Here we just use it because it's what we need.
-	dialer.TLSConfig = transport.Transport.TLSClientConfig
-	// Arrange the configuration such that we always use `dialer` for dialing.
-	transport.Transport.Dial = dialer.Dial
-	transport.Transport.DialContext = dialer.DialContext
-	transport.Transport.DialTLS = dialer.DialTLS
+	transport := NewHTTPTransport(beginning, handler, NewDialer(beginning, handler))
 	transport.Transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
 	return &http.Client{Transport: transport}
 }
@@ -172,4 +164,68 @@ func NewResolver(
 		), nil
 	}
 	return nil, errors.New("resolver.New: unsupported network value")
+}
+
+// HTTPTransport performs single HTTP transactions and emits
+// measurement events as they happen.
+type HTTPTransport struct {
+	Transport    *http.Transport
+	Handler      model.Handler
+	Beginning    time.Time
+	roundTripper http.RoundTripper
+}
+
+// NewHTTPTransport creates a new Transport.
+func NewHTTPTransport(
+	beginning time.Time,
+	handler model.Handler,
+	dialer *Dialer,
+) *HTTPTransport {
+	baseTransport := &http.Transport{
+		ExpectContinueTimeout: 1 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          100,
+		Proxy:                 http.ProxyFromEnvironment,
+		TLSHandshakeTimeout:   10 * time.Second,
+	}
+	ooniTransport := httptransport.New(beginning, handler, baseTransport)
+	// Configure h2 and make sure that the custom TLSConfig we use for dialing
+	// is actually compatible with upgrading to h2. (This mainly means we
+	// need to make sure we include "h2" in the NextProtos array.) Because
+	// http2.ConfigureTransport only returns error when we have already
+	// configured http2, it is safe to ignore the return value.
+	http2.ConfigureTransport(baseTransport)
+	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
+	// an already well configured config that works for http2 (as explained in a
+	// comment there). Here we just use it because it's what we need.
+	dialer.TLSConfig = baseTransport.TLSClientConfig
+	// Arrange the configuration such that we always use `dialer` for dialing.
+	baseTransport.Dial = dialer.Dial
+	baseTransport.DialContext = dialer.DialContext
+	baseTransport.DialTLS = dialer.DialTLS
+	return &HTTPTransport{
+		Transport:    baseTransport,
+		Handler:      handler,
+		Beginning:    beginning,
+		roundTripper: ooniTransport,
+	}
+}
+
+// RoundTrip executes a single HTTP transaction, returning
+// a Response for the provided Request.
+func (t *HTTPTransport) RoundTrip(
+	req *http.Request,
+) (resp *http.Response, err error) {
+	return t.roundTripper.RoundTrip(req)
+}
+
+// CloseIdleConnections closes the idle connections.
+func (t *HTTPTransport) CloseIdleConnections() {
+	// Adapted from net/http code
+	type closeIdler interface {
+		CloseIdleConnections()
+	}
+	if tr, ok := t.roundTripper.(closeIdler); ok {
+		tr.CloseIdleConnections()
+	}
 }
