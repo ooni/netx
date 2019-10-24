@@ -5,11 +5,16 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 	"net"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ooni/netx/internal/dialer"
+	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -88,4 +93,74 @@ func (d *Dialer) SetCABundle(path string) error {
 func (d *Dialer) ForceSpecificSNI(sni string) error {
 	d.TLSConfig.ServerName = sni
 	return nil
+}
+
+func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
+	dialer := NewDialer(beginning, handler)
+	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
+	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
+	// an already well configured config that works for http2 (as explained in a
+	// comment there). Here we just use it because it's what we need.
+	dialer.TLSConfig = transport.TLSClientConfig
+	// Arrange the configuration such that we always use `dialer` for dialing.
+	transport.Dial = dialer.Dial
+	transport.DialContext = dialer.DialContext
+	transport.DialTLS = dialer.DialTLS
+	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
+	return &http.Client{Transport: transport}
+}
+
+func withPort(address, port string) string {
+	// Handle the case where port was not specified. We have written in
+	// a bunch of places that we can just pass a domain in this case and
+	// so we need to gracefully ensure this is still possible.
+	_, _, err := net.SplitHostPort(address)
+	if err != nil && strings.Contains(err.Error(), "missing port in address") {
+		address = net.JoinHostPort(address, port)
+	}
+	return address
+}
+
+// NewResolver returns a new resolver
+func NewResolver(
+	beginning time.Time, handler model.Handler, network, address string,
+) (model.DNSResolver, error) {
+	// Implementation note: system need to be dealt with
+	// separately because it doesn't have any transport.
+	if network == "system" {
+		return &net.Resolver{
+			PreferGo: false,
+		}, nil
+	}
+	if network == "doh" {
+		return resolver.NewResolverHTTPS(
+			beginning, handler, newHTTPClientForDoH(beginning, handler), address,
+		), nil
+	}
+	if network == "dot" {
+		// We need a child dialer here to avoid an endless loop where the
+		// dialer will ask us to resolve, we'll tell the dialer to dial, it
+		// will ask us to resolve, ...
+		return resolver.NewResolverTLS(
+			beginning, handler, NewDialer(beginning, handler),
+			withPort(address, "853"),
+		), nil
+	}
+	if network == "tcp" {
+		return resolver.NewResolverTCP(
+			beginning, handler,
+			// Same rationale as above: avoid possible endless loop
+			NewDialer(beginning, handler),
+			withPort(address, "53"),
+		), nil
+	}
+	if network == "udp" {
+		return resolver.NewResolverUDP(
+			beginning, handler,
+			// Same rationale as above: avoid possible endless loop
+			NewDialer(beginning, handler),
+			withPort(address, "53"),
+		), nil
+	}
+	return nil, errors.New("resolver.New: unsupported network value")
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/internal/dnsconf"
-	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -89,7 +88,7 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // (e.g. creating a new connection) will use this Dialer. This is why
 // NewResolver is a method rather than being just a free function.
 func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error) {
-	return resolver.New(d.dialer.Beginning, d.dialer.Handler, network, address)
+	return internal.NewResolver(d.dialer.Beginning, d.dialer.Handler, network, address)
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle. This
