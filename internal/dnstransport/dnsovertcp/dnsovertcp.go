@@ -12,7 +12,7 @@ import (
 	"github.com/m-lab/go/rtx"
 )
 
-// Transport is a DNS over TCP/TLS dnsx.RoundTripper.
+// Transport is a DNS over TCP/TLS model.DNSRoundTripper.
 //
 // As a known bug, this implementation always creates a new connection
 // for each incoming query, thus increasing the response delay.

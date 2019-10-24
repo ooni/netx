@@ -34,16 +34,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/model"
 )
 
-// NewClient returns a dnsx.Client implementation that is using
+// NewClient returns a model.DNSResolver implementation that is using
 // the specified transport to resolve domain names.
 func NewClient(
-	beginning time.Time, handler model.Handler, transport dnsx.RoundTripper,
+	beginning time.Time, handler model.Handler, transport model.DNSRoundTripper,
 ) *net.Resolver {
 	return &net.Resolver{
 		PreferGo: true,
@@ -63,7 +62,7 @@ type pseudoConn struct {
 	id    int64
 	mutex sync.Mutex
 	rd    time.Time
-	t     dnsx.RoundTripper
+	t     model.DNSRoundTripper
 	wd    time.Time
 }
 
@@ -71,7 +70,7 @@ type pseudoConn struct {
 // specified transport. This allows a DNS client to write a query
 // to the conn to send it, and to read to receive the reply.
 func NewPseudoConn(
-	beginning time.Time, handler model.Handler, transport dnsx.RoundTripper,
+	beginning time.Time, handler model.Handler, transport model.DNSRoundTripper,
 ) net.Conn {
 	connid := dialerapi.NextConnID()
 	conn := net.Conn(&connx.DNSMeasuringConn{

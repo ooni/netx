@@ -2,7 +2,7 @@
 //
 // This is currently experimental code that is not wired into the
 // rest of the code. We want to understand if we can always use the
-// github.com/miekg/dns client to implement dnsx.Client.
+// github.com/miekg/dns client to implement model.DNSResolver.
 //
 // If that is possible, then maybe we can fully replace the current
 // situation in which we monkey patch Go's +netgo DNS client.
@@ -14,7 +14,6 @@ import (
 	"net"
 
 	"github.com/miekg/dns"
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/model"
 )
 
@@ -23,11 +22,11 @@ import (
 // for DNS supported by this library, however.
 type Client struct {
 	handler   model.Handler
-	transport dnsx.RoundTripper
+	transport model.DNSRoundTripper
 }
 
 // NewClient creates a new OONI DNS client instance.
-func NewClient(handler model.Handler, t dnsx.RoundTripper) *Client {
+func NewClient(handler model.Handler, t model.DNSRoundTripper) *Client {
 	return &Client{
 		handler:   handler,
 		transport: t,
@@ -124,7 +123,7 @@ func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg,
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
 		},
-		func(t dnsx.RoundTripper, query []byte) (reply []byte, err error) {
+		func(t model.DNSRoundTripper, query []byte) (reply []byte, err error) {
 			// Pass ctx to round tripper for cancellation as well
 			// as to propagate context information
 			return t.RoundTrip(ctx, query)
@@ -141,7 +140,7 @@ func (c *Client) RoundTripEx(
 	ctx context.Context,
 	query *dns.Msg,
 	pack func(msg *dns.Msg) ([]byte, error),
-	roundTrip func(t dnsx.RoundTripper, query []byte) (reply []byte, err error),
+	roundTrip func(t model.DNSRoundTripper, query []byte) (reply []byte, err error),
 	unpack func(msg *dns.Msg, data []byte) (err error),
 ) (reply *dns.Msg, err error) {
 	// TODO(ooni): we are ignoring the context here

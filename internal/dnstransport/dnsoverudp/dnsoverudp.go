@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Transport is a DNS over UDP dnsx.RoundTripper.
+// Transport is a DNS over UDP model.DNSRoundTripper.
 type Transport struct {
 	dial    func(network, address string) (net.Conn, error)
 	address string

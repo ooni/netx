@@ -19,6 +19,8 @@
 package model
 
 import (
+	"context"
+	"net"
 	"net/http"
 	"time"
 )
@@ -215,4 +217,29 @@ type Handler interface {
 	// or Client is returned. OnMeasurement may be called by background
 	// goroutines and OnMeasurement calls may happen concurrently.
 	OnMeasurement(Measurement)
+}
+
+// DNSResolver is a DNS resolver. The *net.Resolver used by Go implements
+// this interface, but other implementations are possible.
+type DNSResolver interface {
+	// LookupAddr performs a reverse lookup of an address.
+	LookupAddr(ctx context.Context, addr string) (names []string, err error)
+
+	// LookupCNAME returns the canonical name of a given host.
+	LookupCNAME(ctx context.Context, host string) (cname string, err error)
+
+	// LookupHost resolves a hostname to a list of IP addresses.
+	LookupHost(ctx context.Context, hostname string) (addrs []string, err error)
+
+	// LookupMX resolves the DNS MX records for a given domain name.
+	LookupMX(ctx context.Context, name string) ([]*net.MX, error)
+
+	// LookupNS resolves the DNS NS records for a given domain name.
+	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
+}
+
+// DNSRoundTripper represents an abstract DNS transport.
+type DNSRoundTripper interface {
+	// RoundTrip sends a DNS query and receives the reply.
+	RoundTrip(ctx context.Context, query []byte) (reply []byte, err error)
 }
