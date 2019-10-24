@@ -1,5 +1,5 @@
-// Package oodns is OONI's DNS client.
-package oodns
+// Package ooniresolver is OONI's DNS resolver.
+package ooniresolver
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"github.com/ooni/netx/model"
 )
 
-// Client is OONI's DNS client. It is a simplistic client where we
+// Resolver is OONI's DNS client. It is a simplistic client where we
 // manually create and submit queries. It can use all the transports
 // for DNS supported by this library, however.
-type Client struct {
+type Resolver struct {
 	handler   model.Handler
 	transport model.DNSRoundTripper
 }
 
-// NewClient creates a new OONI DNS client instance.
-func NewClient(beginning time.Time, handler model.Handler, t model.DNSRoundTripper) *Client {
-	return &Client{
+// New creates a new OONI Resolver instance.
+func New(beginning time.Time, handler model.Handler, t model.DNSRoundTripper) *Resolver {
+	return &Resolver{
 		handler:   handler,
 		transport: t,
 	}
@@ -30,19 +30,19 @@ func NewClient(beginning time.Time, handler model.Handler, t model.DNSRoundTripp
 var errNotImpl = errors.New("Not implemented")
 
 // LookupAddr returns the name of the provided IP address
-func (c *Client) LookupAddr(ctx context.Context, addr string) (names []string, err error) {
+func (c *Resolver) LookupAddr(ctx context.Context, addr string) (names []string, err error) {
 	err = errNotImpl
 	return
 }
 
 // LookupCNAME returns the canonical name of a host
-func (c *Client) LookupCNAME(ctx context.Context, host string) (cname string, err error) {
+func (c *Resolver) LookupCNAME(ctx context.Context, host string) (cname string, err error) {
 	err = errNotImpl
 	return
 }
 
 // LookupHost returns the IP addresses of a host
-func (c *Client) LookupHost(ctx context.Context, hostname string) ([]string, error) {
+func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, error) {
 	// TODO(bassosimone): wrap errors as net.DNSError
 	// TODO(bassosimone): emit DNS messages
 	var addrs []string
@@ -90,18 +90,18 @@ func lookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
 }
 
 // LookupMX returns the MX records of a specific name
-func (c *Client) LookupMX(ctx context.Context, name string) (mx []*net.MX, err error) {
+func (c *Resolver) LookupMX(ctx context.Context, name string) (mx []*net.MX, err error) {
 	err = errNotImpl
 	return
 }
 
 // LookupNS returns the NS records of a specific name
-func (c *Client) LookupNS(ctx context.Context, name string) (ns []*net.NS, err error) {
+func (c *Resolver) LookupNS(ctx context.Context, name string) (ns []*net.NS, err error) {
 	err = errNotImpl
 	return
 }
 
-func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
+func (c *Resolver) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 	query = new(dns.Msg)
 	query.Id = dns.Id()
 	query.RecursionDesired = true
@@ -110,7 +110,7 @@ func (c *Client) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 	return
 }
 
-func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
+func (c *Resolver) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
 	return c.mockableRoundTrip(
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
@@ -126,7 +126,7 @@ func (c *Client) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg,
 	)
 }
 
-func (c *Client) mockableRoundTrip(
+func (c *Resolver) mockableRoundTrip(
 	ctx context.Context,
 	query *dns.Msg,
 	pack func(msg *dns.Msg) ([]byte, error),
