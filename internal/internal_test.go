@@ -207,3 +207,23 @@ func TestIntegrationNewResolverInvalid(t *testing.T) {
 		t.Fatal("expected a nil resolver here")
 	}
 }
+
+func testconfigurednsquick(t *testing.T, network, address string) {
+	d := NewDialer(time.Now(), handlers.NoHandler)
+	err := d.ConfigureDNS(network, address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := d.DialTLS("tcp", "www.google.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conn == nil {
+		t.Fatal("expected non-nil conn here")
+	}
+	conn.Close()
+}
+
+func TestIntegrationConfigureSystemDNS(t *testing.T) {
+	testconfigurednsquick(t, "system", "")
+}

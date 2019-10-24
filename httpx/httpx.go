@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal"
-	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/model"
 )
@@ -49,7 +48,7 @@ func (t *Transport) CloseIdleConnections() {
 
 // ConfigureDNS is exactly like netx.Dialer.ConfigureDNS.
 func (t *Transport) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(t.dialer, network, address)
+	return t.dialer.ConfigureDNS(network, address)
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

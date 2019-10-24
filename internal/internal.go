@@ -95,6 +95,15 @@ func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return nil
 }
 
+// ConfigureDNS implements netx.Dialer.ConfigureDNS.
+func (d *Dialer) ConfigureDNS(network, address string) error {
+	r, err := NewResolver(d.Beginning, d.Handler, network, address)
+	if err == nil {
+		d.Resolver = r
+	}
+	return err
+}
+
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
 	dialer := NewDialer(beginning, handler)
 	transport := httptransport.NewTransport(dialer.Beginning, dialer.Handler)
