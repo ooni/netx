@@ -12,49 +12,34 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/model"
 )
 
 var nextDialID, nextConnID int64
 
-// DialHostPortFunc is the type of the function that is actually
-// used to dial a connection to a specific host and port.
-type DialHostPortFunc func(
-	ctx context.Context, network, onlyhost, onlyport string,
-	dialID, connID int64,
-) (*connx.MeasuringConn, error)
-
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	Beginning             time.Time
-	DialHostPort          DialHostPortFunc
 	Handler               model.Handler
 	Resolver              model.DNSResolver
 	StartTLSHandshakeHook func(net.Conn)
 	TLSConfig             *tls.Config
 	TLSHandshakeTimeout   time.Duration
-	dialer                *dialerbase.Dialer
 }
 
 // NewDialer creates a new Dialer.
 func NewDialer(
 	beginning time.Time, handler model.Handler,
 ) (d *Dialer) {
-	d = &Dialer{
+	return &Dialer{
 		Beginning:             beginning,
 		Handler:               handler,
 		Resolver:              new(net.Resolver),
 		TLSConfig:             &tls.Config{},
 		StartTLSHandshakeHook: func(net.Conn) {},
-		dialer: dialerbase.NewDialer(
-			beginning, handler,
-		),
 	}
-	d.DialHostPort = d.dialer.DialHostPort
-	return
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
@@ -67,13 +52,13 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
-	conn, _, _, err = d.DialContextEx(ctx, network, address, false)
+	conn, _, _, _, err = d.DialContextEx(ctx, network, address, false)
 	if err != nil {
 		// This is necessary because we're converting from
 		// *measurement.Conn to net.Conn.
 		return nil, err
 	}
-	return net.Conn(conn), nil
+	return conn, nil
 }
 
 // DialTLS is like Dial, but creates TLS connections.
@@ -86,7 +71,7 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 func (d *Dialer) DialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
-	conn, onlyhost, _, err := d.DialContextEx(ctx, network, address, false)
+	conn, onlyhost, _, connID, err := d.DialContextEx(ctx, network, address, false)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +83,7 @@ func (d *Dialer) DialTLSContext(
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
-	tc, err := d.tlsHandshake(config, timeout, conn)
+	tc, err := d.tlsHandshake(config, timeout, conn, connID)
 	if err != nil {
 		conn.Close()
 		return nil, err
@@ -112,15 +97,18 @@ func (d *Dialer) DialTLSContext(
 // optionally prevent processing of domain names.
 func (d *Dialer) DialContextEx(
 	ctx context.Context, network, address string, requireIP bool,
-) (conn *connx.MeasuringConn, onlyhost, onlyport string, err error) {
+) (conn net.Conn, onlyhost, onlyport string, connID int64, err error) {
 	onlyhost, onlyport, err = net.SplitHostPort(address)
 	if err != nil {
 		return
 	}
 	dialID := atomic.AddInt64(&nextDialID, 1)
-	connID := atomic.AddInt64(&nextConnID, 1)
+	connID = atomic.AddInt64(&nextConnID, 1)
 	if net.ParseIP(onlyhost) != nil {
-		conn, err = d.DialHostPort(ctx, network, onlyhost, onlyport, dialID, connID)
+		dialer := dialerbase.New(
+			d.Beginning, d.Handler, new(net.Dialer), dialID, connID,
+		)
+		conn, err = dialer.DialContext(ctx, network, address)
 		return
 	}
 	if requireIP == true {
@@ -145,7 +133,11 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	for _, addr := range addrs {
-		conn, err = d.DialHostPort(ctx, network, addr, onlyport, dialID, connID)
+		dialer := dialerbase.New(
+			d.Beginning, d.Handler, new(net.Dialer), dialID, connID,
+		)
+		target := net.JoinHostPort(addr, onlyport)
+		conn, err = dialer.DialContext(ctx, network, target)
 		if err == nil {
 			return
 		}
@@ -164,7 +156,7 @@ func (d *Dialer) clonedTLSConfig() *tls.Config {
 }
 
 func (d *Dialer) tlsHandshake(
-	config *tls.Config, timeout time.Duration, conn *connx.MeasuringConn,
+	config *tls.Config, timeout time.Duration, conn net.Conn, connID int64,
 ) (*tls.Conn, error) {
 	d.StartTLSHandshakeHook(conn)
 	err := conn.SetDeadline(time.Now().Add(timeout))
@@ -192,8 +184,8 @@ func (d *Dialer) tlsHandshake(
 			},
 			Duration: stop.Sub(start),
 			Error:    err,
-			ConnID:   conn.ID,
-			Time:     stop.Sub(conn.Beginning),
+			ConnID:   connID,
+			Time:     stop.Sub(d.Beginning),
 		},
 	})
 	if err != nil {
