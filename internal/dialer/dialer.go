@@ -1,6 +1,6 @@
-// Package dialerapi contains the dialer's API. The dialer defined
+// Package dialer contains the dialer's API. The dialer defined
 // in here implements basic DNS, but that is overridable.
-package dialerapi
+package dialer
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ooni/netx/internal/connx"
-	"github.com/ooni/netx/internal/dialerbase"
+	"github.com/ooni/netx/internal/dialer/connx"
+	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/model"
 )
 
@@ -127,7 +127,7 @@ func (d *Dialer) DialContextEx(
 		return
 	}
 	if requireIP == true {
-		err = errors.New("dialerapi: you passed me a domain name")
+		err = errors.New("dialer: you passed me a domain name")
 		return
 	}
 	start := time.Now()

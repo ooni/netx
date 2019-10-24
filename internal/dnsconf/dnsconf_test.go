@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dialerapi"
+	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/dnsconf"
 )
 
 func testconfigurednsquick(t *testing.T, network, address string) {
-	d := dialerapi.NewDialer(time.Now(), handlers.NoHandler)
+	d := dialer.NewDialer(time.Now(), handlers.NoHandler)
 	err := dnsconf.ConfigureDNS(d, network, address)
 	if err != nil {
 		t.Fatal(err)

@@ -1,4 +1,4 @@
-package dialerbase_test
+package dialerbase
 
 import (
 	"context"
@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/dialerbase"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
-	dialer := dialerbase.NewDialer(
+	dialer := NewDialer(
 		time.Now(), handlers.NoHandler,
 	)
 	conn, err := dialer.DialHostPort(
@@ -23,7 +22,7 @@ func TestIntegrationSuccess(t *testing.T) {
 }
 
 func TestIntegrationErrorDomain(t *testing.T) {
-	dialer := dialerbase.NewDialer(
+	dialer := NewDialer(
 		time.Now(), handlers.NoHandler,
 	)
 	conn, err := dialer.DialHostPort(
@@ -38,7 +37,7 @@ func TestIntegrationErrorDomain(t *testing.T) {
 }
 
 func TestIntegrationErrorNoConnect(t *testing.T) {
-	dialer := dialerbase.NewDialer(
+	dialer := NewDialer(
 		time.Now(), handlers.NoHandler,
 	)
 	ctx, cancel := context.WithTimeout(context.Background(), 1)
