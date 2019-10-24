@@ -3,30 +3,28 @@ package dnsoverudp
 
 import (
 	"context"
-	"net"
 	"time"
+
+	"github.com/ooni/netx/model"
 )
 
 // Transport is a DNS over UDP model.DNSRoundTripper.
 type Transport struct {
-	dial    func(network, address string) (net.Conn, error)
+	dialer  model.Dialer
 	address string
 }
 
 // NewTransport creates a new Transport
-func NewTransport(
-	dial func(network, address string) (net.Conn, error),
-	address string,
-) *Transport {
+func NewTransport(dialer model.Dialer, address string) *Transport {
 	return &Transport{
-		dial:    dial,
+		dialer:  dialer,
 		address: address,
 	}
 }
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, err error) {
-	conn, err := t.dial("udp", t.address)
+	conn, err := t.dialer.DialContext(ctx, "udp", t.address)
 	if err != nil {
 		return
 	}

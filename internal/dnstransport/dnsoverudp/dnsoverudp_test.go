@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/connx"
 )
 
 func TestIntegrationSuccessWithAddress(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		&net.Dialer{}, "9.9.9.9:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -24,7 +22,7 @@ func TestIntegrationSuccessWithAddress(t *testing.T) {
 
 func TestIntegrationSuccessWithDomain(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "dns.quad9.net:53",
+		&net.Dialer{}, "dns.quad9.net:53",
 	)
 	err := threeRounds(transport)
 	if err != nil {
@@ -34,11 +32,8 @@ func TestIntegrationSuccessWithDomain(t *testing.T) {
 
 func TestIntegrationDialFailure(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
+		&failingDialer{}, "9.9.9.9:53",
 	)
-	transport.dial = func(network, address string) (net.Conn, error) {
-		return nil, errors.New("mocked error")
-	}
 	err := threeRounds(transport)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -47,16 +42,12 @@ func TestIntegrationDialFailure(t *testing.T) {
 
 func TestIntegrationSetDeadlineError(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
-	)
-	transport.dial = func(network, address string) (net.Conn, error) {
-		return &connx.MeasuringConn{
-			Conn: fakeconn{
+		&fakeconnDialer{
+			fakeconn: fakeconn{
 				setDeadlineError: errors.New("mocked error"),
 			},
-			Handler: handlers.NoHandler,
-		}, nil
-	}
+		}, "9.9.9.9:53",
+	)
 	err := threeRounds(transport)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -65,16 +56,12 @@ func TestIntegrationSetDeadlineError(t *testing.T) {
 
 func TestIntegrationWriteError(t *testing.T) {
 	transport := NewTransport(
-		net.Dial, "9.9.9.9:53",
-	)
-	transport.dial = func(network, address string) (net.Conn, error) {
-		return &connx.MeasuringConn{
-			Conn: fakeconn{
+		&fakeconnDialer{
+			fakeconn: fakeconn{
 				writeError: errors.New("mocked error"),
 			},
-			Handler: handlers.NoHandler,
-		}, nil
-	}
+		}, "9.9.9.9:53",
+	)
 	err := threeRounds(transport)
 	if err == nil {
 		t.Fatal("expected an error here")
@@ -109,6 +96,32 @@ func roundTrip(transport *Transport, domain string) error {
 		return err
 	}
 	return query.Unpack(data)
+}
+
+type failingDialer struct{}
+
+func (d *failingDialer) Dial(network, address string) (net.Conn, error) {
+	return d.DialContext(context.Background(), network, address)
+}
+
+func (d *failingDialer) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return nil, errors.New("mocked error")
+}
+
+type fakeconnDialer struct {
+	fakeconn fakeconn
+}
+
+func (d *fakeconnDialer) Dial(network, address string) (net.Conn, error) {
+	return d.DialContext(context.Background(), network, address)
+}
+
+func (d *fakeconnDialer) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return &d.fakeconn, nil
 }
 
 type fakeconn struct {

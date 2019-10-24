@@ -2,7 +2,6 @@ package oodns
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"net"
 	"testing"
@@ -15,12 +14,7 @@ import (
 )
 
 func newtransport() model.DNSRoundTripper {
-	return dnsovertcp.NewTransport(
-		func(network, address string) (net.Conn, error) {
-			return tls.Dial(network, address, nil)
-		},
-		"dns.quad9.net:853",
-	)
+	return dnsovertcp.NewTransport(&net.Dialer{}, "dns.quad9.net:53")
 }
 
 func TestLookupAddr(t *testing.T) {
