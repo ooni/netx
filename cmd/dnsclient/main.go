@@ -38,8 +38,8 @@ import (
 	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/cmd/common"
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/model"
 )
 
 var (
@@ -58,7 +58,7 @@ func mainWithContext(ctx context.Context) error {
 		mxrecs   []*net.MX
 		names    []string
 		nsrecs   []*net.NS
-		resolver dnsx.Client
+		resolver model.DNSResolver
 	)
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)

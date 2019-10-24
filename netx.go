@@ -10,7 +10,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/model"
@@ -103,7 +102,7 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // The Resolver returned by NewResolver shares the same limitation of
 // ConfigureDNS. Under Windows the C library resolver is always used and
 // therefore it is not possible for us to see DNS events.
-func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error) {
+func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error) {
 	return dnsconf.NewResolver(d.dialer, network, address)
 }
 

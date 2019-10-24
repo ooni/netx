@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ooni/netx/dnsx"
 	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
@@ -83,7 +82,7 @@ func NewResolver(
 	} else {
 		// FALLTHROUGH
 	}
-	var transport dnsx.RoundTripper
+	var transport model.DNSRoundTripper
 	if network == "doh" {
 		transport = dnsoverhttps.NewTransport(
 			newHTTPClientForDoH(dialer.Beginning, dialer.Handler), address,
