@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/m-lab/go/rtx"
+	"github.com/ooni/netx/model"
 )
 
 // Transport is a DNS over TCP/TLS model.DNSRoundTripper.
@@ -17,24 +18,21 @@ import (
 // As a known bug, this implementation always creates a new connection
 // for each incoming query, thus increasing the response delay.
 type Transport struct {
-	dial    func(network, address string) (net.Conn, error)
+	dialer  model.Dialer
 	address string
 }
 
 // NewTransport creates a new Transport
-func NewTransport(
-	dial func(network, address string) (net.Conn, error),
-	address string,
-) *Transport {
+func NewTransport(dialer model.Dialer, address string) *Transport {
 	return &Transport{
-		dial:    dial,
+		dialer:  dialer,
 		address: address,
 	}
 }
 
 // RoundTrip sends a request and receives a response.
 func (t *Transport) RoundTrip(ctx context.Context, query []byte) ([]byte, error) {
-	conn, err := t.dial("tcp", t.address)
+	conn, err := t.dialer.DialContext(ctx, "tcp", t.address)
 	if err != nil {
 		return nil, err
 	}
@@ -69,4 +67,26 @@ func (t *Transport) doWithConn(conn net.Conn, query []byte) (reply []byte, err e
 	_, err = io.ReadFull(conn, reply)
 	rtx.PanicOnError(err, "io.ReadFull failed")
 	return reply, nil
+}
+
+// TLSDialerAdapter makes a TLSDialer look like a Dialer
+type TLSDialerAdapter struct {
+	dialer model.TLSDialer
+}
+
+// NewTLSDialerAdapter creates a new TLSDialerAdapter
+func NewTLSDialerAdapter(dialer model.TLSDialer) *TLSDialerAdapter {
+	return &TLSDialerAdapter{dialer: dialer}
+}
+
+// Dial dials a new connection
+func (d *TLSDialerAdapter) Dial(network, address string) (net.Conn, error) {
+	return d.dialer.DialTLS(network, address)
+}
+
+// DialContext is like Dial but with context
+func (d *TLSDialerAdapter) DialContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return d.dialer.DialTLSContext(ctx, network, address)
 }

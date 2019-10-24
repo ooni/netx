@@ -243,3 +243,21 @@ type DNSRoundTripper interface {
 	// RoundTrip sends a DNS query and receives the reply.
 	RoundTrip(ctx context.Context, query []byte) (reply []byte, err error)
 }
+
+// Dialer is a dialer for network connections.
+type Dialer interface {
+	// Dial dials a new connection
+	Dial(network, address string) (net.Conn, error)
+
+	// DialContext is like Dial but with context
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+// TLSDialer is a dialer for TLS connections.
+type TLSDialer interface {
+	// DialTLS dials a new TLS connection
+	DialTLS(network, address string) (net.Conn, error)
+
+	// DialTLSContext is like DialTLS but with context
+	DialTLSContext(ctx context.Context, network, address string) (net.Conn, error)
+}
