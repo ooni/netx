@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ooni/netx/internal/dialer"
+	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/model"
@@ -18,13 +18,13 @@ import (
 
 // Dialer performs measurements while dialing.
 type Dialer struct {
-	dialer *dialer.Dialer
+	dialer *internal.Dialer
 }
 
 // NewDialer returns a new Dialer instance.
 func NewDialer(handler model.Handler) *Dialer {
 	return &Dialer{
-		dialer: dialer.NewDialer(time.Now(), handler),
+		dialer: internal.NewDialer(time.Now(), handler),
 	}
 }
 

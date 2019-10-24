@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ooni/netx/internal/dialer"
+	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/model"
@@ -15,7 +15,7 @@ import (
 
 // Transport performs measurements during HTTP round trips.
 type Transport struct {
-	dialer    *dialer.Dialer
+	dialer    *internal.Dialer
 	transport *httptransport.Transport
 }
 
@@ -23,7 +23,7 @@ type Transport struct {
 // the time to use as zero for computing the elapsed time.
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
-	t.dialer = dialer.NewDialer(beginning, handler)
+	t.dialer = internal.NewDialer(beginning, handler)
 	t.transport = httptransport.NewTransport(beginning, handler)
 	// make sure we use an http2 ready TLS config
 	t.dialer.TLSConfig = t.transport.TLSClientConfig
