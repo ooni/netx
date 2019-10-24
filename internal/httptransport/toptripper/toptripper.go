@@ -6,13 +6,11 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"sync"
-	"sync/atomic"
 	"time"
 
+	"github.com/ooni/netx/internal/httptransport/transactioner"
 	"github.com/ooni/netx/model"
 )
-
-var nextTransactionID int64
 
 // Transport performs single HTTP transactions and emits
 // measurement events as they happen.
@@ -39,7 +37,7 @@ func New(
 func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	outmethod := req.Method
 	outurl := req.URL.String()
-	tid := atomic.AddInt64(&nextTransactionID, 1)
+	tid := transactioner.ContextTransactionID(req.Context())
 	outheaders := http.Header{}
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
