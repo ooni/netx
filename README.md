@@ -66,7 +66,7 @@ https://godoc.org/github.com/ooni/netx#pkg-subdirectories).
 
 ## Build, run tests, run example commands
 
-You need Go >= 1.11. We use Go modules.
+You need Go >= 1.12. We use Go modules.
 
 To run tests:
 

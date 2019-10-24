@@ -25,11 +25,11 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t.dialer = internal.NewDialer(beginning, handler)
 	t.transport = httptransport.NewTransport(beginning, handler)
 	// make sure we use an http2 ready TLS config
-	t.dialer.TLSConfig = t.transport.TLSClientConfig
+	t.dialer.TLSConfig = t.transport.Transport.TLSClientConfig
 	// make sure HTTP uses our dialer
-	t.transport.Dial = t.dialer.Dial
-	t.transport.DialContext = t.dialer.DialContext
-	t.transport.DialTLS = t.dialer.DialTLS
+	t.transport.Transport.Dial = t.dialer.Dial
+	t.transport.Transport.DialContext = t.dialer.DialContext
+	t.transport.Transport.DialTLS = t.dialer.DialTLS
 	return t
 }
 
