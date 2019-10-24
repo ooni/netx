@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal"
-	"github.com/ooni/netx/internal/dnsconf"
 	"github.com/ooni/netx/model"
 )
 
@@ -60,7 +59,7 @@ func NewDialer(handler model.Handler) *Dialer {
 //   d.ConfigureDNS("dot", "dns.quad9.net")
 //   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
 func (d *Dialer) ConfigureDNS(network, address string) error {
-	return dnsconf.ConfigureDNS(d.dialer, network, address)
+	return d.dialer.ConfigureDNS(network, address)
 }
 
 // Dial creates a TCP or UDP connection. See net.Dial docs.
