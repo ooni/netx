@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-04   |
+| Last-Updated | 2019-10-24   |
 | Status       | approved     |
 
 ## Introduction
@@ -193,9 +193,9 @@ The following network-level events will be defined:
 
 1. `CloseEvent`, indicating when a socket is closed
 2. `ConnectEvent`, indicating the result of connecting
-3. `Read`, indicating when a `read` completes
-4. `Resolve`, indicating when a name resolution completes
-5. `Write`, indicating when a `write` completes
+3. `ReadEvent`, indicating when a `read` completes
+4. `ResolveEvent`, indicating when a name resolution completes
+5. `WriteEvent`, indicating when a `write` completes
 
 The following DNS-level events will be defined:
 
@@ -424,13 +424,6 @@ As far as `ConfigureDNS` is concerned it will work as follows:
 * when `network` is `"system"`, the system resolver will be
 used and no low-level events pertaining to the DNS will be
 emitted to the configured `handler`. This will be the default.
-
-* when `network` is `"netgo"`, we will try to use the DNS
-resolver written in Go within the standard library (which is
-know to work only on Unix), and we will use a bunch of
-hacks to observe the events occurring during name resolutions,
-such as `Read` and `Write` events. We will also be able to
-record the DNS messages sent and received.
 
 * when `network` is `"udp"`, `address` must be a valid
 string following the `"<ip_or_domain>(:<port>)*"` pattern. If

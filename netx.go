@@ -41,11 +41,6 @@ func NewDialer(handler model.Handler) *Dialer {
 // address parameter is ignored when using "system". If you do
 // not ConfigureDNS, this is the default resolver used.
 //
-// - "netgo": this indicates that Go should use its pure Go DNS
-// resolver with the default server. The value of the address
-// parameter is ignored when using "netgo". However, with this
-// resolver we'll be able to see DNS packets.
-//
 // - "udp": indicates that we should send queries using UDP. In this
 // case the address is a host, port UDP endpoint.
 //
@@ -60,16 +55,10 @@ func NewDialer(handler model.Handler) *Dialer {
 // For example:
 //
 //   d.ConfigureDNS("system", "")
-//   d.ConfigureDNS("godns", "")
 //   d.ConfigureDNS("udp", "8.8.8.8:53")
 //   d.ConfigureDNS("tcp", "8.8.8.8:53")
 //   d.ConfigureDNS("dot", "dns.quad9.net")
 //   d.ConfigureDNS("doh", "https://cloudflare-dns.com/dns-query")
-//
-// ConfigureDNS is currently only executed when Go chooses to
-// use the pure Go implementation of the DNS. This means that it
-// does not work on Windows, where the C library is preferred. That
-// is, on Windows you always use the "system" DNS.
 func (d *Dialer) ConfigureDNS(network, address string) error {
 	return dnsconf.ConfigureDNS(d.dialer, network, address)
 }
@@ -98,10 +87,6 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 // used by this Dialer, however the network operations that it performs
 // (e.g. creating a new connection) will use this Dialer. This is why
 // NewResolver is a method rather than being just a free function.
-//
-// The Resolver returned by NewResolver shares the same limitation of
-// ConfigureDNS. Under Windows the C library resolver is always used and
-// therefore it is not possible for us to see DNS events.
 func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error) {
 	return dnsconf.NewResolver(d.dialer, network, address)
 }

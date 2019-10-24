@@ -2,20 +2,18 @@
 package dnsconf
 
 import (
-	"context"
 	"errors"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ooni/netx/internal/connx"
 	"github.com/ooni/netx/internal/dialerapi"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverhttps"
 	"github.com/ooni/netx/internal/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/dnstransport/dnsoverudp"
-	"github.com/ooni/netx/internal/godns"
 	"github.com/ooni/netx/internal/httptransport"
+	"github.com/ooni/netx/internal/oodns"
 	"github.com/ooni/netx/model"
 )
 
@@ -58,29 +56,13 @@ func withPort(address, port string) string {
 // creating new network connections used for resolving.
 func NewResolver(
 	dialer *dialerapi.Dialer, network, address string,
-) (*net.Resolver, error) {
-	// Implementation note: system and godns need to be dealt with
-	// separately because they don't have any transport.
+) (model.DNSResolver, error) {
+	// Implementation note: system need to be dealt with
+	// separately because it doesn't have any transport.
 	if network == "system" {
 		return &net.Resolver{
 			PreferGo: false,
 		}, nil
-	} else if network == "godns" {
-		return &net.Resolver{
-			PreferGo: true,
-			Dial: func(
-				ctx context.Context, network, address string,
-			) (net.Conn, error) {
-				conn, _, _, err := dialer.DialContextEx(ctx, network, address, false)
-				if err != nil {
-					return nil, err
-				}
-				// convince Go this is really a net.PacketConn
-				return &connx.DNSMeasuringConn{MeasuringConn: *conn}, nil
-			},
-		}, nil
-	} else {
-		// FALLTHROUGH
 	}
 	var transport model.DNSRoundTripper
 	if network == "doh" {
@@ -111,5 +93,5 @@ func NewResolver(
 	if transport == nil {
 		return nil, errors.New("dnsconf: unsupported network value")
 	}
-	return godns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
+	return oodns.NewClient(dialer.Beginning, dialer.Handler, transport), nil
 }
