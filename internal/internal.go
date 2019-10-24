@@ -110,12 +110,12 @@ func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Clien
 	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
 	// an already well configured config that works for http2 (as explained in a
 	// comment there). Here we just use it because it's what we need.
-	dialer.TLSConfig = transport.TLSClientConfig
+	dialer.TLSConfig = transport.Transport.TLSClientConfig
 	// Arrange the configuration such that we always use `dialer` for dialing.
-	transport.Dial = dialer.Dial
-	transport.DialContext = dialer.DialContext
-	transport.DialTLS = dialer.DialTLS
-	transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
+	transport.Transport.Dial = dialer.Dial
+	transport.Transport.DialContext = dialer.DialContext
+	transport.Transport.DialTLS = dialer.DialTLS
+	transport.Transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
 	return &http.Client{Transport: transport}
 }
 

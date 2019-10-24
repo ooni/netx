@@ -1,4 +1,4 @@
-package httptransport_test
+package toptripper
 
 import (
 	"io/ioutil"
@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/internal/httptransport"
 )
 
 func TestIntegration(t *testing.T) {
 	client := &http.Client{
-		Transport: httptransport.NewTransport(time.Now(), handlers.NoHandler),
+		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
 	}
 	resp, err := client.Get("https://www.google.com")
 	if err != nil {
@@ -28,7 +27,7 @@ func TestIntegration(t *testing.T) {
 
 func TestIntegrationFailure(t *testing.T) {
 	client := &http.Client{
-		Transport: httptransport.NewTransport(time.Now(), handlers.NoHandler),
+		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with
 	// a server that instead is expecting TLS.
