@@ -10,7 +10,7 @@ import (
 func ConfigureDNS(dialer *dialerapi.Dialer, network, address string) error {
 	r, err := resolver.New(dialer.Beginning, dialer.Handler, network, address)
 	if err == nil {
-		dialer.LookupHost = r.LookupHost
+		dialer.Resolver = r
 	}
 	return err
 }

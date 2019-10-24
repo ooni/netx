@@ -24,10 +24,6 @@ func NextConnID() int64 {
 	return atomic.AddInt64(&nextConnID, 1)
 }
 
-// LookupHostFunc is the type of the function used to lookup
-// the addresses of a specific host.
-type LookupHostFunc func(context.Context, string) ([]string, error)
-
 // DialHostPortFunc is the type of the function that is actually
 // used to dial a connection to a specific host and port.
 type DialHostPortFunc func(
@@ -40,7 +36,7 @@ type Dialer struct {
 	Beginning             time.Time
 	DialHostPort          DialHostPortFunc
 	Handler               model.Handler
-	LookupHost            LookupHostFunc
+	Resolver              model.DNSResolver
 	StartTLSHandshakeHook func(net.Conn)
 	TLSConfig             *tls.Config
 	TLSHandshakeTimeout   time.Duration
@@ -48,21 +44,19 @@ type Dialer struct {
 }
 
 // NewDialer creates a new Dialer.
-func NewDialer(beginning time.Time, handler model.Handler) (d *Dialer) {
+func NewDialer(
+	beginning time.Time, handler model.Handler,
+) (d *Dialer) {
 	d = &Dialer{
 		Beginning:             beginning,
 		Handler:               handler,
+		Resolver:              new(net.Resolver),
 		TLSConfig:             &tls.Config{},
 		StartTLSHandshakeHook: func(net.Conn) {},
 		dialer: dialerbase.NewDialer(
 			beginning, handler,
 		),
 	}
-	// This is equivalent to ConfigureDNS("system", "...")
-	r := &net.Resolver{
-		PreferGo: false,
-	}
-	d.LookupHost = r.LookupHost
 	d.DialHostPort = d.dialer.DialHostPort
 	return
 }
@@ -138,7 +132,7 @@ func (d *Dialer) DialContextEx(
 	}
 	start := time.Now()
 	var addrs []string
-	addrs, err = d.LookupHost(ctx, onlyhost)
+	addrs, err = d.Resolver.LookupHost(ctx, onlyhost)
 	stop := time.Now()
 	d.Handler.OnMeasurement(model.Measurement{
 		Resolve: &model.ResolveEvent{
