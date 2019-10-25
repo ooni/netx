@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ooni/netx/internal/connid"
 	"github.com/ooni/netx/internal/httptransport/transactioner"
 	"github.com/ooni/netx/model"
 )
@@ -42,7 +43,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		GotConn: func(info httptrace.GotConnInfo) {
 			t.handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
-					LocalAddress:  info.Conn.LocalAddr().String(),
+					ConnID: connid.Compute(
+						info.Conn.LocalAddr().Network(),
+						info.Conn.LocalAddr().String(),
+					),
 					Network:       info.Conn.LocalAddr().Network(),
 					RemoteAddress: info.Conn.RemoteAddr().String(),
 					Time:          time.Now().Sub(t.beginning),

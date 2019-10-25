@@ -27,7 +27,7 @@ func TestIntegrationSuccess(t *testing.T) {
 func TestIntegrationSuccessWithMeasuringConn(t *testing.T) {
 	dialer := newdialer()
 	dialer.(*TLSDialer).dialer = dialerbase.New(
-		time.Now(), handlers.NoHandler, new(net.Dialer), 17, 17,
+		time.Now(), handlers.NoHandler, new(net.Dialer), 17,
 	)
 	conn, err := dialer.DialTLS("tcp", "www.google.com:443")
 	if err != nil {

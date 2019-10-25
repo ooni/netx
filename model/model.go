@@ -1,10 +1,9 @@
 // Package model contains the data model. Network events are tagged
 // using a unique int64 ConnID. HTTP events also have a unique int64
-// ID, TransactionID. These IDs are never reused.
-//
-// To join network events and HTTP events, use the LocalAddress and
-// RemoteAddress that are included both in the ConnectEvent and in
-// the HTTPConnectionReadyEvent.
+// ID, TransactionID. Dial events also have their own DialID. A
+// zero ID value always means unknown. We never reuse the DialID
+// and the TransactionID. For technical reasons, we need to use a
+// ConnID that depends on the five tuple, so they're reused.
 //
 // All events also have a Time. This is always the time in which
 // an event has been emitted. We use a monotonic clock. Hence, the
@@ -39,7 +38,6 @@ type ConnectEvent struct {
 	DialID        int64
 	Duration      time.Duration
 	Error         error
-	LocalAddress  string
 	Network       string
 	RemoteAddress string
 	Time          time.Duration
@@ -66,7 +64,7 @@ type DNSReplyEvent struct {
 
 // HTTPConnectionReadyEvent is emitted when a connection is ready for HTTP.
 type HTTPConnectionReadyEvent struct {
-	LocalAddress  string
+	ConnID        int64
 	Network       string
 	RemoteAddress string
 	Time          time.Duration

@@ -38,6 +38,6 @@ func TestIntegrationErrorNoConnect(t *testing.T) {
 // see whether we implement the interface
 func newdialer() model.Dialer {
 	return New(
-		time.Now(), handlers.NoHandler, new(net.Dialer), 17, 17,
+		time.Now(), handlers.NoHandler, new(net.Dialer), 17,
 	)
 }
