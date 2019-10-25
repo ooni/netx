@@ -265,14 +265,14 @@ Every dialing operation will be identified by
     DialID   int64
 ```
 
-Every network connection will be additionally identified by
+Every established network connection will be additionally identified by
 
 ```Go
     ConnID   int64
 ```
 
 Where `ConnID` is the identifier of the connection and is
-unique within a specific set of measurements.
+generated from the five tuple.
 
 Likewise, HTTP events will have their
 
@@ -283,35 +283,11 @@ Likewise, HTTP events will have their
 which will uniquely identify the round trip within a specific
 set of measurements.
 
-Because in this first PoC it has been deemed complex to access
-the `ConnID` from the HTTP code, we have determined that we
-will be using the five-tuple to join network and HTTP
-events. Accordingly, both the `ConnectEvent` and
-`HTTPConnectionReadyEvent` structures will thus include:
+Mapping HTTP events to network events is easy because the
+`HTTPConnectionReadyEvent` contains the `ConnID`.
 
-```Go
-    LocalAddress  string
-    Network       string
-    RemoteAddress string
-```
-
-The problem of joining together network and HTTP level
-measurements is currently not solved by this library. If
-we perform a measurement at a time, however, this may
-not be a big issue, because all the low-level events will
-necessarily pertain to a single measurement, e.g., to
-the fetching of a specific URL.
-
-A subsequent revision of this specification will see
-whether we can join measurements in a better way.
-
-(As a contextual note, the problem of knowing the ID
-of a connection is that we cannot wrap `*tls.Conn`
-with a ConnID-aware-replacement that is compatible with `net.Conn`,
-because that will confuse `net/http` and prevent using
-`http2`. We could solve the problem to join automatically network
-and lower-level events by implementing a goroutine
-safe cache mapping the five tuple to a `ConnID`.)
+Mapping dial events to connections is easy because the
+`ConnectEvent` includes also the `DialID`.
 
 ### The github.com/ooni/netx/httpx package
 
@@ -480,14 +456,3 @@ type Client interface {
     LookupNS(ctx context.Context, name string) ([]*net.NS, error)
 }
 ```
-
-## Future work
-
-The current revision of this specification does not specify a
-programmatic way of joining measurements occurring at different
-levels (e.g. network and HTTP). This has been done under the
-assumption that we will probably be able to understand the
-sequence of events anyway, by looking at the timing, if we're
-measuring a single URL at a time. We will implement and
-deploy code conformant with this specification and see whether
-this assumption is correct, or we need something else.

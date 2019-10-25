@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ooni/netx/internal/connid"
 	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/model"
 )
@@ -18,7 +19,6 @@ type Dialer struct {
 	beginning time.Time
 	handler   model.Handler
 	dialID    int64
-	connID    int64
 }
 
 // New creates a new dialer
@@ -26,14 +26,13 @@ func New(
 	beginning time.Time,
 	handler model.Handler,
 	dialer model.Dialer,
-	dialID, connID int64,
+	dialID int64,
 ) *Dialer {
 	return &Dialer{
 		dialer:    dialer,
 		beginning: beginning,
 		handler:   handler,
 		dialID:    dialID,
-		connID:    connID,
 	}
 }
 
@@ -49,13 +48,13 @@ func (d *Dialer) DialContext(
 	start := time.Now()
 	conn, err := d.dialer.DialContext(ctx, network, address)
 	stop := time.Now()
+	connID := safeConnID(network, conn)
 	d.handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
-			ConnID:        d.connID,
+			ConnID:        connID,
 			DialID:        d.dialID,
 			Duration:      stop.Sub(start),
 			Error:         err,
-			LocalAddress:  safeLocalAddress(conn),
 			Network:       network,
 			RemoteAddress: safeRemoteAddress(conn),
 			Time:          stop.Sub(d.beginning),
@@ -68,7 +67,7 @@ func (d *Dialer) DialContext(
 		Conn:      conn,
 		Beginning: d.beginning,
 		Handler:   d.handler,
-		ID:        d.connID,
+		ID:        connID,
 	}, nil
 }
 
@@ -84,4 +83,8 @@ func safeRemoteAddress(conn net.Conn) (s string) {
 		s = conn.RemoteAddr().String()
 	}
 	return
+}
+
+func safeConnID(network string, conn net.Conn) int64 {
+	return connid.Compute(network, safeLocalAddress(conn))
 }

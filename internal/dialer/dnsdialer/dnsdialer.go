@@ -12,7 +12,7 @@ import (
 	"github.com/ooni/netx/model"
 )
 
-var nextDialID, nextConnID int64
+var nextDialID int64
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
@@ -51,10 +51,9 @@ func (d *Dialer) DialContext(
 		return nil, err
 	}
 	dialID := atomic.AddInt64(&nextDialID, 1)
-	connID := atomic.AddInt64(&nextConnID, 1)
 	if net.ParseIP(onlyhost) != nil {
 		dialer := dialerbase.New(
-			d.beginning, d.handler, d.dialer, dialID, connID,
+			d.beginning, d.handler, d.dialer, dialID,
 		)
 		conn, err = dialer.DialContext(ctx, network, address)
 		return
@@ -78,14 +77,13 @@ func (d *Dialer) DialContext(
 	}
 	for _, addr := range addrs {
 		dialer := dialerbase.New(
-			d.beginning, d.handler, d.dialer, dialID, connID,
+			d.beginning, d.handler, d.dialer, dialID,
 		)
 		target := net.JoinHostPort(addr, onlyport)
 		conn, err = dialer.DialContext(ctx, network, target)
 		if err == nil {
 			return
 		}
-		connID = atomic.AddInt64(&nextConnID, 1)
 	}
 	err = &net.OpError{
 		Op:  "dial",
