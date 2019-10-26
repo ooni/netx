@@ -2,6 +2,7 @@
 package tracetripper
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -42,7 +43,31 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			URL:           req.URL.String(),
 		},
 	})
+
+	// Prepare a tracer for delivering events
 	tracer := &httptrace.ClientTrace{
+		TLSHandshakeStart: func() {
+			// Event emitted by net/http when DialTLS is not
+			// configured in the http.Transport
+			t.handler.OnMeasurement(model.Measurement{
+				TLSHandshakeStart: &model.TLSHandshakeStartEvent{
+					Time:          time.Now().Sub(t.beginning),
+					TransactionID: tid,
+				},
+			})
+		},
+		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+			// Event emitted by net/http when DialTLS is not
+			// configured in the http.Transport
+			t.handler.OnMeasurement(model.Measurement{
+				TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
+					ConnectionState: model.NewTLSConnectionState(state),
+					Error:           err,
+					Time:            time.Now().Sub(t.beginning),
+					TransactionID:   tid,
+				},
+			})
+		},
 		GotConn: func(info httptrace.GotConnInfo) {
 			t.handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
@@ -92,7 +117,22 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 	}
-	req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
+
+	// If we don't have already a tracer this is a toplevel request, so just
+	// set the tracer. Otherwise, we're doing DoH. We cannot set anothert trace
+	// because they'd be merged. Instead, replace the existing trace content
+	// with the new trace and then remember to reset it.
+	origtracer := httptrace.ContextClientTrace(req.Context())
+	if origtracer != nil {
+		bkp := *origtracer
+		*origtracer = *tracer
+		defer func() {
+			*origtracer = bkp
+		}()
+	} else {
+		req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
+	}
+
 	resp, err := t.roundTripper.RoundTrip(req)
 	event := &model.HTTPRoundTripDoneEvent{
 		Error:         err,

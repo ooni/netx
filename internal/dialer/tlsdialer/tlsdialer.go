@@ -4,7 +4,6 @@ package tlsdialer
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"net"
 	"time"
 
@@ -73,49 +72,33 @@ func (d *TLSDialer) DialTLSContext(
 		return nil, err
 	}
 	tlsconn := tls.Client(conn, config)
-	start := time.Now()
-	err = tlsconn.Handshake()
-	stop := time.Now()
 	var connID int64
 	if mconn, ok := conn.(*connx.MeasuringConn); ok {
 		connID = mconn.ID
 	}
-	m := model.Measurement{
-		TLSHandshake: &model.TLSHandshakeEvent{
+	// Implementation note: when DialTLS is not set, the code in
+	// net/http will perform the handshake. Otherwise, if DialTLS
+	// is set, we will end up here. This code is still used when
+	// performing non-HTTP TLS-enabled dial operations.
+	d.handler.OnMeasurement(model.Measurement{
+		TLSHandshakeStart: &model.TLSHandshakeStartEvent{
 			ConnID: connID,
-			Config: model.TLSConfig{
-				NextProtos: config.NextProtos,
-				ServerName: config.ServerName,
-			},
-			ConnectionState: newConnectionState(tlsconn.ConnectionState()),
-			Duration:        stop.Sub(start),
-			Error:           err,
-			Time:            stop.Sub(d.beginning),
+			Time:   time.Now().Sub(d.beginning),
 		},
-	}
+	})
+	err = tlsconn.Handshake()
+	d.handler.OnMeasurement(model.Measurement{
+		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
+			ConnID:          connID,
+			ConnectionState: model.NewTLSConnectionState(tlsconn.ConnectionState()),
+			Error:           err,
+			Time:            time.Now().Sub(d.beginning),
+		},
+	})
 	conn.SetDeadline(time.Time{}) // clear deadline
-	d.handler.OnMeasurement(m)
 	if err != nil {
 		conn.Close()
 		return nil, err
 	}
 	return tlsconn, err
-}
-
-func newConnectionState(s tls.ConnectionState) model.TLSConnectionState {
-	return model.TLSConnectionState{
-		CipherSuite:        s.CipherSuite,
-		NegotiatedProtocol: s.NegotiatedProtocol,
-		PeerCertificates:   simplifyCerts(s.PeerCertificates),
-		Version:            s.Version,
-	}
-}
-
-func simplifyCerts(in []*x509.Certificate) (out []model.X509Certificate) {
-	for _, cert := range in {
-		out = append(out, model.X509Certificate{
-			Data: cert.Raw,
-		})
-	}
-	return
 }

@@ -19,6 +19,8 @@ package model
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"net/http"
 	"time"
@@ -156,12 +158,6 @@ type ResolveEvent struct {
 	Time      time.Duration
 }
 
-// TLSConfig contains TLS configurations.
-type TLSConfig struct {
-	NextProtos []string
-	ServerName string
-}
-
 // X509Certificate is an x.509 certificate.
 type X509Certificate struct {
 	// Data contains the certificate bytes in DER format.
@@ -170,21 +166,53 @@ type X509Certificate struct {
 
 // TLSConnectionState contains the TLS connection state.
 type TLSConnectionState struct {
-	CipherSuite                uint16
-	NegotiatedProtocol         string
-	NegotiatedProtocolIsMutual bool
-	PeerCertificates           []X509Certificate
-	Version                    uint16
+	CipherSuite        uint16
+	NegotiatedProtocol string
+	PeerCertificates   []X509Certificate
+	Version            uint16
 }
 
-// TLSHandshakeEvent is emitted when conn.Handshake returns.
-type TLSHandshakeEvent struct {
-	Config          TLSConfig
+// NewTLSConnectionState creates a new TLSConnectionState.
+func NewTLSConnectionState(s tls.ConnectionState) TLSConnectionState {
+	return TLSConnectionState{
+		CipherSuite:        s.CipherSuite,
+		NegotiatedProtocol: s.NegotiatedProtocol,
+		PeerCertificates:   simplifyCerts(s.PeerCertificates),
+		Version:            s.Version,
+	}
+}
+
+func simplifyCerts(in []*x509.Certificate) (out []X509Certificate) {
+	for _, cert := range in {
+		out = append(out, X509Certificate{
+			Data: cert.Raw,
+		})
+	}
+	return
+}
+
+// TLSHandshakeStartEvent is emitted when conn.Handshake starts.
+//
+// The ConnID field is set when net/http is using DialTLS and hence
+// we're calling our TLS dialer. Conversely, the net/http code is
+// performing the handshake for us, and TransactionID is set.
+type TLSHandshakeStartEvent struct {
+	ConnID        int64
+	Time          time.Duration
+	TransactionID int64
+}
+
+// TLSHandshakeDoneEvent is emitted when conn.Handshake returns.
+//
+// The ConnID field is set when net/http is using DialTLS and hence
+// we're calling our TLS dialer. Conversely, the net/http code is
+// performing the handshake for us, and TransactionID is set.
+type TLSHandshakeDoneEvent struct {
 	ConnectionState TLSConnectionState
 	ConnID          int64
-	Duration        time.Duration
 	Error           error
 	Time            time.Duration
+	TransactionID   int64
 }
 
 // WriteEvent is emitted when conn.Write returns.
@@ -205,6 +233,10 @@ type Measurement struct {
 	DNSQuery *DNSQueryEvent `json:",omitempty"`
 	DNSReply *DNSReplyEvent `json:",omitempty"`
 
+	// TLS events
+	TLSHandshakeStart *TLSHandshakeStartEvent `json:",omitempty"`
+	TLSHandshakeDone  *TLSHandshakeDoneEvent  `json:",omitempty"`
+
 	// HTTP roundtrip events
 	HTTPRoundTripStart     *HTTPRoundTripStartEvent     `json:",omitempty"`
 	HTTPConnectionReady    *HTTPConnectionReadyEvent    `json:",omitempty"`
@@ -218,7 +250,6 @@ type Measurement struct {
 	HTTPResponseDone     *HTTPResponseDoneEvent     `json:",omitempty"`
 	Read                 *ReadEvent                 `json:",omitempty"`
 	Resolve              *ResolveEvent              `json:",omitempty"`
-	TLSHandshake         *TLSHandshakeEvent         `json:",omitempty"`
 	Write                *WriteEvent                `json:",omitempty"`
 }
 
