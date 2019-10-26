@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-24   |
+| Last-Updated | 2019-10-26   |
 | Status       | approved     |
 
 ## Introduction
@@ -165,22 +165,10 @@ as follows:
 
 ```Go
 type Measurement struct {
-    Close                   *CloseEvent
-    Connect                 *ConnectEvent
-    DNSQuery                *DNSQueryEvent
-    DNSReply                *DNSReplyEvent
-    HTTPConnectionReady     *HTTPConnectionReadyEvent
-    HTTPRequestStart        *HTTPRequestStartEvent
-    HTTPRequestHeadersDone  *HTTPRequestHeadersDoneEvent
-    HTTPRequestDone         *HTTPRequestDoneEvent
-    HTTPResponseStart       *HTTPResponseStartEvent
-    HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent
-    HTTPResponseBodyPart    *HTTPResponseBodyPartEvent
-    HTTPResponseDone        *HTTPResponseDoneEvent
-    Read                    *ReadEvent
-    Resolve                 *ResolveEvent
-    TLSHandshake            *TLSHandshakeEvent
-    Write                   *WriteEvent
+    Read  *ReadEvent
+    Write *WriteEvent
+
+    // more similar events ...
 }
 ```
 
@@ -189,105 +177,8 @@ that we support. The events processing code will
 check what pointer or pointers are not `nil` to
 known which event or events have occurred.
 
-The following network-level events will be defined:
-
-1. `CloseEvent`, indicating when a socket is closed
-2. `ConnectEvent`, indicating the result of connecting
-3. `ReadEvent`, indicating when a `read` completes
-4. `ResolveEvent`, indicating when a name resolution completes
-5. `WriteEvent`, indicating when a `write` completes
-
-The following DNS-level events will be defined:
-
-1. `DNSQueryEvent`, containing the query data
-2. `DNSReplyEvent`, containing the reply data
-
-The following HTTP-level events will be defined:
-
-1. `HTTPConnectionReadyEvent`, indicating when the connection
-is ready to be used by HTTP code
-
-2. `HTTPRequestStartEvent`, indicating when we start sending the request
-
-3. `HTTPRequestHeadersDoneEvent`, indicating when we have sent the
-request headers, and containing the sent headers
-
-4. `HTTPRequestDoneEvent`, indicating when the whole request has been sent
-
-5. `HTTPResponseStartEvent`, indicacting when we receive the first
-byte of the HTTP response
-
-6. `HTTPResponseHeadersDoneEvent`, indicating when we have received the
-response headers, and containing headers and status code
-
-7. `HTTPResponseBodyPartEvent`, indicating when we have received a
-part of the response body, or an error reading it
-
-8. `HTTPResponseDoneEvent`, indicating when we have received the
-response body
-
-Every event will include at the minimum this field:
-
-```Go
-    Time     time.Duration
-```
-
-This will be the time when the event occurred, relative to
-a configured "zero" time. If an event pertains to a blocking
-operation (i.e. `Read`), it will also contain this field:
-
-```Go
-    Duration time.Duration
-```
-
-This will be the amount time we have been waiting for
-the event to occur. That is, in the case of `Read` the
-amount of time we've been blocking waiting for the `Read`
-operation to return a value or an error.
-
-Every operation that can fail will have a field
-
-```Go
-    Error    error
-```
-
-This will indicate the error that occurred.
-
-Measurement events will also contain contextual information
-that is meaningful to the event itself. Since this is likely
-to change as we improve our understanding of what could
-be measured, as stated above, please see the current documentation
-for more information on the structure of each event.
-
-Every dialing operation will be identified by
-
-```Go
-    DialID   int64
-```
-
-Every established network connection will be additionally identified by
-
-```Go
-    ConnID   int64
-```
-
-Where `ConnID` is the identifier of the connection and is
-generated from the five tuple.
-
-Likewise, HTTP events will have their
-
-```Go
-    TransactionID int64
-```
-
-which will uniquely identify the round trip within a specific
-set of measurements.
-
-Mapping HTTP events to network events is easy because the
-`HTTPConnectionReadyEvent` contains the `ConnID`.
-
-Mapping dial events to connections is easy because the
-`ConnectEvent` includes also the `DialID`.
+For every detail regarding the structure of the
+events, we defer to the current docs.
 
 ### The github.com/ooni/netx/httpx package
 

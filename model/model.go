@@ -71,8 +71,8 @@ type HTTPConnectionReadyEvent struct {
 	TransactionID int64
 }
 
-// HTTPRequestStartEvent is emitted when we start sending the request.
-type HTTPRequestStartEvent struct {
+// HTTPRoundTripStartEvent is emitted when we start the round trip.
+type HTTPRoundTripStartEvent struct {
 	Time          time.Duration
 	TransactionID int64
 }
@@ -98,8 +98,10 @@ type HTTPResponseStartEvent struct {
 	TransactionID int64
 }
 
-// HTTPResponseHeadersDoneEvent is emitted after we have received the headers.
-type HTTPResponseHeadersDoneEvent struct {
+// HTTPRoundTripDoneEvent is emitted at the end of the round trip. Either
+// we have an error, or a valid HTTP response.
+type HTTPRoundTripDoneEvent struct {
+	Error         error
 	Headers       http.Header
 	StatusCode    int64
 	Time          time.Duration
@@ -191,22 +193,25 @@ type WriteEvent struct {
 // time a Measurement will only contain a single event. When a Measurement
 // contains an event, the corresponding pointer is non nil.
 type Measurement struct {
-	Close                   *CloseEvent                   `json:",omitempty"`
-	Connect                 *ConnectEvent                 `json:",omitempty"`
-	DNSQuery                *DNSQueryEvent                `json:",omitempty"`
-	DNSReply                *DNSReplyEvent                `json:",omitempty"`
-	HTTPConnectionReady     *HTTPConnectionReadyEvent     `json:",omitempty"`
-	HTTPRequestStart        *HTTPRequestStartEvent        `json:",omitempty"`
-	HTTPRequestHeadersDone  *HTTPRequestHeadersDoneEvent  `json:",omitempty"`
-	HTTPRequestDone         *HTTPRequestDoneEvent         `json:",omitempty"`
-	HTTPResponseStart       *HTTPResponseStartEvent       `json:",omitempty"`
-	HTTPResponseHeadersDone *HTTPResponseHeadersDoneEvent `json:",omitempty"`
-	HTTPResponseBodyPart    *HTTPResponseBodyPartEvent    `json:",omitempty"`
-	HTTPResponseDone        *HTTPResponseDoneEvent        `json:",omitempty"`
-	Read                    *ReadEvent                    `json:",omitempty"`
-	Resolve                 *ResolveEvent                 `json:",omitempty"`
-	TLSHandshake            *TLSHandshakeEvent            `json:",omitempty"`
-	Write                   *WriteEvent                   `json:",omitempty"`
+	Close    *CloseEvent    `json:",omitempty"`
+	Connect  *ConnectEvent  `json:",omitempty"`
+	DNSQuery *DNSQueryEvent `json:",omitempty"`
+	DNSReply *DNSReplyEvent `json:",omitempty"`
+
+	// HTTP roundtrip events
+	HTTPRoundTripStart     *HTTPRoundTripStartEvent     `json:",omitempty"`
+	HTTPConnectionReady    *HTTPConnectionReadyEvent    `json:",omitempty"`
+	HTTPRequestHeadersDone *HTTPRequestHeadersDoneEvent `json:",omitempty"`
+	HTTPRequestDone        *HTTPRequestDoneEvent        `json:",omitempty"`
+	HTTPResponseStart      *HTTPResponseStartEvent      `json:",omitempty"`
+	HTTPRoundTripDone      *HTTPRoundTripDoneEvent      `json:",omitempty"`
+
+	HTTPResponseBodyPart *HTTPResponseBodyPartEvent `json:",omitempty"`
+	HTTPResponseDone     *HTTPResponseDoneEvent     `json:",omitempty"`
+	Read                 *ReadEvent                 `json:",omitempty"`
+	Resolve              *ResolveEvent              `json:",omitempty"`
+	TLSHandshake         *TLSHandshakeEvent         `json:",omitempty"`
+	Write                *WriteEvent                `json:",omitempty"`
 }
 
 // Handler handles measurement events.

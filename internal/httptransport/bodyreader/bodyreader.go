@@ -38,14 +38,6 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	if err != nil {
 		return
 	}
-	t.handler.OnMeasurement(model.Measurement{
-		HTTPResponseHeadersDone: &model.HTTPResponseHeadersDoneEvent{
-			Headers:       resp.Header,
-			StatusCode:    int64(resp.StatusCode),
-			Time:          time.Now().Sub(t.beginning),
-			TransactionID: tid,
-		},
-	})
 	// "The http Client and Transport guarantee that Body is always
 	//  non-nil, even on responses without a body or responses with
 	//  a zero-length body." (from the docs)
