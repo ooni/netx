@@ -37,6 +37,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	outmethod := req.Method
 	outurl := req.URL.String()
 	tid := transactioner.ContextTransactionID(req.Context())
+	t.handler.OnMeasurement(model.Measurement{
+		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
+			Time:          time.Now().Sub(t.beginning),
+			TransactionID: tid,
+		},
+	})
 	outheaders := http.Header{}
 	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
@@ -91,7 +97,20 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		},
 	}
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), tracer))
-	return t.roundTripper.RoundTrip(req)
+	resp, err := t.roundTripper.RoundTrip(req)
+	event := &model.HTTPRoundTripDoneEvent{
+		Error:         err,
+		Time:          time.Now().Sub(t.beginning),
+		TransactionID: tid,
+	}
+	if resp != nil {
+		event.Headers = resp.Header
+		event.StatusCode = int64(resp.StatusCode)
+	}
+	t.handler.OnMeasurement(model.Measurement{
+		HTTPRoundTripDone: event,
+	})
+	return resp, err
 }
 
 // CloseIdleConnections closes the idle connections.
