@@ -73,17 +73,24 @@ type HTTPConnectionReadyEvent struct {
 
 // HTTPRoundTripStartEvent is emitted when we start the round trip.
 type HTTPRoundTripStartEvent struct {
-	Time          time.Duration
-	TransactionID int64
-}
-
-// HTTPRequestHeadersDoneEvent is emitted when we have written the headers.
-type HTTPRequestHeadersDoneEvent struct {
-	Headers       http.Header
 	Method        string
 	Time          time.Duration
 	TransactionID int64
 	URL           string
+}
+
+// HTTPRequestHeaderEvent is emitted when we have written a header.
+type HTTPRequestHeaderEvent struct {
+	Key           string
+	Time          time.Duration
+	TransactionID int64
+	Value         []string
+}
+
+// HTTPRequestHeadersDoneEvent is emitted when we have written all headers.
+type HTTPRequestHeadersDoneEvent struct {
+	Time          time.Duration
+	TransactionID int64
 }
 
 // HTTPRequestDoneEvent is emitted when we have sent the body.
@@ -201,6 +208,7 @@ type Measurement struct {
 	// HTTP roundtrip events
 	HTTPRoundTripStart     *HTTPRoundTripStartEvent     `json:",omitempty"`
 	HTTPConnectionReady    *HTTPConnectionReadyEvent    `json:",omitempty"`
+	HTTPRequestHeader      *HTTPRequestHeaderEvent      `json:",omitempty"`
 	HTTPRequestHeadersDone *HTTPRequestHeadersDoneEvent `json:",omitempty"`
 	HTTPRequestDone        *HTTPRequestDoneEvent        `json:",omitempty"`
 	HTTPResponseStart      *HTTPResponseStartEvent      `json:",omitempty"`

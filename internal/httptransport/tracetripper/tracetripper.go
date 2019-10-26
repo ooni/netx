@@ -4,7 +4,6 @@ package tracetripper
 import (
 	"net/http"
 	"net/http/httptrace"
-	"sync"
 	"time"
 
 	"github.com/ooni/netx/internal/connid"
@@ -34,17 +33,15 @@ func New(
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	outmethod := req.Method
-	outurl := req.URL.String()
 	tid := transactioner.ContextTransactionID(req.Context())
 	t.handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
+			Method:        req.Method,
 			Time:          time.Now().Sub(t.beginning),
 			TransactionID: tid,
+			URL:           req.URL.String(),
 		},
 	})
-	outheaders := http.Header{}
-	var mutex sync.Mutex
 	tracer := &httptrace.ClientTrace{
 		GotConn: func(info httptrace.GotConnInfo) {
 			t.handler.OnMeasurement(model.Measurement{
@@ -61,23 +58,22 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		WroteHeaderField: func(key string, values []string) {
-			mutex.Lock()
-			outheaders[key] = values
-			mutex.Unlock()
-		},
-		WroteHeaders: func() {
-			mutex.Lock()
-			m := model.Measurement{
-				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
-					Headers:       outheaders,
-					Method:        outmethod,
+			t.handler.OnMeasurement(model.Measurement{
+				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
+					Key:           key,
 					Time:          time.Now().Sub(t.beginning),
 					TransactionID: tid,
-					URL:           outurl,
+					Value:         values,
 				},
-			}
-			mutex.Unlock()
-			t.handler.OnMeasurement(m)
+			})
+		},
+		WroteHeaders: func() {
+			t.handler.OnMeasurement(model.Measurement{
+				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
+					Time:          time.Now().Sub(t.beginning),
+					TransactionID: tid,
+				},
+			})
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			t.handler.OnMeasurement(model.Measurement{
