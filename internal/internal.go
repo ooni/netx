@@ -194,14 +194,14 @@ func NewHTTPTransport(
 	// http2.ConfigureTransport only returns error when we have already
 	// configured http2, it is safe to ignore the return value.
 	http2.ConfigureTransport(baseTransport)
-	// Logic to make sure we'll use the dialer in the new HTTP transport. We have
-	// an already well configured config that works for http2 (as explained in a
-	// comment there). Here we just use it because it's what we need.
+	// Since we're not going to use our dialer for TLS, the main purpose of
+	// the following line is to make sure ForseSpecificSNI has impact on the
+	// config we are going to use when doing TLS. The code is as such since
+	// we used to force net/http through using dialer.DialTLS.
 	dialer.TLSConfig = baseTransport.TLSClientConfig
-	// Arrange the configuration such that we always use `dialer` for dialing.
-	baseTransport.Dial = dialer.Dial
+	// Arrange the configuration such that we always use `dialer` for dialing
+	// cleartext connections. The net/http code will dial TLS connections.
 	baseTransport.DialContext = dialer.DialContext
-	baseTransport.DialTLS = dialer.DialTLS
 	// Better for Cloudflare DNS and also better because we have less
 	// noisy events and we can better understand what happened.
 	baseTransport.MaxConnsPerHost = 1
