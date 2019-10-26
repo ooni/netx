@@ -107,7 +107,6 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
 	transport := NewHTTPTransport(beginning, handler, NewDialer(beginning, handler))
-	transport.Transport.MaxConnsPerHost = 1 // seems to be better for cloudflare DNS
 	return &http.Client{Transport: transport}
 }
 
@@ -203,6 +202,9 @@ func NewHTTPTransport(
 	baseTransport.Dial = dialer.Dial
 	baseTransport.DialContext = dialer.DialContext
 	baseTransport.DialTLS = dialer.DialTLS
+	// Better for Cloudflare DNS and also better because we have less
+	// noisy events and we can better understand what happened.
+	baseTransport.MaxConnsPerHost = 1
 	return &HTTPTransport{
 		Transport:    baseTransport,
 		Handler:      handler,
