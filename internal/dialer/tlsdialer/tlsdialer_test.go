@@ -89,10 +89,5 @@ func TestIntegrationFailureSetDeadline(t *testing.T) {
 }
 
 func newdialer() model.TLSDialer {
-	return New(
-		time.Now(),
-		handlers.NoHandler,
-		new(net.Dialer),
-		new(tls.Config),
-	)
+	return New(new(net.Dialer), new(tls.Config))
 }

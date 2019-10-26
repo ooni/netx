@@ -304,3 +304,52 @@ type TLSDialer interface {
 	// DialTLSContext is like DialTLS but with context
 	DialTLSContext(ctx context.Context, network, address string) (net.Conn, error)
 }
+
+// MeasurementRoot is a measurement root
+type MeasurementRoot struct {
+	Beginning time.Time
+	Handler   Handler
+}
+
+type measurementRootContextKey struct{}
+
+type dummyHandler struct{}
+
+func (*dummyHandler) OnMeasurement(Measurement) {}
+
+// ContextMeasurementRoot returns the measurement root configured in the
+// provided context, or a nil pointer, if not set.
+func ContextMeasurementRoot(ctx context.Context) *MeasurementRoot {
+	root, _ := ctx.Value(measurementRootContextKey{}).(*MeasurementRoot)
+	return root
+}
+
+// ContextMeasurementRootOrDefault returns the measurement root configured in
+// the provided context, or a working, dummy, measurement root.
+func ContextMeasurementRootOrDefault(ctx context.Context) *MeasurementRoot {
+	root := ContextMeasurementRoot(ctx)
+	if root == nil {
+		root = &MeasurementRoot{
+			Beginning: time.Now(),
+			Handler:   &dummyHandler{},
+		}
+	}
+	return root
+}
+
+// WithMeasurementRoot returns a copy of the context with the
+// configured measurement root set. Panics if the provided root
+// is a nil pointer, like httptrace.WithClientTrace.
+//
+// Merging more than one root is not supported. Setting again
+// the root is just going to replace the original root.
+func WithMeasurementRoot(
+	ctx context.Context, root *MeasurementRoot,
+) context.Context {
+	if root == nil {
+		panic("nil measurement root")
+	}
+	return context.WithValue(
+		ctx, measurementRootContextKey{}, root,
+	)
+}

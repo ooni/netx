@@ -4,12 +4,10 @@ package httptransport
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/ooni/netx/internal/httptransport/bodyreader"
 	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/internal/httptransport/transactioner"
-	"github.com/ooni/netx/model"
 )
 
 // Transport performs single HTTP transactions and emits
@@ -19,16 +17,11 @@ type Transport struct {
 }
 
 // New creates a new Transport.
-func New(
-	beginning time.Time, handler model.Handler,
-	roundTripper http.RoundTripper,
-) *Transport {
+func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
 		roundTripper: transactioner.New(bodyreader.New(
-			beginning, handler, tracetripper.New(
-				beginning, handler, roundTripper,
-			),
-		))}
+			tracetripper.New(roundTripper))),
+	}
 }
 
 // RoundTrip executes a single HTTP transaction, returning

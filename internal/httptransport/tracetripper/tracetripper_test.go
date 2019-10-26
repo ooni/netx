@@ -3,15 +3,13 @@ package tracetripper
 import (
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"testing"
-	"time"
-
-	"github.com/ooni/netx/handlers"
 )
 
 func TestIntegration(t *testing.T) {
 	client := &http.Client{
-		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
+		Transport: New(http.DefaultTransport),
 	}
 	resp, err := client.Get("https://www.google.com")
 	if err != nil {
@@ -27,7 +25,7 @@ func TestIntegration(t *testing.T) {
 
 func TestIntegrationFailure(t *testing.T) {
 	client := &http.Client{
-		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
+		Transport: New(http.DefaultTransport),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with
 	// a server that instead is expecting TLS.
@@ -38,5 +36,27 @@ func TestIntegrationFailure(t *testing.T) {
 	if resp != nil {
 		t.Fatal("expected a nil response here")
 	}
+	client.CloseIdleConnections()
+}
+
+func TestIntegrationWithClientTrace(t *testing.T) {
+	client := &http.Client{
+		Transport: New(http.DefaultTransport),
+	}
+	req, err := http.NewRequest("GET", "https://www.kernel.org/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = req.WithContext(
+		httptrace.WithClientTrace(req.Context(), new(httptrace.ClientTrace)),
+	)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected a good response here")
+	}
+	resp.Body.Close()
 	client.CloseIdleConnections()
 }

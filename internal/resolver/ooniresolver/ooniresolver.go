@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/model"
@@ -15,16 +14,12 @@ import (
 // manually create and submit queries. It can use all the transports
 // for DNS supported by this library, however.
 type Resolver struct {
-	handler   model.Handler
 	transport model.DNSRoundTripper
 }
 
 // New creates a new OONI Resolver instance.
-func New(beginning time.Time, handler model.Handler, t model.DNSRoundTripper) *Resolver {
-	return &Resolver{
-		handler:   handler,
-		transport: t,
-	}
+func New(t model.DNSRoundTripper) *Resolver {
+	return &Resolver{transport: t}
 }
 
 var errNotImpl = errors.New("Not implemented")

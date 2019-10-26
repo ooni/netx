@@ -45,13 +45,26 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 	return d.DialContext(context.Background(), network, address)
 }
 
+func maybeWithMeasurementRoot(
+	ctx context.Context, beginning time.Time, handler model.Handler,
+) context.Context {
+	if model.ContextMeasurementRoot(ctx) != nil {
+		return ctx
+	}
+	return model.WithMeasurementRoot(ctx, &model.MeasurementRoot{
+		Beginning: beginning,
+		Handler:   handler,
+	})
+}
+
 // DialContext is like Dial but the context allows to interrupt a
 // pending connection attempt at any time.
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
+	ctx = maybeWithMeasurementRoot(ctx, d.Beginning, d.Handler)
 	return dialer.New(
-		d.Beginning, d.Handler, d.Resolver, new(net.Dialer),
+		d.Resolver, new(net.Dialer),
 	).DialContext(ctx, network, address)
 }
 
@@ -65,15 +78,9 @@ func (d *Dialer) DialTLS(network, address string) (net.Conn, error) {
 func (d *Dialer) DialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
+	ctx = maybeWithMeasurementRoot(ctx, d.Beginning, d.Handler)
 	return dialer.NewTLS(
-		d.Beginning,
-		d.Handler,
-		dialer.New(
-			d.Beginning,
-			d.Handler,
-			d.Resolver,
-			new(net.Dialer),
-		),
+		dialer.New(d.Resolver, new(net.Dialer)),
 		d.TLSConfig,
 	).DialTLSContext(ctx, network, address)
 }
@@ -121,6 +128,53 @@ func withPort(address, port string) string {
 	return address
 }
 
+type resolverWrapper struct {
+	beginning time.Time
+	handler   model.Handler
+	resolver  model.DNSResolver
+}
+
+func newResolverWrapper(
+	beginning time.Time, handler model.Handler,
+	resolver model.DNSResolver,
+) *resolverWrapper {
+	return &resolverWrapper{
+		beginning: beginning,
+		handler:   handler,
+		resolver:  resolver,
+	}
+}
+
+// LookupAddr returns the name of the provided IP address
+func (r *resolverWrapper) LookupAddr(ctx context.Context, addr string) ([]string, error) {
+	ctx = maybeWithMeasurementRoot(ctx, r.beginning, r.handler)
+	return r.resolver.LookupAddr(ctx, addr)
+}
+
+// LookupCNAME returns the canonical name of a host
+func (r *resolverWrapper) LookupCNAME(ctx context.Context, host string) (string, error) {
+	ctx = maybeWithMeasurementRoot(ctx, r.beginning, r.handler)
+	return r.resolver.LookupCNAME(ctx, host)
+}
+
+// LookupHost returns the IP addresses of a host
+func (r *resolverWrapper) LookupHost(ctx context.Context, hostname string) ([]string, error) {
+	ctx = maybeWithMeasurementRoot(ctx, r.beginning, r.handler)
+	return r.resolver.LookupHost(ctx, hostname)
+}
+
+// LookupMX returns the MX records of a specific name
+func (r *resolverWrapper) LookupMX(ctx context.Context, name string) ([]*net.MX, error) {
+	ctx = maybeWithMeasurementRoot(ctx, r.beginning, r.handler)
+	return r.resolver.LookupMX(ctx, name)
+}
+
+// LookupNS returns the NS records of a specific name
+func (r *resolverWrapper) LookupNS(ctx context.Context, name string) ([]*net.NS, error) {
+	ctx = maybeWithMeasurementRoot(ctx, r.beginning, r.handler)
+	return r.resolver.LookupNS(ctx, name)
+}
+
 // NewResolver returns a new resolver
 func NewResolver(
 	beginning time.Time, handler model.Handler, network, address string,
@@ -128,39 +182,34 @@ func NewResolver(
 	// Implementation note: system need to be dealt with
 	// separately because it doesn't have any transport.
 	if network == "system" {
-		return &net.Resolver{
+		return newResolverWrapper(beginning, handler, &net.Resolver{
 			PreferGo: false,
-		}, nil
+		}), nil
 	}
 	if network == "doh" {
-		return resolver.NewResolverHTTPS(
-			beginning, handler, newHTTPClientForDoH(beginning, handler), address,
-		), nil
+		return newResolverWrapper(beginning, handler, resolver.NewResolverHTTPS(
+			newHTTPClientForDoH(beginning, handler), address,
+		)), nil
 	}
 	if network == "dot" {
 		// We need a child dialer here to avoid an endless loop where the
 		// dialer will ask us to resolve, we'll tell the dialer to dial, it
 		// will ask us to resolve, ...
-		return resolver.NewResolverTLS(
-			beginning, handler, NewDialer(beginning, handler),
-			withPort(address, "853"),
-		), nil
+		return newResolverWrapper(beginning, handler, resolver.NewResolverTLS(
+			NewDialer(beginning, handler), withPort(address, "853"),
+		)), nil
 	}
 	if network == "tcp" {
-		return resolver.NewResolverTCP(
-			beginning, handler,
-			// Same rationale as above: avoid possible endless loop
-			NewDialer(beginning, handler),
-			withPort(address, "53"),
-		), nil
+		// Same rationale as above: avoid possible endless loop
+		return newResolverWrapper(beginning, handler, resolver.NewResolverTCP(
+			NewDialer(beginning, handler), withPort(address, "53"),
+		)), nil
 	}
 	if network == "udp" {
-		return resolver.NewResolverUDP(
-			beginning, handler,
-			// Same rationale as above: avoid possible endless loop
-			NewDialer(beginning, handler),
-			withPort(address, "53"),
-		), nil
+		// Same rationale as above: avoid possible endless loop
+		return newResolverWrapper(beginning, handler, resolver.NewResolverUDP(
+			NewDialer(beginning, handler), withPort(address, "53"),
+		)), nil
 	}
 	return nil, errors.New("resolver.New: unsupported network value")
 }
@@ -187,7 +236,7 @@ func NewHTTPTransport(
 		Proxy:                 http.ProxyFromEnvironment,
 		TLSHandshakeTimeout:   10 * time.Second,
 	}
-	ooniTransport := httptransport.New(beginning, handler, baseTransport)
+	ooniTransport := httptransport.New(baseTransport)
 	// Configure h2 and make sure that the custom TLSConfig we use for dialing
 	// is actually compatible with upgrading to h2. (This mainly means we
 	// need to make sure we include "h2" in the NextProtos array.) Because
@@ -218,6 +267,8 @@ func NewHTTPTransport(
 func (t *HTTPTransport) RoundTrip(
 	req *http.Request,
 ) (resp *http.Response, err error) {
+	ctx := maybeWithMeasurementRoot(req.Context(), t.Beginning, t.Handler)
+	req = req.WithContext(ctx)
 	return t.roundTripper.RoundTrip(req)
 }
 
