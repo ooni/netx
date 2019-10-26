@@ -15,27 +15,18 @@ import (
 type TLSDialer struct {
 	ConnectTimeout      time.Duration // default: 30 second
 	TLSHandshakeTimeout time.Duration // default: 10 second
-	beginning           time.Time
 	config              *tls.Config
 	dialer              model.Dialer
-	handler             model.Handler
 	setDeadline         func(net.Conn, time.Time) error
 }
 
 // New creates a new TLS dialer
-func New(
-	beginning time.Time,
-	handler model.Handler,
-	dialer model.Dialer,
-	config *tls.Config,
-) *TLSDialer {
+func New(dialer model.Dialer, config *tls.Config) *TLSDialer {
 	return &TLSDialer{
 		ConnectTimeout:      30 * time.Second,
 		TLSHandshakeTimeout: 10 * time.Second,
-		beginning:           beginning,
 		config:              config,
 		dialer:              dialer,
-		handler:             handler,
 		setDeadline: func(conn net.Conn, t time.Time) error {
 			return conn.SetDeadline(t)
 		},
@@ -56,7 +47,7 @@ func (d *TLSDialer) DialTLSContext(
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), d.ConnectTimeout)
+	ctx, cancel := context.WithTimeout(ctx, d.ConnectTimeout)
 	defer cancel()
 	conn, err := d.dialer.DialContext(ctx, network, address)
 	if err != nil {
@@ -76,23 +67,24 @@ func (d *TLSDialer) DialTLSContext(
 	if mconn, ok := conn.(*connx.MeasuringConn); ok {
 		connID = mconn.ID
 	}
+	root := model.ContextMeasurementRootOrDefault(ctx)
 	// Implementation note: when DialTLS is not set, the code in
 	// net/http will perform the handshake. Otherwise, if DialTLS
 	// is set, we will end up here. This code is still used when
 	// performing non-HTTP TLS-enabled dial operations.
-	d.handler.OnMeasurement(model.Measurement{
+	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeStart: &model.TLSHandshakeStartEvent{
 			ConnID: connID,
-			Time:   time.Now().Sub(d.beginning),
+			Time:   time.Now().Sub(root.Beginning),
 		},
 	})
 	err = tlsconn.Handshake()
-	d.handler.OnMeasurement(model.Measurement{
+	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
 			ConnID:          connID,
 			ConnectionState: model.NewTLSConnectionState(tlsconn.ConnectionState()),
 			Error:           err,
-			Time:            time.Now().Sub(d.beginning),
+			Time:            time.Now().Sub(root.Beginning),
 		},
 	})
 	conn.SetDeadline(time.Time{}) // clear deadline

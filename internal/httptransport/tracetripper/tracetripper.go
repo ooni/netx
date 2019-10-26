@@ -14,19 +14,12 @@ import (
 
 // Transport performs single HTTP transactions.
 type Transport struct {
-	beginning    time.Time
-	handler      model.Handler
 	roundTripper http.RoundTripper
 }
 
 // New creates a new Transport.
-func New(
-	beginning time.Time, handler model.Handler,
-	roundTripper http.RoundTripper,
-) *Transport {
+func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
-		beginning:    beginning,
-		handler:      handler,
 		roundTripper: roundTripper,
 	}
 }
@@ -34,11 +27,13 @@ func New(
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	root := model.ContextMeasurementRootOrDefault(req.Context())
+
 	tid := transactioner.ContextTransactionID(req.Context())
-	t.handler.OnMeasurement(model.Measurement{
+	root.Handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
 			Method:        req.Method,
-			Time:          time.Now().Sub(t.beginning),
+			Time:          time.Now().Sub(root.Beginning),
 			TransactionID: tid,
 			URL:           req.URL.String(),
 		},
@@ -49,9 +44,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		TLSHandshakeStart: func() {
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				TLSHandshakeStart: &model.TLSHandshakeStartEvent{
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
 			})
@@ -59,17 +54,17 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
 					ConnectionState: model.NewTLSConnectionState(state),
 					Error:           err,
-					Time:            time.Now().Sub(t.beginning),
+					Time:            time.Now().Sub(root.Beginning),
 					TransactionID:   tid,
 				},
 			})
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
 					ConnID: connid.Compute(
 						info.Conn.LocalAddr().Network(),
@@ -77,41 +72,41 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 					),
 					Network:       info.Conn.LocalAddr().Network(),
 					RemoteAddress: info.Conn.RemoteAddr().String(),
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
 			})
 		},
 		WroteHeaderField: func(key string, values []string) {
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
 					Key:           key,
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 					Value:         values,
 				},
 			})
 		},
 		WroteHeaders: func() {
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
 			})
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
 			})
 		},
 		GotFirstResponseByte: func() {
-			t.handler.OnMeasurement(model.Measurement{
+			root.Handler.OnMeasurement(model.Measurement{
 				HTTPResponseStart: &model.HTTPResponseStartEvent{
-					Time:          time.Now().Sub(t.beginning),
+					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
 			})
@@ -136,14 +131,14 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := t.roundTripper.RoundTrip(req)
 	event := &model.HTTPRoundTripDoneEvent{
 		Error:         err,
-		Time:          time.Now().Sub(t.beginning),
+		Time:          time.Now().Sub(root.Beginning),
 		TransactionID: tid,
 	}
 	if resp != nil {
 		event.Headers = resp.Header
 		event.StatusCode = int64(resp.StatusCode)
 	}
-	t.handler.OnMeasurement(model.Measurement{
+	root.Handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripDone: event,
 	})
 	return resp, err

@@ -4,14 +4,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
-
-	"github.com/ooni/netx/handlers"
 )
 
 func TestIntegration(t *testing.T) {
 	client := &http.Client{
-		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
+		Transport: New(http.DefaultTransport),
 	}
 	resp, err := client.Get("https://www.google.com")
 	if err != nil {
@@ -27,7 +24,7 @@ func TestIntegration(t *testing.T) {
 
 func TestIntegrationFailure(t *testing.T) {
 	client := &http.Client{
-		Transport: New(time.Now(), handlers.NoHandler, http.DefaultTransport),
+		Transport: New(http.DefaultTransport),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with
 	// a server that instead is expecting TLS.

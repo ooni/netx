@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -266,4 +267,48 @@ func TestIntegrationFailure(t *testing.T) {
 		t.Fatal("expected a nil response here")
 	}
 	client.CloseIdleConnections()
+}
+
+func TestLookupAddrWrapper(t *testing.T) {
+	resolver := newResolverWrapper(time.Now(), handlers.NoHandler, new(net.Resolver))
+	names, err := resolver.LookupAddr(context.Background(), "8.8.8.8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) < 1 {
+		t.Fatal("unexpected result")
+	}
+}
+
+func TestLookupCNAMEWrapper(t *testing.T) {
+	resolver := newResolverWrapper(time.Now(), handlers.NoHandler, new(net.Resolver))
+	name, err := resolver.LookupCNAME(context.Background(), "www.google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name == "" {
+		t.Fatal("unexpected result")
+	}
+}
+
+func TestLookupMXWrapper(t *testing.T) {
+	resolver := newResolverWrapper(time.Now(), handlers.NoHandler, new(net.Resolver))
+	entries, err := resolver.LookupMX(context.Background(), "google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) < 1 {
+		t.Fatal("unexpected result")
+	}
+}
+
+func TestLookupNSWrapper(t *testing.T) {
+	resolver := newResolverWrapper(time.Now(), handlers.NoHandler, new(net.Resolver))
+	entries, err := resolver.LookupNS(context.Background(), "google.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) < 1 {
+		t.Fatal("unexpected result")
+	}
 }

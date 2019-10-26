@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/model"
 )
 
@@ -66,10 +65,5 @@ func TestIntegrationDialTCPFailure(t *testing.T) {
 }
 
 func newdialer() model.Dialer {
-	return New(
-		time.Now(),
-		handlers.NoHandler,
-		new(net.Resolver),
-		new(net.Dialer),
-	)
+	return New(new(net.Resolver), new(net.Dialer))
 }
