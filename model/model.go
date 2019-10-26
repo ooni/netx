@@ -148,13 +148,18 @@ type ReadEvent struct {
 	Time     time.Duration
 }
 
-// ResolveEvent is emitted when resolver.LookupHost returns.
-type ResolveEvent struct {
+// ResolveStartEvent is emitted when resolver.LookupHost begins.
+type ResolveStartEvent struct {
+	DialID   int64
+	Hostname string
+	Time     time.Duration
+}
+
+// ResolveDoneEvent is emitted when resolver.LookupHost returns.
+type ResolveDoneEvent struct {
 	Addresses []string
 	DialID    int64
-	Duration  time.Duration
 	Error     error
-	Hostname  string
 	Time      time.Duration
 }
 
@@ -228,10 +233,17 @@ type WriteEvent struct {
 // time a Measurement will only contain a single event. When a Measurement
 // contains an event, the corresponding pointer is non nil.
 type Measurement struct {
-	Close    *CloseEvent    `json:",omitempty"`
-	Connect  *ConnectEvent  `json:",omitempty"`
-	DNSQuery *DNSQueryEvent `json:",omitempty"`
-	DNSReply *DNSReplyEvent `json:",omitempty"`
+	// DNS
+	ResolveStart *ResolveStartEvent `json:",omitempty"`
+	ResolveDone  *ResolveDoneEvent  `json:",omitempty"`
+	DNSQuery     *DNSQueryEvent     `json:",omitempty"`
+	DNSReply     *DNSReplyEvent     `json:",omitempty"`
+
+	// Syscalls
+	Connect *ConnectEvent `json:",omitempty"`
+	Read    *ReadEvent    `json:",omitempty"`
+	Write   *WriteEvent   `json:",omitempty"`
+	Close   *CloseEvent   `json:",omitempty"`
 
 	// TLS events
 	TLSHandshakeStart *TLSHandshakeStartEvent `json:",omitempty"`
@@ -246,11 +258,9 @@ type Measurement struct {
 	HTTPResponseStart      *HTTPResponseStartEvent      `json:",omitempty"`
 	HTTPRoundTripDone      *HTTPRoundTripDoneEvent      `json:",omitempty"`
 
+	// HTTP body events
 	HTTPResponseBodyPart *HTTPResponseBodyPartEvent `json:",omitempty"`
 	HTTPResponseDone     *HTTPResponseDoneEvent     `json:",omitempty"`
-	Read                 *ReadEvent                 `json:",omitempty"`
-	Resolve              *ResolveEvent              `json:",omitempty"`
-	Write                *WriteEvent                `json:",omitempty"`
 }
 
 // Handler handles measurement events.

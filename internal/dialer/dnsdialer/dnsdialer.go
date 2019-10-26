@@ -52,18 +52,21 @@ func (d *Dialer) DialContext(
 		conn, err = dialer.DialContext(ctx, network, address)
 		return
 	}
-	start := time.Now()
+	root.Handler.OnMeasurement(model.Measurement{
+		ResolveStart: &model.ResolveStartEvent{
+			DialID:   dialID,
+			Hostname: onlyhost,
+			Time:     time.Now().Sub(root.Beginning),
+		},
+	})
 	var addrs []string
 	addrs, err = d.resolver.LookupHost(ctx, onlyhost)
-	stop := time.Now()
 	root.Handler.OnMeasurement(model.Measurement{
-		Resolve: &model.ResolveEvent{
+		ResolveDone: &model.ResolveDoneEvent{
 			Addresses: addrs,
 			DialID:    dialID,
-			Duration:  stop.Sub(start),
 			Error:     err,
-			Hostname:  onlyhost,
-			Time:      stop.Sub(root.Beginning),
+			Time:      time.Now().Sub(root.Beginning),
 		},
 	})
 	if err != nil {
