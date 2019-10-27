@@ -65,7 +65,6 @@ func mainfunc() (err error) {
 		fmt.Printf("Usage: httpclient -dns-server <URL> -sni <string> -url <url>\n")
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples with `-dns-server <URL>`:\n")
-		fmt.Printf("  ./httpclient system:///\n")
 		fmt.Printf("  ./httpclient -dns-server udp://1.1.1.1:53\n")
 		fmt.Printf("  ./httpclient -dns-server tcp://8.8.8.8:53\n")
 		fmt.Printf("  ./httpclient -dns-server dot://dns.quad9.net\n")
