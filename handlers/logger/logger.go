@@ -3,6 +3,8 @@ package logger
 
 import (
 	"crypto/tls"
+	"fmt"
+	"strings"
 
 	"github.com/apex/log"
 	"github.com/ooni/netx/model"
@@ -38,6 +40,22 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"hostname":      m.ResolveStart.Hostname,
 			"transactionID": m.ResolveStart.TransactionID,
 		}).Debug("dns: resolve domain name")
+	}
+	if m.DNSQuery != nil {
+		h.logger.WithFields(log.Fields{
+			"dialID":   m.DNSQuery.DialID,
+			"elapsed":  m.DNSQuery.Time,
+			"numBytes": len(m.DNSQuery.Data),
+			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSQuery.Msg.String())),
+		}).Debug("dns: query out")
+	}
+	if m.DNSReply != nil {
+		h.logger.WithFields(log.Fields{
+			"dialID":   m.DNSReply.DialID,
+			"elapsed":  m.DNSReply.Time,
+			"numBytes": len(m.DNSReply.Data),
+			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSReply.Msg.String())),
+		}).Debug("dns: reply in")
 	}
 	if m.ResolveDone != nil {
 		h.logger.WithFields(log.Fields{
@@ -180,4 +198,8 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"transactionID": m.HTTPResponseDone.TransactionID,
 		}).Debug("http: got whole body")
 	}
+}
+
+func reformat(s string) string {
+	return strings.ReplaceAll(s, "\n", "\n\t")
 }

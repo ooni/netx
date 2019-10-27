@@ -5,8 +5,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/miekg/dns"
+	"github.com/ooni/netx/internal/dialid"
 	"github.com/ooni/netx/model"
 )
 
@@ -39,7 +41,6 @@ func (c *Resolver) LookupCNAME(ctx context.Context, host string) (cname string, 
 // LookupHost returns the IP addresses of a host
 func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, error) {
 	// TODO(bassosimone): wrap errors as net.DNSError
-	// TODO(bassosimone): emit DNS messages
 	var addrs []string
 	var reply *dns.Msg
 	reply, errA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
@@ -136,6 +137,15 @@ func (c *Resolver) mockableRoundTrip(
 	if err != nil {
 		return
 	}
+	root := model.ContextMeasurementRootOrDefault(ctx)
+	root.Handler.OnMeasurement(model.Measurement{
+		DNSQuery: &model.DNSQueryEvent{
+			Data:   querydata,
+			DialID: dialid.ContextDialID(ctx),
+			Msg:    query,
+			Time:   time.Now().Sub(root.Beginning),
+		},
+	})
 	replydata, err = roundTrip(c.transport, querydata)
 	if err != nil {
 		return
@@ -145,6 +155,14 @@ func (c *Resolver) mockableRoundTrip(
 	if err != nil {
 		return
 	}
+	root.Handler.OnMeasurement(model.Measurement{
+		DNSReply: &model.DNSReplyEvent{
+			Data:   replydata,
+			DialID: dialid.ContextDialID(ctx),
+			Msg:    reply,
+			Time:   time.Now().Sub(root.Beginning),
+		},
+	})
 	if reply.Rcode != dns.RcodeSuccess {
 		err = errors.New("oodns: query failed")
 		return
