@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -93,7 +94,8 @@ func TestDialerSetCABundleWAI(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	if _, ok := err.(x509.UnknownAuthorityError); !ok {
+	var target x509.UnknownAuthorityError
+	if errors.As(err, &target) == false {
 		t.Fatal("not the error we expected")
 	}
 	if conn != nil {
@@ -108,7 +110,8 @@ func TestDialerForceSpecificSNI(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	if _, ok := err.(x509.HostnameError); !ok {
+	var target x509.HostnameError
+	if errors.As(err, &target) == false {
 		t.Fatal("not the error we expected")
 	}
 	if conn != nil {

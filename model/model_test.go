@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"testing"
 	"time"
 )
@@ -53,4 +54,18 @@ func TestMeasurementRootWithMeasurementRootPanic(t *testing.T) {
 	}()
 	ctx := context.Background()
 	ctx = WithMeasurementRoot(ctx, nil)
+}
+
+func TestErrWrapperPublicAPI(t *testing.T) {
+	child := errors.New("mocked error")
+	wrapper := &ErrWrapper{
+		Failure:    "moobar",
+		WrappedErr: child,
+	}
+	if wrapper.Error() != "moobar" {
+		t.Fatal("The Error() method is misbehaving")
+	}
+	if wrapper.Unwrap() != child {
+		t.Fatal("The Unwrap() method is misbehaving")
+	}
 }

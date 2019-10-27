@@ -83,6 +83,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"blockedFor": m.Read.SyscallDuration,
 			"connID":     m.Read.ConnID,
 			"elapsed":    m.Read.DurationSinceBeginning,
+			"error":      m.Read.Error,
 			"numBytes":   m.Read.NumBytes,
 		}).Debug("net: read done")
 	}
@@ -91,6 +92,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"blockedFor": m.Write.SyscallDuration,
 			"connID":     m.Write.ConnID,
 			"elapsed":    m.Write.DurationSinceBeginning,
+			"error":      m.Write.Error,
 			"numBytes":   m.Write.NumBytes,
 		}).Debug("net: write done")
 	}
