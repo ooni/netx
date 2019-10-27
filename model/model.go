@@ -74,6 +74,49 @@ type Measurement struct {
 	HTTPResponseDone     *HTTPResponseDoneEvent     `json:",omitempty"`
 }
 
+// ErrWrapper is our error wrapper for Go errors. The key objective of
+// this structure is to properly set Failure, which is also returned by
+// the Error() method, so be one of the OONI defined strings.
+type ErrWrapper struct {
+	// ConnID is the connection ID, or zero if not known.
+	ConnID int64
+
+	// DialID is the dial ID, or zero if not known.
+	DialID int64
+
+	// Failure is the OONI failure string. The failure strings are
+	// loosely backward compatible with Measurement Kit.
+	//
+	// Supported failure strings
+	//
+	// - `connection_refused`: ECONNREFUSED
+	// - `connection_reset`: ECONNRESET
+	// - `dns_nxdomain_error`: NXDOMAIN in DNS reply
+	// - `eof_error`: unexpected EOF on connection
+	// - `generic_timeout_error`: some timer has expired
+	// - `ssl_invalid_hostname`: certificate not valid for SNI
+	// - `ssl_unknown_autority`: cannot find CA validating certificate
+	// - `ssl_invalid_certificate`: e.g. certificate expried
+	// - `unknown_failure ...`: any other error
+	Failure string
+
+	// TransactionDI is the transaction ID, or zero if not known.
+	TransactionID int64
+
+	// WrappedErr is the error that we're wrapping.
+	WrappedErr error
+}
+
+// Error returns a description of the error that occurred.
+func (e *ErrWrapper) Error() string {
+	return e.Failure
+}
+
+// Unwrap allows to access the underlying error
+func (e *ErrWrapper) Unwrap() error {
+	return e.WrappedErr
+}
+
 // CloseEvent is emitted when the CLOSE syscall returns.
 type CloseEvent struct {
 	// ConnID is the identifier of this connection.

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/dialer/connx"
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/model"
 )
 
@@ -79,6 +80,10 @@ func (d *TLSDialer) DialTLSContext(
 		},
 	})
 	err = tlsconn.Handshake()
+	err = errwrapper.SafeErrWrapperBuilder{
+		ConnID: connID,
+		Error:  err,
+	}.MaybeBuild()
 	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
 			ConnID:                 connID,

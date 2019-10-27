@@ -9,6 +9,7 @@ import (
 
 	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/internal/dialid"
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
@@ -45,16 +46,22 @@ func (d *Dialer) DialContext(
 	}
 	ctx = dialid.WithDialID(ctx)
 	dialID := dialid.ContextDialID(ctx)
+	txID := transactionid.ContextTransactionID(ctx)
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveStart: &model.ResolveStartEvent{
 			DialID:                 dialID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Hostname:               onlyhost,
-			TransactionID:          transactionid.ContextTransactionID(ctx),
+			TransactionID:          txID,
 		},
 	})
 	var addrs []string
 	addrs, err = d.lookupHost(ctx, onlyhost)
+	err = errwrapper.SafeErrWrapperBuilder{
+		DialID:        dialID,
+		Error:         err,
+		TransactionID: txID,
+	}.MaybeBuild()
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveDone: &model.ResolveDoneEvent{
 			Addresses:              addrs,
@@ -66,6 +73,7 @@ func (d *Dialer) DialContext(
 	if err != nil {
 		return
 	}
+	var errorslist []error
 	for _, addr := range addrs {
 		dialer := dialerbase.New(
 			root.Beginning, root.Handler, d.dialer, dialID,
@@ -75,13 +83,21 @@ func (d *Dialer) DialContext(
 		if err == nil {
 			return
 		}
+		errorslist = append(errorslist, err)
 	}
-	err = &net.OpError{
-		Op:  "dial",
-		Net: network,
-		Err: errors.New("all connect attempts failed"),
-	}
+	err = reduceErrors(errorslist)
 	return
+}
+
+func reduceErrors(errorslist []error) error {
+	if len(errorslist) == 0 {
+		return nil
+	}
+	if len(errorslist) == 1 {
+		return errorslist[0]
+	}
+	// TODO(bassosimone): handle this case in a better way
+	return errors.New("all connect attempts failed")
 }
 
 func (d *Dialer) lookupHost(ctx context.Context, hostname string) ([]string, error) {

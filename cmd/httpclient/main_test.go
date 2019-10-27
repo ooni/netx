@@ -10,6 +10,13 @@ func TestIntegration(t *testing.T) {
 	main()
 }
 
+func TestIntegrationBatch(t *testing.T) {
+	*flagBatch = true
+	defer func() {
+		*flagBatch = false
+	}()
+	main()
+}
 func TestHelp(t *testing.T) {
 	*common.FlagHelp = true
 	err := mainfunc()

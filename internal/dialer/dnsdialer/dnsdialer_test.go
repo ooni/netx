@@ -2,6 +2,7 @@ package dnsdialer
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -66,4 +67,29 @@ func TestIntegrationDialTCPFailure(t *testing.T) {
 
 func newdialer() model.Dialer {
 	return New(new(net.Resolver), new(net.Dialer))
+}
+
+func TestReduceErrors(t *testing.T) {
+	t.Run("no errors", func(t *testing.T) {
+		result := reduceErrors(nil)
+		if result != nil {
+			t.Fatal("wrong result")
+		}
+	})
+
+	t.Run("single error", func(t *testing.T) {
+		err := errors.New("mocked error")
+		result := reduceErrors([]error{err})
+		if result != err {
+			t.Fatal("wrong result")
+		}
+	})
+
+	t.Run("multiple error", func(t *testing.T) {
+		err := errors.New("mocked error")
+		result := reduceErrors([]error{err, err})
+		if result.Error() != "all connect attempts failed" {
+			t.Fatal("wrong result")
+		}
+	})
 }

@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/model"
 )
 
@@ -20,6 +21,10 @@ type MeasuringConn struct {
 func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Read(b)
+	err = errwrapper.SafeErrWrapperBuilder{
+		ConnID: c.ID,
+		Error:  err,
+	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Read: &model.ReadEvent{
@@ -37,6 +42,10 @@ func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Write(b)
+	err = errwrapper.SafeErrWrapperBuilder{
+		ConnID: c.ID,
+		Error:  err,
+	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Write: &model.WriteEvent{
@@ -54,6 +63,10 @@ func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 func (c *MeasuringConn) Close() (err error) {
 	start := time.Now()
 	err = c.Conn.Close()
+	err = errwrapper.SafeErrWrapperBuilder{
+		ConnID: c.ID,
+		Error:  err,
+	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Close: &model.CloseEvent{

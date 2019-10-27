@@ -9,6 +9,7 @@ import (
 
 	"github.com/ooni/netx/internal/connid"
 	"github.com/ooni/netx/internal/dialid"
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
@@ -54,6 +55,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+			// Wrapping the error even if we're not returning it because it may
+			// less confusing to users to see the wrapped name
+			err = errwrapper.SafeErrWrapperBuilder{
+				Error:         err,
+				TransactionID: tid,
+			}.MaybeBuild()
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
 			root.Handler.OnMeasurement(model.Measurement{
@@ -96,10 +103,16 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			// Wrapping the error even if we're not returning it because it may
+			// less confusing to users to see the wrapped name
+			err := errwrapper.SafeErrWrapperBuilder{
+				Error:         info.Err,
+				TransactionID: tid,
+			}.MaybeBuild()
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
-					Error:                  info.Err,
+					Error:                  err,
 					TransactionID:          tid,
 				},
 			})
@@ -130,6 +143,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	resp, err := t.roundTripper.RoundTrip(req)
+	err = errwrapper.SafeErrWrapperBuilder{
+		Error:         err,
+		TransactionID: tid,
+	}.MaybeBuild()
 	event := &model.HTTPRoundTripDoneEvent{
 		DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		Error:                  err,

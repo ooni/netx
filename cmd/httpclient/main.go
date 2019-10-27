@@ -2,15 +2,15 @@
 //
 // Usage:
 //
-//   httpclient -dns-server <URL> -sni <string> -url <URL>
+//   httpclient -batch -dns-server <URL> -sni <string> -url <URL>
 //
 //   httpclient -help
 //
 // The default is to use the system DNS. The `-dns-server <URL>` flag
 // allows to choose what DNS transport to use (see below).
 //
-// We emit JSONL messages on the stdout showing what we are
-// currently doing. We also print the final result on the stdout.
+// With -batch we emit JSONL messages on the stdout showing what we are
+// currently doing. Otherwise we emit user friendly log messages.
 //
 // Examples with `-dns-server <URL>`
 //
@@ -35,11 +35,14 @@ import (
 	"github.com/apex/log/handlers/cli"
 	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx/cmd/common"
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/handlers/logger"
 	"github.com/ooni/netx/httpx"
+	"github.com/ooni/netx/model"
 )
 
 var (
+	flagBatch     = flag.Bool("batch", false, "Emit JSON events")
 	flagDNSServer = flag.String("dns-server", "system:///", "Server to use")
 	flagSNI       = flag.String("sni", "", "Force specific SNI")
 	flagURL       = flag.String("url", "https://ooni.io/", "URL to fetch")
@@ -59,7 +62,7 @@ func mainfunc() (err error) {
 	}()
 	log.SetLevel(log.DebugLevel)
 	log.SetHandler(cli.Default)
-	client := httpx.NewClient(logger.NewHandler(log.Log))
+	client := httpx.NewClient(makehandler())
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: httpclient -dns-server <URL> -sni <string> -url <url>\n")
@@ -109,4 +112,11 @@ func fetch(client *http.Client, url string) (err error) {
 	_, err = ioutil.ReadAll(resp.Body)
 	rtx.PanicOnError(err, "ioutil.ReadAll failed")
 	return
+}
+
+func makehandler() model.Handler {
+	if *flagBatch {
+		return handlers.StdoutHandler
+	}
+	return logger.NewHandler(log.Log)
 }

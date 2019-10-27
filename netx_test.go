@@ -3,6 +3,7 @@ package netx_test
 import (
 	"context"
 	"crypto/x509"
+	"errors"
 	"testing"
 
 	"github.com/ooni/netx"
@@ -67,7 +68,8 @@ func TestForceSpecificSNI(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	if _, ok := err.(x509.HostnameError); !ok {
+	var target x509.HostnameError
+	if errors.As(err, &target) == false {
 		t.Fatal("not the error we expected")
 	}
 	if conn != nil {
