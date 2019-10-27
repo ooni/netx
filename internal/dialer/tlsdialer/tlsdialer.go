@@ -74,17 +74,17 @@ func (d *TLSDialer) DialTLSContext(
 	// performing non-HTTP TLS-enabled dial operations.
 	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeStart: &model.TLSHandshakeStartEvent{
-			ConnID: connID,
-			Time:   time.Now().Sub(root.Beginning),
+			ConnID:                 connID,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		},
 	})
 	err = tlsconn.Handshake()
 	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
-			ConnID:          connID,
-			ConnectionState: model.NewTLSConnectionState(tlsconn.ConnectionState()),
-			Error:           err,
-			Time:            time.Now().Sub(root.Beginning),
+			ConnID:                 connID,
+			ConnectionState:        model.NewTLSConnectionState(tlsconn.ConnectionState()),
+			Error:                  err,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		},
 	})
 	conn.SetDeadline(time.Time{}) // clear deadline

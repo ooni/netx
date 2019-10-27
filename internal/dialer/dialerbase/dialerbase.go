@@ -51,13 +51,13 @@ func (d *Dialer) DialContext(
 	connID := safeConnID(network, conn)
 	d.handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
-			ConnID:        connID,
-			DialID:        d.dialID,
-			Duration:      stop.Sub(start),
-			Error:         err,
-			Network:       network,
-			RemoteAddress: safeRemoteAddress(conn),
-			Time:          stop.Sub(d.beginning),
+			ConnID:                 connID,
+			DialID:                 d.dialID,
+			DurationSinceBeginning: stop.Sub(d.beginning),
+			Error:                  err,
+			Network:                network,
+			RemoteAddress:          safeRemoteAddress(conn),
+			SyscallDuration:        stop.Sub(start),
 		},
 	})
 	if err != nil {

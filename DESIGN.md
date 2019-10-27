@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-26   |
+| Last-Updated | 2019-10-27   |
 | Status       | approved     |
 
 ## Introduction
@@ -105,16 +105,6 @@ There will be a mechanism for gathering such low
 level measurements as they occur, for logging
 and/or storing purposes.
 
-A OONI experiment is expected to create instances of
-our replacement objects, configure them properly,
-then use our replacements, which are compatible with
-standard library mechanisms to perform their task,
-e.g. fetching a URL. After the measurement task
-is completed, the experiment code will include the
-low-level events into the measurement result object,
-and will walk through the stream of events to determine
-in a more precise way what could have gone wrong.
-
 ## Implementation
 
 The actual implementation must follow this spec. It may include more
@@ -188,7 +178,7 @@ structure that we will provide is as follows:
 ```Go
 type Client struct {
   HTTPClient *http.Client
-  Transport  Transport
+  Transport  *Transport
 }
 ```
 
@@ -242,6 +232,42 @@ The `handler` shall point to a structure implementing the
 `model.Handler` interface. Also, this constructor will
 automatically record the current time as the "zero" time
 used to compute the `Time` field of every event.
+
+Passing a handler to an HTTP client is fine for logging
+but less optimal for recording events caused by each HTTP
+round trip. To this end, it may be more convenent to use
+_context rooted measurements_, instead:
+
+```Go
+import (
+    "net/http"
+    "time"
+
+    "github.com/ooni/netx/handlers"
+    "github.com/ooni/netx/httpx"
+)
+
+var client = httpx.NewClient(handlers.NoHandler).HTTPClient
+
+func fetchURL(URL string) (*http.Response, error) {
+    req, err := http.NewRequest("GET", URL, nil)
+    if err != nil {
+        return nil, err
+    }
+    // The following code will update the request context and cause
+    // events to be delivered to the specified handler.
+    root := &model.MeasurementRoot{
+        Beginning: time.Now(),
+        Handler:   handlers.StdoutHandler, // your handler here
+    }
+    ctx := req.Context()
+    ctx = model.WithMeasurementRoot(ctx, root)
+    req = req.WithContext(ctx)
+    return client.Do(req)
+}
+```
+
+Of course, you should probably use your handler there.
 
 ### The github.com/ooni/netx package
 
@@ -325,25 +351,9 @@ DNS messages sent and received, etc.
 Lastly, `netx.Dialer` will expose this API:
 
 ```Go
-func (d *Dialer) NewResolver(network, address string) (dnsx.Client, error)
+func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error)
 ```
 
 The arguments have the same meaning of `ConfigureDNS` and
 the will return an interface replacement for `net.Resolver`
 as described below.
-
-### The github.com/ooni/netx/dnsx package
-
-This package will define an interface compatible with the
-`net.Resolver` struct, such that its methods can be used
-as replacements for the golang stdlib `net.Resolver` methods:
-
-```Go
-type Client interface {
-    LookupAddr(ctx context.Context, addr string) (names []string, err error)
-    LookupCNAME(ctx context.Context, host string) (cname string, err error)
-    LookupHost(ctx context.Context, hostname string) (addrs []string, err error)
-    LookupMX(ctx context.Context, name string) ([]*net.MX, error)
-    LookupNS(ctx context.Context, name string) ([]*net.NS, error)
-}
-```

@@ -140,10 +140,10 @@ func (c *Resolver) mockableRoundTrip(
 	root := model.ContextMeasurementRootOrDefault(ctx)
 	root.Handler.OnMeasurement(model.Measurement{
 		DNSQuery: &model.DNSQueryEvent{
-			Data:   querydata,
-			DialID: dialid.ContextDialID(ctx),
-			Msg:    query,
-			Time:   time.Now().Sub(root.Beginning),
+			Data:                   querydata,
+			DialID:                 dialid.ContextDialID(ctx),
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Msg:                    query,
 		},
 	})
 	replydata, err = roundTrip(c.transport, querydata)
@@ -157,10 +157,10 @@ func (c *Resolver) mockableRoundTrip(
 	}
 	root.Handler.OnMeasurement(model.Measurement{
 		DNSReply: &model.DNSReplyEvent{
-			Data:   replydata,
-			DialID: dialid.ContextDialID(ctx),
-			Msg:    reply,
-			Time:   time.Now().Sub(root.Beginning),
+			Data:                   replydata,
+			DialID:                 dialid.ContextDialID(ctx),
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Msg:                    reply,
 		},
 	})
 	if reply.Rcode != dns.RcodeSuccess {

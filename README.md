@@ -16,9 +16,7 @@ such replacements, as opposed to standard library interfaces, we can:
 * save the timing and result of every Connect, Read, Write, Close operation
 * save the timing and result of the TLS handshake (including certificates)
 
-By default, this library uses the DNS resolving policy preferred by
-Go on a specific platform. When the pure Go resolver is used, this
-allows us to intercept and save DNS messages as well. In addition, it
+By default, this library uses the system resolver. In addition, it
 is possible to configure alternative DNS transports and remote
 servers. We support DNS over UDP, DNS over TCP, DNS over TLS (DoT),
 and DNS over HTTPS (DoH). When using an alternative transport, we
@@ -31,7 +29,8 @@ TLS handshake for DoT and DoH).
 [![GoDoc](https://godoc.org/github.com/ooni/netx/model?status.svg)](
 https://godoc.org/github.com/ooni/netx/model)
 
-Defines the events measured by this library.
+The base package, that defines everything that other packages
+will use. Among others, it defines the measurement model.
 
 ### github.com/ooni/netx/httpx
 
@@ -47,16 +46,7 @@ results of HTTP and network events.
 https://godoc.org/github.com/ooni/netx)
 
 Implements a replacement for `net.Dialer` that saves the timing and
-results of network events.
-
-### github.com/ooni/netx/dnsx
-
-[![GoDoc](https://godoc.org/github.com/ooni/netx/dnsx?status.svg)](
-https://godoc.org/github.com/ooni/netx/dnsx)
-
-Implements a relacement for `net.Resolver` that saves the timing and
-content of DNS packets. Allows to use several transports for DNS
-queries and replies, including DoT and DoH.
+results of network events and a replacement for `net.Resolver`.
 
 ### Other packages
 

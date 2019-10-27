@@ -47,20 +47,20 @@ func (d *Dialer) DialContext(
 	dialID := dialid.ContextDialID(ctx)
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveStart: &model.ResolveStartEvent{
-			DialID:        dialID,
-			Hostname:      onlyhost,
-			Time:          time.Now().Sub(root.Beginning),
-			TransactionID: transactionid.ContextTransactionID(ctx),
+			DialID:                 dialID,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Hostname:               onlyhost,
+			TransactionID:          transactionid.ContextTransactionID(ctx),
 		},
 	})
 	var addrs []string
 	addrs, err = d.lookupHost(ctx, onlyhost)
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveDone: &model.ResolveDoneEvent{
-			Addresses: addrs,
-			DialID:    dialID,
-			Error:     err,
-			Time:      time.Now().Sub(root.Beginning),
+			Addresses:              addrs,
+			DialID:                 dialID,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Error:                  err,
 		},
 	})
 	if err != nil {
