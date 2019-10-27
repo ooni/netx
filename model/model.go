@@ -24,6 +24,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/miekg/dns"
 )
 
 // CloseEvent is emitted when conn.Close returns.
@@ -45,23 +47,20 @@ type ConnectEvent struct {
 	Time          time.Duration
 }
 
-// DNSMessage is a DNS message.
-type DNSMessage struct {
-	Data []byte
-}
-
 // DNSQueryEvent is emitted when we send a DNS query
 type DNSQueryEvent struct {
-	ConnID  int64
-	Message DNSMessage
-	Time    time.Duration
+	DialID int64
+	Data   []byte
+	Msg    *dns.Msg `json:"-"`
+	Time   time.Duration
 }
 
 // DNSReplyEvent is emitted when we receive a DNS reply
 type DNSReplyEvent struct {
-	ConnID  int64
-	Message DNSMessage
-	Time    time.Duration
+	Data   []byte
+	DialID int64
+	Msg    *dns.Msg `json:"-"`
+	Time   time.Duration
 }
 
 // HTTPConnectionReadyEvent is emitted when a connection is ready for HTTP.

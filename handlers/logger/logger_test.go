@@ -12,6 +12,7 @@ import (
 func TestIntegration(t *testing.T) {
 	log.SetHandler(discard.Default)
 	client := httpx.NewClient(NewHandler(log.Log))
+	client.ConfigureDNS("udp", "dns.google.com:53")
 	resp, err := client.HTTPClient.Get("http://www.facebook.com")
 	if err != nil {
 		t.Fatal(err)
