@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/connid"
-	"github.com/ooni/netx/internal/httptransport/transactioner"
+	"github.com/ooni/netx/internal/dialid"
+	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
 
@@ -29,9 +30,10 @@ func New(roundTripper http.RoundTripper) *Transport {
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	root := model.ContextMeasurementRootOrDefault(req.Context())
 
-	tid := transactioner.ContextTransactionID(req.Context())
+	tid := transactionid.ContextTransactionID(req.Context())
 	root.Handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
+			DialID:        dialid.ContextDialID(req.Context()),
 			Method:        req.Method,
 			Time:          time.Now().Sub(root.Beginning),
 			TransactionID: tid,

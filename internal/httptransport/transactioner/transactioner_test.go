@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+
+	"github.com/ooni/netx/internal/transactionid"
 )
 
 type transport struct {
@@ -13,7 +15,7 @@ type transport struct {
 
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
-	if id := ContextTransactionID(ctx); id == 0 {
+	if id := transactionid.ContextTransactionID(ctx); id == 0 {
 		t.t.Fatal("transaction ID not set")
 	}
 	return t.roundTripper.RoundTrip(req)

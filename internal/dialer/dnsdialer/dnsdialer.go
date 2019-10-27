@@ -5,14 +5,13 @@ import (
 	"context"
 	"errors"
 	"net"
-	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/internal/dialer/dialerbase"
+	"github.com/ooni/netx/internal/dialid"
+	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
-
-var nextDialID int64
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
@@ -44,23 +43,18 @@ func (d *Dialer) DialContext(
 	if err != nil {
 		return nil, err
 	}
-	dialID := atomic.AddInt64(&nextDialID, 1)
-	if net.ParseIP(onlyhost) != nil {
-		dialer := dialerbase.New(
-			root.Beginning, root.Handler, d.dialer, dialID,
-		)
-		conn, err = dialer.DialContext(ctx, network, address)
-		return
-	}
+	ctx = dialid.WithDialID(ctx)
+	dialID := dialid.ContextDialID(ctx)
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveStart: &model.ResolveStartEvent{
-			DialID:   dialID,
-			Hostname: onlyhost,
-			Time:     time.Now().Sub(root.Beginning),
+			DialID:        dialID,
+			Hostname:      onlyhost,
+			Time:          time.Now().Sub(root.Beginning),
+			TransactionID: transactionid.ContextTransactionID(ctx),
 		},
 	})
 	var addrs []string
-	addrs, err = d.resolver.LookupHost(ctx, onlyhost)
+	addrs, err = d.lookupHost(ctx, onlyhost)
 	root.Handler.OnMeasurement(model.Measurement{
 		ResolveDone: &model.ResolveDoneEvent{
 			Addresses: addrs,
@@ -88,4 +82,11 @@ func (d *Dialer) DialContext(
 		Err: errors.New("all connect attempts failed"),
 	}
 	return
+}
+
+func (d *Dialer) lookupHost(ctx context.Context, hostname string) ([]string, error) {
+	if net.ParseIP(hostname) != nil {
+		return []string{hostname}, nil
+	}
+	return d.resolver.LookupHost(ctx, hostname)
 }

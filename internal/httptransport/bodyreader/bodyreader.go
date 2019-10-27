@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ooni/netx/internal/httptransport/transactioner"
+	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
 
@@ -34,7 +34,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	resp.Body = &bodyWrapper{
 		ReadCloser: resp.Body,
 		root:       model.ContextMeasurementRootOrDefault(req.Context()),
-		tid:        transactioner.ContextTransactionID(req.Context()),
+		tid:        transactionid.ContextTransactionID(req.Context()),
 	}
 	return
 }
