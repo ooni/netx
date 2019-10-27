@@ -2,8 +2,8 @@
 package transactionid
 
 import (
-	"sync/atomic"
 	"context"
+	"sync/atomic"
 )
 
 type contextkey struct{}

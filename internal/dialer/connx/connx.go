@@ -23,11 +23,11 @@ func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Read: &model.ReadEvent{
-			Duration: stop.Sub(start),
-			Error:    err,
-			NumBytes: int64(n),
-			ConnID:   c.ID,
-			Time:     stop.Sub(c.Beginning),
+			ConnID:                 c.ID,
+			DurationSinceBeginning: stop.Sub(c.Beginning),
+			Error:                  err,
+			NumBytes:               int64(n),
+			SyscallDuration:        stop.Sub(start),
 		},
 	})
 	return
@@ -40,11 +40,11 @@ func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Write: &model.WriteEvent{
-			Duration: stop.Sub(start),
-			Error:    err,
-			NumBytes: int64(n),
-			ConnID:   c.ID,
-			Time:     stop.Sub(c.Beginning),
+			ConnID:                 c.ID,
+			DurationSinceBeginning: stop.Sub(c.Beginning),
+			Error:                  err,
+			NumBytes:               int64(n),
+			SyscallDuration:        stop.Sub(start),
 		},
 	})
 	return
@@ -57,10 +57,10 @@ func (c *MeasuringConn) Close() (err error) {
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
 		Close: &model.CloseEvent{
-			Duration: stop.Sub(start),
-			Error:    err,
-			ConnID:   c.ID,
-			Time:     stop.Sub(c.Beginning),
+			ConnID:                 c.ID,
+			DurationSinceBeginning: stop.Sub(c.Beginning),
+			Error:                  err,
+			SyscallDuration:        stop.Sub(start),
 		},
 	})
 	return

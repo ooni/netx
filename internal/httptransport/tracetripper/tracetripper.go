@@ -33,11 +33,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	tid := transactionid.ContextTransactionID(req.Context())
 	root.Handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
-			DialID:        dialid.ContextDialID(req.Context()),
-			Method:        req.Method,
-			Time:          time.Now().Sub(root.Beginning),
-			TransactionID: tid,
-			URL:           req.URL.String(),
+			DialID:                 dialid.ContextDialID(req.Context()),
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Method:                 req.Method,
+			TransactionID:          tid,
+			URL:                    req.URL.String(),
 		},
 	})
 
@@ -48,8 +48,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// configured in the http.Transport
 			root.Handler.OnMeasurement(model.Measurement{
 				TLSHandshakeStart: &model.TLSHandshakeStartEvent{
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					TransactionID:          tid,
 				},
 			})
 		},
@@ -58,10 +58,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// configured in the http.Transport
 			root.Handler.OnMeasurement(model.Measurement{
 				TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
-					ConnectionState: model.NewTLSConnectionState(state),
-					Error:           err,
-					Time:            time.Now().Sub(root.Beginning),
-					TransactionID:   tid,
+					ConnectionState:        model.NewTLSConnectionState(state),
+					Error:                  err,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					TransactionID:          tid,
 				},
 			})
 		},
@@ -72,45 +72,43 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 						info.Conn.LocalAddr().Network(),
 						info.Conn.LocalAddr().String(),
 					),
-					Network:       info.Conn.LocalAddr().Network(),
-					RemoteAddress: info.Conn.RemoteAddr().String(),
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					TransactionID:          tid,
 				},
 			})
 		},
 		WroteHeaderField: func(key string, values []string) {
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
-					Key:           key,
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
-					Value:         values,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					Key:                    key,
+					TransactionID:          tid,
+					Value:                  values,
 				},
 			})
 		},
 		WroteHeaders: func() {
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					TransactionID:          tid,
 				},
 			})
 		},
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
-					Error:         info.Err,
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					Error:                  info.Err,
+					TransactionID:          tid,
 				},
 			})
 		},
 		GotFirstResponseByte: func() {
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPResponseStart: &model.HTTPResponseStartEvent{
-					Time:          time.Now().Sub(root.Beginning),
-					TransactionID: tid,
+					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					TransactionID:          tid,
 				},
 			})
 		},
@@ -133,9 +131,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	resp, err := t.roundTripper.RoundTrip(req)
 	event := &model.HTTPRoundTripDoneEvent{
-		Error:         err,
-		Time:          time.Now().Sub(root.Beginning),
-		TransactionID: tid,
+		DurationSinceBeginning: time.Now().Sub(root.Beginning),
+		Error:                  err,
+		TransactionID:          tid,
 	}
 	if resp != nil {
 		event.Headers = resp.Header

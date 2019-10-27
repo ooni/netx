@@ -36,7 +36,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.ResolveStart != nil {
 		h.logger.WithFields(log.Fields{
 			"dialID":        m.ResolveStart.DialID,
-			"elapsed":       m.ResolveStart.Time,
+			"elapsed":       m.ResolveStart.DurationSinceBeginning,
 			"hostname":      m.ResolveStart.Hostname,
 			"transactionID": m.ResolveStart.TransactionID,
 		}).Debug("dns: resolve domain name")
@@ -44,7 +44,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.DNSQuery != nil {
 		h.logger.WithFields(log.Fields{
 			"dialID":   m.DNSQuery.DialID,
-			"elapsed":  m.DNSQuery.Time,
+			"elapsed":  m.DNSQuery.DurationSinceBeginning,
 			"numBytes": len(m.DNSQuery.Data),
 			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSQuery.Msg.String())),
 		}).Debug("dns: query out")
@@ -52,7 +52,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.DNSReply != nil {
 		h.logger.WithFields(log.Fields{
 			"dialID":   m.DNSReply.DialID,
-			"elapsed":  m.DNSReply.Time,
+			"elapsed":  m.DNSReply.DurationSinceBeginning,
 			"numBytes": len(m.DNSReply.Data),
 			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSReply.Msg.String())),
 		}).Debug("dns: reply in")
@@ -61,7 +61,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 		h.logger.WithFields(log.Fields{
 			"addresses": m.ResolveDone.Addresses,
 			"dialID":    m.ResolveDone.DialID,
-			"elapsed":   m.ResolveDone.Time,
+			"elapsed":   m.ResolveDone.DurationSinceBeginning,
 			"error":     m.ResolveDone.Error,
 		}).Debug("dns: resolution done")
 	}
@@ -69,10 +69,10 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	// Syscalls
 	if m.Connect != nil {
 		h.logger.WithFields(log.Fields{
-			"blockedFor":    m.Connect.Duration,
+			"blockedFor":    m.Connect.SyscallDuration,
 			"connID":        m.Connect.ConnID,
 			"dialID":        m.Connect.DialID,
-			"elapsed":       m.Connect.Time,
+			"elapsed":       m.Connect.DurationSinceBeginning,
 			"error":         m.Connect.Error,
 			"network":       m.Connect.Network,
 			"remoteAddress": m.Connect.RemoteAddress,
@@ -80,25 +80,25 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.Read != nil {
 		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Read.Duration,
+			"blockedFor": m.Read.SyscallDuration,
 			"connID":     m.Read.ConnID,
-			"elapsed":    m.Read.Time,
+			"elapsed":    m.Read.DurationSinceBeginning,
 			"numBytes":   m.Read.NumBytes,
 		}).Debug("net: read done")
 	}
 	if m.Write != nil {
 		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Write.Duration,
+			"blockedFor": m.Write.SyscallDuration,
 			"connID":     m.Write.ConnID,
-			"elapsed":    m.Write.Time,
+			"elapsed":    m.Write.DurationSinceBeginning,
 			"numBytes":   m.Write.NumBytes,
 		}).Debug("net: write done")
 	}
 	if m.Close != nil {
 		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Close.Duration,
+			"blockedFor": m.Close.SyscallDuration,
 			"connID":     m.Close.ConnID,
-			"elapsed":    m.Close.Time,
+			"elapsed":    m.Close.DurationSinceBeginning,
 		}).Debug("net: close done")
 	}
 
@@ -106,7 +106,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.TLSHandshakeStart != nil {
 		h.logger.WithFields(log.Fields{
 			"connID":        m.TLSHandshakeStart.ConnID,
-			"elapsed":       m.TLSHandshakeStart.Time,
+			"elapsed":       m.TLSHandshakeStart.DurationSinceBeginning,
 			"transactionID": m.TLSHandshakeStart.TransactionID,
 		}).Debug("tls: start handshake")
 	}
@@ -114,7 +114,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 		h.logger.WithFields(log.Fields{
 			"alpn":          m.TLSHandshakeDone.ConnectionState.NegotiatedProtocol,
 			"connID":        m.TLSHandshakeDone.ConnID,
-			"elapsed":       m.TLSHandshakeDone.Time,
+			"elapsed":       m.TLSHandshakeDone.DurationSinceBeginning,
 			"error":         m.TLSHandshakeDone.Error,
 			"transactionID": m.TLSHandshakeDone.TransactionID,
 			"version":       tlsVersion[m.TLSHandshakeDone.ConnectionState.Version],
@@ -125,7 +125,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.HTTPRoundTripStart != nil {
 		h.logger.WithFields(log.Fields{
 			"dialID":        m.HTTPRoundTripStart.DialID,
-			"elapsed":       m.HTTPRoundTripStart.Time,
+			"elapsed":       m.HTTPRoundTripStart.DurationSinceBeginning,
 			"method":        m.HTTPRoundTripStart.Method,
 			"transactionID": m.HTTPRoundTripStart.TransactionID,
 			"url":           m.HTTPRoundTripStart.URL,
@@ -134,13 +134,13 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	if m.HTTPConnectionReady != nil {
 		h.logger.WithFields(log.Fields{
 			"connID":        m.HTTPConnectionReady.ConnID,
-			"elapsed":       m.HTTPConnectionReady.Time,
+			"elapsed":       m.HTTPConnectionReady.DurationSinceBeginning,
 			"transactionID": m.HTTPConnectionReady.TransactionID,
 		}).Debug("http: connection ready")
 	}
 	if m.HTTPRequestHeader != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestHeader.Time,
+			"elapsed":       m.HTTPRequestHeader.DurationSinceBeginning,
 			"key":           m.HTTPRequestHeader.Key,
 			"transactionID": m.HTTPRequestHeader.TransactionID,
 			"value":         m.HTTPRequestHeader.Value,
@@ -148,25 +148,25 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.HTTPRequestHeadersDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestHeadersDone.Time,
+			"elapsed":       m.HTTPRequestHeadersDone.DurationSinceBeginning,
 			"transactionID": m.HTTPRequestHeadersDone.TransactionID,
 		}).Debug("http: all headers out")
 	}
 	if m.HTTPRequestDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestDone.Time,
+			"elapsed":       m.HTTPRequestDone.DurationSinceBeginning,
 			"transactionID": m.HTTPRequestDone.TransactionID,
 		}).Debug("http: whole request out")
 	}
 	if m.HTTPResponseStart != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseStart.Time,
+			"elapsed":       m.HTTPResponseStart.DurationSinceBeginning,
 			"transactionID": m.HTTPResponseStart.TransactionID,
 		}).Debug("http: first response byte")
 	}
 	if m.HTTPRoundTripDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRoundTripDone.Time,
+			"elapsed":       m.HTTPRoundTripDone.DurationSinceBeginning,
 			"error":         m.HTTPRoundTripDone.Error,
 			"statusCode":    m.HTTPRoundTripDone.StatusCode,
 			"transactionID": m.HTTPRoundTripDone.TransactionID,
@@ -174,7 +174,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 		for key, values := range m.HTTPRoundTripDone.Headers {
 			for _, value := range values {
 				h.logger.WithFields(log.Fields{
-					"elapsed":       m.HTTPRoundTripDone.Time,
+					"elapsed":       m.HTTPRoundTripDone.DurationSinceBeginning,
 					"key":           key,
 					"transactionID": m.HTTPRoundTripDone.TransactionID,
 					"value":         value,
@@ -186,15 +186,15 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	// HTTP response body
 	if m.HTTPResponseBodyPart != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseBodyPart.Time,
+			"elapsed":       m.HTTPResponseBodyPart.DurationSinceBeginning,
 			"error":         m.HTTPResponseBodyPart.Error,
-			"numBytes":      m.HTTPResponseBodyPart.NumBytes,
+			"numBytes":      len(m.HTTPResponseBodyPart.Data),
 			"transactionID": m.HTTPResponseBodyPart.TransactionID,
 		}).Debug("http: got body part")
 	}
 	if m.HTTPResponseDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseDone.Time,
+			"elapsed":       m.HTTPResponseDone.DurationSinceBeginning,
 			"transactionID": m.HTTPResponseDone.TransactionID,
 		}).Debug("http: got whole body")
 	}
