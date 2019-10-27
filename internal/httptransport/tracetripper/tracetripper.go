@@ -98,6 +98,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		WroteRequest: func(info httptrace.WroteRequestInfo) {
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestDone: &model.HTTPRequestDoneEvent{
+					Error:         info.Err,
 					Time:          time.Now().Sub(root.Beginning),
 					TransactionID: tid,
 				},
