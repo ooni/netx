@@ -2,28 +2,27 @@
 //
 // Usage:
 //
-//   httpclient -dns-server <URL> -url <URL>
+//   httpclient -dns-server <URL> -sni <string> -url <URL>
 //
 //   httpclient -help
 //
-// The default is to use the system DNS. The -dns-server <URL> flag
+// The default is to use the system DNS. The `-dns-server <URL>` flag
 // allows to choose what DNS transport to use (see below).
 //
 // We emit JSONL messages on the stdout showing what we are
 // currently doing. We also print the final result on the stdout.
 //
-// Examples:
+// Examples with `-dns-server <URL>`
 //
-//   ./httpclient -dns-server system:/// -url https://ooni.org/ ...
-//   ./httpclient -dns-server https://cloudflare-dns.com/dns-query -url https://ooni.org/ ...
-//   ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...
-//   ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...
-//   ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...
-//   ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...
+//   ./httpclient -dns-server system:///
+//   ./httpclient -dns-server udp://1.1.1.1:53
+//   ./httpclient -dns-server tcp://8.8.8.8:53
+//   ./httpclient -dns-server dot://dns.quad9.net
+//   ./httpclient -dns-server dot://1.1.1.1:853
+//   ./httpclient -dns-server https://cloudflare-dns.com/dns-query
 package main
 
 import (
-	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
@@ -32,9 +31,11 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/apex/log"
+	"github.com/apex/log/handlers/cli"
 	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx/cmd/common"
-	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/handlers/logger"
 	"github.com/ooni/netx/httpx"
 )
 
@@ -56,32 +57,19 @@ func mainfunc() (err error) {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	client := httpx.NewClient(handlers.StdoutHandler)
+	log.SetLevel(log.DebugLevel)
+	log.SetHandler(cli.Default)
+	client := httpx.NewClient(logger.NewHandler(log.Log))
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
-		fmt.Printf("Usage: httpclient [flags] -url <url>\n")
+		fmt.Printf("Usage: httpclient -dns-server <URL> -sni <string> -url <url>\n")
 		flag.PrintDefaults()
-		fmt.Printf("\nExamples:\n")
-		fmt.Printf("%s\n",
-			"  ./httpclient system:/// -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server https://cloudflare-dns.com/dns-query "+
-				"-url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server dot://dns.quad9.net -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server dot://1.1.1.1:853 -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server tcp://8.8.8.8:53 -url https://ooni.org/ ...",
-		)
-		fmt.Printf("%s\n",
-			"  ./httpclient -dns-server udp://1.1.1.1:53 -url https://ooni.org/ ...",
-		)
-		fmt.Printf("\nWe'll select a suitable backend for each transport.\n")
+		fmt.Printf("\nExamples with `-dns-server <URL>`:\n")
+		fmt.Printf("  ./httpclient -dns-server udp://1.1.1.1:53\n")
+		fmt.Printf("  ./httpclient -dns-server tcp://8.8.8.8:53\n")
+		fmt.Printf("  ./httpclient -dns-server dot://dns.quad9.net\n")
+		fmt.Printf("  ./httpclient -dns-server dot://1.1.1.1:853\n")
+		fmt.Printf("  ./httpclient -dns-server https://cloudflare-dns.com/dns-query\n")
 		return nil
 	}
 
@@ -118,10 +106,7 @@ func fetch(client *http.Client, url string) (err error) {
 	resp, err := client.Get(url)
 	rtx.PanicOnError(err, "client.Get failed")
 	defer resp.Body.Close()
-	data, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	rtx.PanicOnError(err, "ioutil.ReadAll failed")
-	fmt.Printf(
-		`{"_HTTPResponseBody": "%s"}`+"\n", base64.StdEncoding.EncodeToString(data),
-	)
 	return
 }
