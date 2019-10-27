@@ -97,6 +97,7 @@ type HTTPRequestHeadersDoneEvent struct {
 
 // HTTPRequestDoneEvent is emitted when we have sent the body.
 type HTTPRequestDoneEvent struct {
+	Error         error
 	Time          time.Duration
 	TransactionID int64
 }
