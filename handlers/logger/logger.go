@@ -33,9 +33,10 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	// DNS
 	if m.ResolveStart != nil {
 		h.logger.WithFields(log.Fields{
-			"dialID":   m.ResolveStart.DialID,
-			"elapsed":  m.ResolveStart.Time,
-			"hostname": m.ResolveStart.Hostname,
+			"dialID":        m.ResolveStart.DialID,
+			"elapsed":       m.ResolveStart.Time,
+			"hostname":      m.ResolveStart.Hostname,
+			"transactionID": m.ResolveStart.TransactionID,
 		}).Debug("dns: resolve domain name")
 	}
 	if m.ResolveDone != nil {
@@ -105,6 +106,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	// HTTP round trip
 	if m.HTTPRoundTripStart != nil {
 		h.logger.WithFields(log.Fields{
+			"dialID":        m.HTTPRoundTripStart.DialID,
 			"elapsed":       m.HTTPRoundTripStart.Time,
 			"method":        m.HTTPRoundTripStart.Method,
 			"transactionID": m.HTTPRoundTripStart.TransactionID,

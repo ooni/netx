@@ -75,6 +75,7 @@ type HTTPConnectionReadyEvent struct {
 
 // HTTPRoundTripStartEvent is emitted when we start the round trip.
 type HTTPRoundTripStartEvent struct {
+	DialID        int64
 	Method        string
 	Time          time.Duration
 	TransactionID int64
@@ -151,9 +152,10 @@ type ReadEvent struct {
 
 // ResolveStartEvent is emitted when resolver.LookupHost begins.
 type ResolveStartEvent struct {
-	DialID   int64
-	Hostname string
-	Time     time.Duration
+	DialID        int64
+	Hostname      string
+	Time          time.Duration
+	TransactionID int64
 }
 
 // ResolveDoneEvent is emitted when resolver.LookupHost returns.
