@@ -59,10 +59,11 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.ResolveDone != nil {
 		h.logger.WithFields(log.Fields{
-			"addresses": m.ResolveDone.Addresses,
-			"dialID":    m.ResolveDone.DialID,
-			"elapsed":   m.ResolveDone.DurationSinceBeginning,
-			"error":     m.ResolveDone.Error,
+			"addresses":     m.ResolveDone.Addresses,
+			"dialID":        m.ResolveDone.DialID,
+			"elapsed":       m.ResolveDone.DurationSinceBeginning,
+			"error":         m.ResolveDone.Error,
+			"transactionID": m.ResolveDone.TransactionID,
 		}).Debug("dns: resolution done")
 	}
 
@@ -76,6 +77,7 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"error":         m.Connect.Error,
 			"network":       m.Connect.Network,
 			"remoteAddress": m.Connect.RemoteAddress,
+			"transactionID": m.Connect.TransactionID,
 		}).Debug("net: connect done")
 	}
 	if m.Read != nil {

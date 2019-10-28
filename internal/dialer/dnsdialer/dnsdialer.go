@@ -68,6 +68,8 @@ func (d *Dialer) DialContext(
 			DialID:                 dialID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Error:                  err,
+			Hostname:               onlyhost,
+			TransactionID:          txID,
 		},
 	})
 	if err != nil {

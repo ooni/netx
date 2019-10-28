@@ -10,6 +10,7 @@ import (
 	"github.com/ooni/netx/internal/connid"
 	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/internal/errwrapper"
+	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
 
@@ -59,6 +60,7 @@ func (d *Dialer) DialContext(
 		Error:  err,
 	}.MaybeBuild()
 	connID := safeConnID(network, conn)
+	txID := transactionid.ContextTransactionID(ctx)
 	d.handler.OnMeasurement(model.Measurement{
 		Connect: &model.ConnectEvent{
 			ConnID:                 connID,
@@ -66,8 +68,9 @@ func (d *Dialer) DialContext(
 			DurationSinceBeginning: stop.Sub(d.beginning),
 			Error:                  err,
 			Network:                network,
-			RemoteAddress:          safeRemoteAddress(conn),
+			RemoteAddress:          address,
 			SyscallDuration:        stop.Sub(start),
+			TransactionID:          txID,
 		},
 	})
 	if err != nil {
@@ -84,13 +87,6 @@ func (d *Dialer) DialContext(
 func safeLocalAddress(conn net.Conn) (s string) {
 	if conn != nil && conn.LocalAddr() != nil {
 		s = conn.LocalAddr().String()
-	}
-	return
-}
-
-func safeRemoteAddress(conn net.Conn) (s string) {
-	if conn != nil && conn.RemoteAddr() != nil {
-		s = conn.RemoteAddr().String()
 	}
 	return
 }
