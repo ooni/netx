@@ -82,8 +82,8 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	root.X.Scoreboard.AddDNSBogonInfo(scoreboard.DNSBogonInfo{
 		Addresses:              addrs,
 		DurationSinceBeginning: durationSinceBeginning,
-		FollowupAction:         "retry using DoH resolver",
-		Hostname:               hostname,
+		Domain:                 hostname,
+		FallbackPlan:           "ignore_and_retry_with_doh",
 	})
 	value := bogonLookup{
 		Addresses: addrs,
