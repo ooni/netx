@@ -159,6 +159,10 @@ type ConnectEvent struct {
 	// SyscallDuration is the number of nanoseconds we were
 	// blocked waiting for the syscall to return.
 	SyscallDuration time.Duration
+
+	// TransactionID is the ID of the HTTP transaction that caused the
+	// current dial to run, or zero if there's no such transaction.
+	TransactionID int64 `json:",omitempty"`
 }
 
 // DNSQueryEvent is emitted when we send a DNS query.
@@ -414,6 +418,13 @@ type ResolveDoneEvent struct {
 
 	// Error is the result of the dial operation.
 	Error error
+
+	// Hostname is the domain name to resolve.
+	Hostname string
+
+	// TransactionID is the ID of the HTTP transaction that caused the
+	// current dial to run, or zero if there's no such transaction.
+	TransactionID int64 `json:",omitempty"`
 }
 
 // X509Certificate is an x.509 certificate.
