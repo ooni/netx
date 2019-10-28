@@ -7,6 +7,7 @@ import (
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/discard"
 	"github.com/ooni/netx/httpx"
+	"github.com/ooni/netx/model"
 )
 
 func TestIntegration(t *testing.T) {
@@ -26,4 +27,11 @@ func TestIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.HTTPClient.CloseIdleConnections()
+}
+
+func TestExtension(t *testing.T) {
+	logger := NewHandler(log.Log)
+	logger.OnMeasurement(model.Measurement{
+		Extension: &model.ExtensionEvent{},
+	})
 }
