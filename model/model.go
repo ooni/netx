@@ -590,6 +590,10 @@ type MeasurementRoot struct {
 
 	// Handler is the handler that will handle events.
 	Handler Handler
+
+	// LookupHost allows to override the host lookup for all the request
+	// and dials that use this measurement root.
+	LookupHost func(ctx context.Context, hostname string) ([]string, error)
 }
 
 type measurementRootContextKey struct{}

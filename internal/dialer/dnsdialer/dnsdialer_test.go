@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/model"
 )
 
@@ -92,4 +93,23 @@ func TestReduceErrors(t *testing.T) {
 			t.Fatal("wrong result")
 		}
 	})
+}
+
+func TestIntegrationDivertLookupHost(t *testing.T) {
+	dialer := newdialer()
+	root := &model.MeasurementRoot{
+		Beginning: time.Now(),
+		Handler:   handlers.NoHandler,
+		LookupHost: func(ctx context.Context, hostname string) ([]string, error) {
+			return nil, errors.New("mocked error")
+		},
+	}
+	ctx := model.WithMeasurementRoot(context.Background(), root)
+	conn, err := dialer.DialContext(ctx, "tcp", "google.com:443")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if conn != nil {
+		t.Fatal("expected a nil conn here")
+	}
 }
