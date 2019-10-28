@@ -37,9 +37,9 @@ import (
 	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx/cmd/common"
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/handlers/logger"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/x/logger"
 	"github.com/ooni/netx/x/nervousresolver"
 )
 
