@@ -106,5 +106,9 @@ func (d *Dialer) lookupHost(ctx context.Context, hostname string) ([]string, err
 	if net.ParseIP(hostname) != nil {
 		return []string{hostname}, nil
 	}
+	root := model.ContextMeasurementRootOrDefault(ctx)
+	if root.LookupHost != nil {
+		return root.LookupHost(ctx, hostname)
+	}
 	return d.resolver.LookupHost(ctx, hostname)
 }
