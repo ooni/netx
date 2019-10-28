@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -39,6 +40,7 @@ import (
 	"github.com/ooni/netx/handlers/logger"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/x/nervousresolver"
 )
 
 var (
@@ -62,7 +64,7 @@ func mainfunc() (err error) {
 	}()
 	log.SetLevel(log.DebugLevel)
 	log.SetHandler(cli.Default)
-	client := httpx.NewClient(makehandler())
+	client := httpx.NewClient(handlers.NoHandler)
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: httpclient -dns-server <URL> -sni <string> -url <url>\n")
@@ -106,8 +108,17 @@ func fetch(client *http.Client, url string) (err error) {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	resp, err := client.Get(url)
-	rtx.PanicOnError(err, "client.Get failed")
+	req, err := http.NewRequest("GET", url, nil)
+	rtx.PanicOnError(err, "http.NewRequest failed")
+	root := &model.MeasurementRoot{
+		Beginning:  time.Now(),
+		Handler:    makehandler(),
+		LookupHost: nervousresolver.Default.LookupHost,
+	}
+	ctx := model.WithMeasurementRoot(req.Context(), root)
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	rtx.PanicOnError(err, "client.Do failed")
 	defer resp.Body.Close()
 	_, err = ioutil.ReadAll(resp.Body)
 	rtx.PanicOnError(err, "ioutil.ReadAll failed")

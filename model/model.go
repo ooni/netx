@@ -72,6 +72,14 @@ type Measurement struct {
 	// something you are supposed to do, so you should be fine.
 	HTTPResponseBodyPart *HTTPResponseBodyPartEvent `json:",omitempty"`
 	HTTPResponseDone     *HTTPResponseDoneEvent     `json:",omitempty"`
+
+	// Extension events.
+	//
+	// The purpose of these events is to give us some flexibility to
+	// experiment with message formats before blessing something as
+	// part of the official API of the library. The intent however is
+	// to avoid keeping something as an extension for a long time.
+	Extension *ExtensionEvent `json:",omitempty"`
 }
 
 // ErrWrapper is our error wrapper for Go errors. The key objective of
@@ -198,6 +206,28 @@ type DNSReplyEvent struct {
 
 	// Msg is the received parsed message.
 	Msg *dns.Msg `json:"-"`
+}
+
+// ExtensionEvent is emitted by a netx extension.
+type ExtensionEvent struct {
+	// DurationSinceBeginning is the number of nanoseconds since
+	// the time configured as the "zero" time.
+	DurationSinceBeginning time.Duration
+
+	// Key is the unique identifier of the event. A good rule of
+	// thumb is to use `${packageName}.${messageType}`.
+	Key string
+
+	// Severity of the emitted message ("WARN", "INFO", "DEBUG")
+	Severity string
+
+	// TransactionID is the identifier of this transaction, provided
+	// that we have an active one, otherwise is zero.
+	TransactionID int64
+
+	// Value is the extension dependent message. This message
+	// has the only requirement of being JSON serializable.
+	Value interface{}
 }
 
 // HTTPRoundTripStartEvent is emitted when the HTTP transport

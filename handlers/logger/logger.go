@@ -202,6 +202,17 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"transactionID": m.HTTPResponseDone.TransactionID,
 		}).Debug("http: got whole body")
 	}
+
+	// Extensions
+	if m.Extension != nil {
+		h.logger.WithFields(log.Fields{
+			"elapsed":       m.Extension.DurationSinceBeginning,
+			"key":           m.Extension.Key,
+			"severity":      m.Extension.Severity,
+			"transactionID": m.Extension.TransactionID,
+			"value":         fmt.Sprintf("%+v", m.Extension.Value),
+		}).Debug("extension:")
+	}
 }
 
 func reformat(s string) string {
