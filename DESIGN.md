@@ -364,7 +364,8 @@ As far as `SetResolver` is concerned, this is a way to
 set an arbitrary resolver. To create resolvers use:
 
 ```Go
-func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error)
+func NewResolver(handler model.Handler,
+    network, address string) (model.DNSResolver, error)
 ```
 
 The arguments have the same meaning of `ConfigureDNS` and
