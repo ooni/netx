@@ -41,6 +41,26 @@ func TestIntegrationMixed(t *testing.T) {
 	if len(addrs) < 1 {
 		t.Fatal("expected an address here")
 	}
+	if resolver.bogonsCount != 1 {
+		t.Fatal("unexpected number of bogons seen")
+	}
+}
+
+func TestIntegrationGood(t *testing.T) {
+	resolver := New(
+		&fakeresolverbogon{
+			Resolver: new(net.Resolver),
+			reply:    []string{"8.8.8.8"},
+		},
+		new(net.Resolver),
+	)
+	addrs, err := resolver.LookupHost(context.Background(), "www.kernel.org")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(addrs) < 1 {
+		t.Fatal("expected an address here")
+	}
 	if resolver.bogonsCount != 0 {
 		t.Fatal("unexpected number of bogons seen")
 	}

@@ -69,13 +69,17 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	addrs, err := c.primary.LookupHost(ctx, hostname)
 	if err == nil {
 		for _, addr := range addrs {
-			if bogon.Check(addr) == false {
-				// If we see at least a non bogon IP address, let's continue
-				// since it's gonna be interesting :^).
-				return addrs, err
+			if bogon.Check(addr) == true {
+				return c.detectedBogon(ctx, hostname, addrs)
 			}
 		}
 	}
+	return addrs, err
+}
+
+func (c *Resolver) detectedBogon(
+	ctx context.Context, hostname string, addrs []string,
+) ([]string, error) {
 	atomic.AddInt64(&c.bogonsCount, 1)
 	root := model.ContextMeasurementRootOrDefault(ctx)
 	durationSinceBeginning := time.Now().Sub(root.Beginning)
