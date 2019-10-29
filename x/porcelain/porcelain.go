@@ -15,7 +15,7 @@ import (
 // to such request a configured MeasurementRoot. The configured
 // MeasurementRoot will have all experimental extensions enabled.
 func NewHTTPRequest(method, URL string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest("GET", URL, nil)
+	req, err := http.NewRequest(method, URL, nil)
 	if err == nil {
 		root := &model.MeasurementRoot{
 			Beginning:  time.Now(),
