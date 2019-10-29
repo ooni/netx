@@ -30,7 +30,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -40,7 +39,7 @@ import (
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/model"
 	"github.com/ooni/netx/x/logger"
-	"github.com/ooni/netx/x/nervousresolver"
+	"github.com/ooni/netx/x/porcelain"
 )
 
 var (
@@ -108,18 +107,13 @@ func fetch(client *http.Client, url string) (err error) {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	req, err := http.NewRequest("GET", url, nil)
-	rtx.PanicOnError(err, "http.NewRequest failed")
-	root := &model.MeasurementRoot{
-		Beginning:  time.Now(),
-		Handler:    makehandler(),
-		LookupHost: nervousresolver.Default.LookupHost,
-	}
+	req, err := porcelain.NewHTTPRequest("GET", url, nil)
+	rtx.PanicOnError(err, "porcelain.NewHTTPRequest failed")
+	root := porcelain.RequestMeasurementRoot(req)
+	root.Handler = makehandler()
 	defer func() {
 		fmt.Printf("%s\n", root.X.Scoreboard.Marshal())
 	}()
-	ctx := model.WithMeasurementRoot(req.Context(), root)
-	req = req.WithContext(ctx)
 	resp, err := client.Do(req)
 	rtx.PanicOnError(err, "client.Do failed")
 	defer resp.Body.Close()
