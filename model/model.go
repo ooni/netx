@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Measurement contains zero or more events. Do not assume that at any
@@ -624,6 +625,12 @@ type MeasurementRoot struct {
 	// LookupHost allows to override the host lookup for all the request
 	// and dials that use this measurement root.
 	LookupHost func(ctx context.Context, hostname string) ([]string, error)
+
+	// X contains experimental extensions. You are welcome to use
+	// the code in here. Just know we may change APIs often.
+	X struct {
+		Scoreboard scoreboard.Board
+	}
 }
 
 type measurementRootContextKey struct{}
