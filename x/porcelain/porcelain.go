@@ -8,7 +8,6 @@ import (
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/model"
-	"github.com/ooni/netx/x/nervousresolver"
 )
 
 // NewHTTPRequest is like http.NewRequest except that it also adds
@@ -18,9 +17,8 @@ func NewHTTPRequest(method, URL string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, URL, body)
 	if err == nil {
 		root := &model.MeasurementRoot{
-			Beginning:  time.Now(),
-			Handler:    handlers.NoHandler,
-			LookupHost: nervousresolver.Default.LookupHost,
+			Beginning: time.Now(),
+			Handler:   handlers.NoHandler,
 		}
 		ctx := model.WithMeasurementRoot(req.Context(), root)
 		req = req.WithContext(ctx)

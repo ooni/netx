@@ -81,6 +81,17 @@ func TestDoHTransport(t *testing.T) {
 	}
 }
 
+func TestNervousTransport(t *testing.T) {
+	*flagDNSServer = "x-nervous:///"
+	defer func() {
+		*flagDNSServer = ""
+	}()
+	err := mainfunc()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestInvalidTransport(t *testing.T) {
 	*flagDNSServer = "invalid"
 	defer func() {
