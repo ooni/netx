@@ -12,9 +12,16 @@ import (
 )
 
 func TestIntegrationSuccess(t *testing.T) {
+	const queryURL = "https://cloudflare-dns.com/dns-query"
 	transport := NewTransport(
-		http.DefaultClient, "https://cloudflare-dns.com/dns-query",
+		http.DefaultClient, queryURL,
 	)
+	if transport.Network() != "doh" {
+		t.Fatal("invalid network")
+	}
+	if transport.Address() != queryURL {
+		t.Fatal("invalid address")
+	}
 	err := threeRounds(transport)
 	if err != nil {
 		t.Fatal(err)

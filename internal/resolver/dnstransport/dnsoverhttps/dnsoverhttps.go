@@ -52,3 +52,13 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, 
 	reply, err = ioutil.ReadAll(resp.Body)
 	return
 }
+
+// Network returns the transport network (e.g., doh, dot)
+func (t *Transport) Network() string {
+	return "doh"
+}
+
+// Address returns the upstream server address.
+func (t *Transport) Address() string {
+	return t.url
+}

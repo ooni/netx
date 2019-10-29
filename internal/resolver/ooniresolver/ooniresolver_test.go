@@ -12,7 +12,7 @@ import (
 )
 
 func newtransport() model.DNSRoundTripper {
-	return dnsovertcp.NewTransport(&net.Dialer{}, "dns.quad9.net:53")
+	return dnsovertcp.NewTransportTCP(&net.Dialer{}, "dns.quad9.net:53")
 }
 
 func TestLookupAddr(t *testing.T) {

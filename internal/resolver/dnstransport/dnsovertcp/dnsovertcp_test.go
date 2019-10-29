@@ -15,11 +15,11 @@ type tlsdialer struct {
 	config *tls.Config
 }
 
-func (d *tlsdialer) Dial(network, address string) (net.Conn, error) {
-	return d.DialContext(context.Background(), network, address)
+func (d *tlsdialer) DialTLS(network, address string) (net.Conn, error) {
+	return d.DialTLSContext(context.Background(), network, address)
 }
 
-func (d *tlsdialer) DialContext(
+func (d *tlsdialer) DialTLSContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
 	return tls.Dial(network, address, d.config)
@@ -29,28 +29,42 @@ func TestIntegrationSuccessTLS(t *testing.T) {
 	// "Dial interprets a nil configuration as equivalent to
 	// the zero configuration; see the documentation of Config
 	// for the defaults."
-	transport := NewTransport(&tlsdialer{}, "dns.quad9.net:853")
+	address := "dns.quad9.net:853"
+	transport := NewTransportTLS(&tlsdialer{}, address)
+	if transport.Network() != "dot" {
+		t.Fatal("unexpected network")
+	}
+	if transport.Address() != address {
+		t.Fatal("unexpected address")
+	}
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestIntegrationSuccessTCP(t *testing.T) {
-	transport := NewTransport(&net.Dialer{}, "9.9.9.9:53")
+	address := "9.9.9.9:53"
+	transport := NewTransportTCP(&net.Dialer{}, address)
+	if transport.Network() != "tcp" {
+		t.Fatal("unexpected network")
+	}
+	if transport.Address() != address {
+		t.Fatal("unexpected address")
+	}
 	if err := threeRounds(transport); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestIntegrationLookupHostError(t *testing.T) {
-	transport := NewTransport(&net.Dialer{}, "antani.local")
+	transport := NewTransportTCP(&net.Dialer{}, "antani.local")
 	if err := roundTrip(transport, "ooni.io."); err == nil {
 		t.Fatal("expected an error here")
 	}
 }
 
 func TestIntegrationCustomTLSConfig(t *testing.T) {
-	transport := NewTransport(&tlsdialer{
+	transport := NewTransportTLS(&tlsdialer{
 		config: &tls.Config{
 			MinVersion: tls.VersionTLS10,
 		},
@@ -63,7 +77,7 @@ func TestIntegrationCustomTLSConfig(t *testing.T) {
 func TestUnitRoundTripWithConnFailure(t *testing.T) {
 	// fakeconn will fail in the SetDeadline, therefore we will have
 	// an immediate error and we expect all errors the be alike
-	transport := NewTransport(&fakeconnDialer{}, "8.8.8.8:53")
+	transport := NewTransportTCP(&fakeconnDialer{}, "8.8.8.8:53")
 	query := make([]byte, 1<<10)
 	reply, err := transport.doWithConn(&fakeconn{}, query)
 	if err == nil {
@@ -149,7 +163,7 @@ func (fakeconn) SetWriteDeadline(t time.Time) (err error) {
 
 func TestTLSDialerAdapter(t *testing.T) {
 	fake := &fakeTLSDialer{}
-	adapter := NewTLSDialerAdapter(fake)
+	adapter := newTLSDialerAdapter(fake)
 	adapter.Dial("tcp", "www.google.com:443")
 	if !fake.calledDialTLS {
 		t.Fatal("redirection to DialTLS not working")

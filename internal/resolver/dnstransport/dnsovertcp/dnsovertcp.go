@@ -18,14 +18,27 @@ import (
 // As a known bug, this implementation always creates a new connection
 // for each incoming query, thus increasing the response delay.
 type Transport struct {
-	dialer  model.Dialer
+	dialer  dialerAdapter
 	address string
 }
 
-// NewTransport creates a new Transport
-func NewTransport(dialer model.Dialer, address string) *Transport {
+type dialerAdapter interface {
+	model.Dialer
+	Network() string
+}
+
+// NewTransportTCP creates a new TCP Transport
+func NewTransportTCP(dialer model.Dialer, address string) *Transport {
 	return &Transport{
-		dialer:  dialer,
+		dialer:  newTCPDialerAdapter(dialer),
+		address: address,
+	}
+}
+
+// NewTransportTLS creates a new TLS Transport
+func NewTransportTLS(dialer model.TLSDialer, address string) *Transport {
+	return &Transport{
+		dialer:  newTLSDialerAdapter(dialer),
 		address: address,
 	}
 }
@@ -69,24 +82,46 @@ func (t *Transport) doWithConn(conn net.Conn, query []byte) (reply []byte, err e
 	return reply, nil
 }
 
-// TLSDialerAdapter makes a TLSDialer look like a Dialer
-type TLSDialerAdapter struct {
+type tlsDialerAdapter struct {
 	dialer model.TLSDialer
 }
 
-// NewTLSDialerAdapter creates a new TLSDialerAdapter
-func NewTLSDialerAdapter(dialer model.TLSDialer) *TLSDialerAdapter {
-	return &TLSDialerAdapter{dialer: dialer}
+func newTLSDialerAdapter(dialer model.TLSDialer) *tlsDialerAdapter {
+	return &tlsDialerAdapter{dialer: dialer}
 }
 
-// Dial dials a new connection
-func (d *TLSDialerAdapter) Dial(network, address string) (net.Conn, error) {
+func (d *tlsDialerAdapter) Dial(network, address string) (net.Conn, error) {
 	return d.dialer.DialTLS(network, address)
 }
 
-// DialContext is like Dial but with context
-func (d *TLSDialerAdapter) DialContext(
+func (d *tlsDialerAdapter) DialContext(
 	ctx context.Context, network, address string,
 ) (net.Conn, error) {
 	return d.dialer.DialTLSContext(ctx, network, address)
+}
+
+func (d *tlsDialerAdapter) Network() string {
+	return "dot"
+}
+
+type tcpDialerAdapter struct {
+	model.Dialer
+}
+
+func newTCPDialerAdapter(dialer model.Dialer) *tcpDialerAdapter {
+	return &tcpDialerAdapter{Dialer: dialer}
+}
+
+func (d *tcpDialerAdapter) Network() string {
+	return "tcp"
+}
+
+// Network returns the transport network (e.g., doh, dot)
+func (t *Transport) Network() string {
+	return t.dialer.Network()
+}
+
+// Address returns the upstream server address.
+func (t *Transport) Address() string {
+	return t.address
 }
