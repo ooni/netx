@@ -77,7 +77,7 @@ func (b *Board) MaybeTLSHandshakeReset(
 }
 
 // Marshal marshals the board in JSON format.
-func (b *Board) Marshal() string {
+func (b *Board) Marshal() []byte {
 	data, _ := json.Marshal(b)
-	return string(data)
+	return data
 }
