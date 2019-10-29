@@ -2,6 +2,7 @@ package nervousresolver
 
 import (
 	"context"
+	"errors"
 	"net"
 	"testing"
 )
@@ -66,6 +67,26 @@ func TestIntegrationGood(t *testing.T) {
 	}
 }
 
+func TestIntegrationAnotherError(t *testing.T) {
+	resolver := New(
+		&fakeresolverbogon{
+			Resolver: new(net.Resolver),
+			err:      errors.New("mocked error"),
+		},
+		new(net.Resolver),
+	)
+	addrs, err := resolver.LookupHost(context.Background(), "www.kernel.org")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(addrs) < 1 {
+		t.Fatal("expected an address here")
+	}
+	if resolver.bogonsCount != 0 {
+		t.Fatal("unexpected number of bogons seen")
+	}
+}
+
 func TestOtherLookupMethods(t *testing.T) {
 	// quick because I'm just composing
 	resolver := New(new(net.Resolver), new(net.Resolver))
@@ -98,11 +119,12 @@ func TestOtherLookupMethods(t *testing.T) {
 
 type fakeresolverbogon struct {
 	*net.Resolver
+	err   error
 	reply []string
 }
 
 func (c *fakeresolverbogon) LookupHost(
 	ctx context.Context, hostname string,
 ) ([]string, error) {
-	return c.reply, nil
+	return c.reply, c.err
 }

@@ -23,6 +23,16 @@ func TestIntegrationDial(t *testing.T) {
 	conn.Close()
 }
 
+func TestIntegrationDialWithCustomResolver(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	dialer.SetResolver(new(net.Resolver))
+	conn, err := dialer.Dial("tcp", "www.google.com:80")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+}
+
 func TestIntegrationDialTLS(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.DialTLS("tcp", "www.google.com:443")

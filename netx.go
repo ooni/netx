@@ -62,6 +62,12 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 	return d.dialer.ConfigureDNS(network, address)
 }
 
+// SetResolver is a more flexible way of configuring a resolver
+// that should perhaps be used instead of ConfigureDNS.
+func (d *Dialer) SetResolver(r model.DNSResolver) {
+	d.dialer.SetResolver(r)
+}
+
 // Dial creates a TCP or UDP connection. See net.Dial docs.
 func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 	return d.dialer.Dial(network, address)
@@ -80,14 +86,19 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 	return d.dialer.DialTLS(network, address)
 }
 
-// NewResolver returns a new resolver using this Dialer as dialer for
-// creating new network connections used for resolving. The arguments have
-// the same meaning of ConfigureDNS. The returned resolver will not be
-// used by this Dialer, however the network operations that it performs
-// (e.g. creating a new connection) will use this Dialer. This is why
-// NewResolver is a method rather than being just a free function.
+// NewResolver returns a new resolver using the same handler of this
+// Dialer. The arguments have the same meaning of ConfigureDNS. The
+// returned resolver will not be used by this Dialer, and will not use
+// this Dialer as well. The fact that it's a method of Dialer rather
+// than an independent method is an historical oddity. There is also a
+// standalone NewResolver factory and you should probably use it.
 func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error) {
 	return internal.NewResolver(d.dialer.Beginning, d.dialer.Handler, network, address)
+}
+
+// NewResolver is a standalone Dialer.NewResolver
+func NewResolver(handler model.Handler, network, address string) (model.DNSResolver, error) {
+	return internal.NewResolver(time.Now(), handler, network, address)
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle. This

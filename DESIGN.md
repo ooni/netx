@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-27   |
+| Last-Updated | 2019-10-29   |
 | Status       | approved     |
 
 ## Introduction
@@ -188,8 +188,8 @@ then pass to code that needs it `HTTPClient` as the real
 `*http.Client` instance.
 
 To configure our `*Client` instance, one could use the
-`ConfigureDNS`, `SetCABundle` and `ForceSpecificSNI`
-methods. They should all be called before using the
+`ConfigureDNS`, `SetCABundle`, `ForceSpecificSNI`,
+and `SetResolver` methods. They should all be called before using the
 `HTTPClient` field, as they'll not be goroutine safe.
 
 ```Go
@@ -213,6 +213,12 @@ func (c *Client) ConfigureDNS(network, address string) error
 
 The `ConfigureDNS` method will behave exactly like the
 `ConfigureDNS` method of `netx.Resolver` (see below).
+
+```Go
+func (c *Client) SetResolver(r model.DNSResolver) error
+```
+
+Also `SetResolver` is described below.
 
 ```Go
 func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
@@ -267,7 +273,9 @@ func fetchURL(URL string) (*http.Response, error) {
 }
 ```
 
-Of course, you should probably use your handler there.
+This will cause code to use `root` for all requests
+using the specific `ctx`. This allows you to naturally
+organize events in different groups.
 
 ### The github.com/ooni/netx package
 
@@ -304,15 +312,19 @@ The `netx.Dialer` will also feature the following functions, to
 be called before using the dialer:
 
 ```Go
-func (c *Client) ConfigureDNS(network, address string) error
+func (d *Dialer) ConfigureDNS(network, address string) error
 ```
 
 ```Go
-func (c *Client) SetCABundle(path string) error
+func (d *Dialer) SetCABundle(path string) error
 ```
 
 ```Go
-func (c *Client) ForceSpecificSNI(sni string) error
+func (d *Dialer) ForceSpecificSNI(sni string) error
+```
+
+```Go
+func (d *Dialer) SetResolver(r model.DNSResolver) error
 ```
 
 `SetCABundle` and `ForceSpecificSNI` behave exactly like the same
@@ -348,7 +360,8 @@ URL of a DNS over HTTPS server to use. We will observe all
 events, including the TLS handshake and HTTP events, the
 DNS messages sent and received, etc.
 
-Lastly, `netx.Dialer` will expose this API:
+As far as `SetResolver` is concerned, this is a way to
+set an arbitrary resolver. To create resolvers use:
 
 ```Go
 func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error)
@@ -357,3 +370,7 @@ func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error)
 The arguments have the same meaning of `ConfigureDNS` and
 the will return an interface replacement for `net.Resolver`
 as described below.
+
+### The github.com/ooni/netx/x package
+
+This is for experimental stuff.

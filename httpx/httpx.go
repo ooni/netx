@@ -44,6 +44,11 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 	return t.dialer.ConfigureDNS(network, address)
 }
 
+// SetResolver is exactly like netx.Dialer.SetResolver.
+func (t *Transport) SetResolver(r model.DNSResolver) {
+	t.dialer.SetResolver(r)
+}
+
 // SetCABundle internally calls netx.Dialer.SetCABundle and
 // therefore it has the same caveats and limitations.
 func (t *Transport) SetCABundle(path string) error {
@@ -81,6 +86,11 @@ func NewClient(handler model.Handler) *Client {
 // therefore it has the same caveats and limitations.
 func (c *Client) ConfigureDNS(network, address string) error {
 	return c.Transport.ConfigureDNS(network, address)
+}
+
+// SetResolver internally calls netx.Dialer.SetResolver
+func (c *Client) SetResolver(r model.DNSResolver) {
+	c.Transport.SetResolver(r)
 }
 
 // SetCABundle internally calls netx.Dialer.SetCABundle and

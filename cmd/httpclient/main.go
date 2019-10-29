@@ -39,6 +39,7 @@ import (
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/model"
 	"github.com/ooni/netx/x/logger"
+	"github.com/ooni/netx/x/nervousresolver"
 	"github.com/ooni/netx/x/porcelain"
 )
 
@@ -74,6 +75,7 @@ func mainfunc() (err error) {
 		fmt.Printf("  ./httpclient -dns-server dot://dns.quad9.net\n")
 		fmt.Printf("  ./httpclient -dns-server dot://1.1.1.1:853\n")
 		fmt.Printf("  ./httpclient -dns-server https://cloudflare-dns.com/dns-query\n")
+		fmt.Printf("  ./httpclient -dns-server x-nervous:///\n")
 		return nil
 	}
 
@@ -90,6 +92,10 @@ func mainfunc() (err error) {
 		err = client.ConfigureDNS("dot", urlDNSServer.Host)
 	} else if urlDNSServer.Scheme == "https" {
 		err = client.ConfigureDNS("doh", urlDNSServer.String())
+	} else if urlDNSServer.Scheme == "x-nervous" {
+		// This is a new, experimental resolver, so it's using a more
+		// direct and simple API for configuring a resolver.
+		client.SetResolver(nervousresolver.Default)
 	} else if *flagDNSServer != "" {
 		err = errors.New("invalid -dns-server argument")
 	}

@@ -112,6 +112,11 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 	return err
 }
 
+// SetResolver implements netx.Dialer.SetResolver.
+func (d *Dialer) SetResolver(r model.DNSResolver) {
+	d.Resolver = r
+}
+
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
 	transport := NewHTTPTransport(beginning, handler, NewDialer(beginning, handler))
 	return &http.Client{Transport: transport}

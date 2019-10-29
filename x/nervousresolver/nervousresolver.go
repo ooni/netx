@@ -67,11 +67,12 @@ type bogonLookup struct {
 // TODO(bassosimone): integrate more ideas from the design doc.
 func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, error) {
 	addrs, err := c.primary.LookupHost(ctx, hostname)
-	if err == nil {
-		for _, addr := range addrs {
-			if bogon.Check(addr) == true {
-				return c.detectedBogon(ctx, hostname, addrs)
-			}
+	if err != nil {
+		return c.secondary.LookupHost(ctx, hostname)
+	}
+	for _, addr := range addrs {
+		if bogon.Check(addr) == true {
+			return c.detectedBogon(ctx, hostname, addrs)
 		}
 	}
 	return addrs, err
