@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/miekg/dns"
@@ -16,6 +17,7 @@ import (
 // manually create and submit queries. It can use all the transports
 // for DNS supported by this library, however.
 type Resolver struct {
+	ntimeouts int64
 	transport model.DNSRoundTripper
 }
 
@@ -43,11 +45,7 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	// TODO(bassosimone): wrap errors as net.DNSError
 	var addrs []string
 	var reply *dns.Msg
-	reply, errA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
-		Name:   dns.Fqdn(hostname),
-		Qtype:  dns.TypeA,
-		Qclass: dns.ClassINET,
-	}))
+	reply, errA := c.roundTripWithRetry(ctx, hostname, dns.TypeA)
 	if errA == nil {
 		for _, answer := range reply.Answer {
 			if rra, ok := answer.(*dns.A); ok {
@@ -56,11 +54,7 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 			}
 		}
 	}
-	reply, errAAAA := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
-		Name:   dns.Fqdn(hostname),
-		Qtype:  dns.TypeAAAA,
-		Qclass: dns.ClassINET,
-	}))
+	reply, errAAAA := c.roundTripWithRetry(ctx, hostname, dns.TypeAAAA)
 	if errAAAA == nil {
 		for _, answer := range reply.Answer {
 			if rra, ok := answer.(*dns.AAAA); ok {
@@ -104,6 +98,27 @@ func (c *Resolver) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 	query.Question = make([]dns.Question, 1)
 	query.Question[0] = q
 	return
+}
+
+func (c *Resolver) roundTripWithRetry(
+	ctx context.Context, hostname string, qtype uint16,
+) (*dns.Msg, error) {
+	for i := 0; i < 3; i++ {
+		reply, err := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
+			Name:   dns.Fqdn(hostname),
+			Qtype:  qtype,
+			Qclass: dns.ClassINET,
+		}))
+		if err == nil {
+			return reply, nil
+		}
+		var operr *net.OpError
+		if errors.As(err, &operr) == false || operr.Timeout() == false {
+			return nil, err
+		}
+		atomic.AddInt64(&c.ntimeouts, 1)
+	}
+	return nil, context.DeadlineExceeded
 }
 
 func (c *Resolver) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
