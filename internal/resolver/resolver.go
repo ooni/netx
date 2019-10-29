@@ -18,14 +18,12 @@ func NewResolverUDP(dialer model.Dialer, address string) *ooniresolver.Resolver 
 
 // NewResolverTCP creates a new TCP resolver.
 func NewResolverTCP(dialer model.Dialer, address string) *ooniresolver.Resolver {
-	return ooniresolver.New(dnsovertcp.NewTransport(dialer, address))
+	return ooniresolver.New(dnsovertcp.NewTransportTCP(dialer, address))
 }
 
 // NewResolverTLS creates a new DoT resolver.
 func NewResolverTLS(dialer model.TLSDialer, address string) *ooniresolver.Resolver {
-	return ooniresolver.New(dnsovertcp.NewTransport(
-		dnsovertcp.NewTLSDialerAdapter(dialer), address),
-	)
+	return ooniresolver.New(dnsovertcp.NewTransportTLS(dialer, address))
 }
 
 // NewResolverHTTPS creates a new DoH resolver.

@@ -11,9 +11,16 @@ import (
 )
 
 func TestIntegrationSuccessWithAddress(t *testing.T) {
+	const address = "9.9.9.9:53"
 	transport := NewTransport(
-		&net.Dialer{}, "9.9.9.9:53",
+		&net.Dialer{}, address,
 	)
+	if transport.Network() != "udp" {
+		t.Fatal("invalid network")
+	}
+	if transport.Address() != address {
+		t.Fatal("invalid address")
+	}
 	err := threeRounds(transport)
 	if err != nil {
 		t.Fatal(err)
