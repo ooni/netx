@@ -18,6 +18,7 @@ import (
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 	"github.com/ooni/netx/x/nervousresolver/bogon"
+	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Resolver is OONI's nervous resolver.
@@ -77,9 +78,16 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	}
 	atomic.AddInt64(&c.bogonsCount, 1)
 	root := model.ContextMeasurementRootOrDefault(ctx)
+	durationSinceBeginning := time.Now().Sub(root.Beginning)
+	root.X.Scoreboard.AddDNSBogonInfo(scoreboard.DNSBogonInfo{
+		Addresses:              addrs,
+		DurationSinceBeginning: durationSinceBeginning,
+		FollowupAction:         "retry using DoH resolver",
+		Hostname:               hostname,
+	})
 	value := bogonLookup{
 		Addresses: addrs,
-		Comment:   "detected bogon DNS reply, using another resolver",
+		Comment:   "detected bogon DNS reply; retry using DoH resolver",
 		Hostname:  hostname,
 	}
 	// TODO(bassosimone): because this is a PoC, I'm using the
@@ -87,7 +95,7 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	// first class event emitted when we see a bogon, tho.
 	root.Handler.OnMeasurement(model.Measurement{
 		Extension: &model.ExtensionEvent{
-			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			DurationSinceBeginning: durationSinceBeginning,
 			Key:                    fmt.Sprintf("%T", value),
 			Severity:               "WARN",
 			TransactionID:          transactionid.ContextTransactionID(ctx),

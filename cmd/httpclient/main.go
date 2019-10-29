@@ -115,6 +115,9 @@ func fetch(client *http.Client, url string) (err error) {
 		Handler:    makehandler(),
 		LookupHost: nervousresolver.Default.LookupHost,
 	}
+	defer func() {
+		fmt.Printf("%s\n", root.X.Scoreboard.Marshal())
+	}()
 	ctx := model.WithMeasurementRoot(req.Context(), root)
 	req = req.WithContext(ctx)
 	resp, err := client.Do(req)
