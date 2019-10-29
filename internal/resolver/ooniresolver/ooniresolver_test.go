@@ -8,6 +8,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsovertcp"
+	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/model"
 )
 
@@ -34,6 +35,54 @@ func TestLookupCNAME(t *testing.T) {
 	}
 	for _, addr := range addrs {
 		t.Log(addr)
+	}
+}
+
+func TestLookupHostWithRetry(t *testing.T) {
+	// Because there is no server there, if there is no DNS injection
+	// then we are going to see several timeouts.
+	client := New(dnsoverudp.NewTransport(
+		&net.Dialer{}, "www.example.com:53",
+	))
+	addrs, err := client.LookupHost(context.Background(), "www.google.com")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if err.Error() != "context deadline exceeded" {
+		t.Fatal("not the error we expected")
+	}
+	if client.ntimeouts <= 0 {
+		t.Fatal("no timeouts?")
+	}
+	if addrs != nil {
+		t.Fatal("expected nil addr here")
+	}
+}
+
+type faketransport struct{}
+
+func (t *faketransport) RoundTrip(
+	ctx context.Context, query []byte,
+) (reply []byte, err error) {
+	return nil, errors.New("mocked error")
+}
+
+func TestLookupHostWithNonTimeoutError(t *testing.T) {
+	client := New(&faketransport{})
+	addrs, err := client.LookupHost(context.Background(), "www.google.com")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	// Not a typo! Check for equality to make sure that we are
+	// in the case where no timeout was returned but something else.
+	if err.Error() == "context deadline exceeded" {
+		t.Fatal("not the error we expected")
+	}
+	if client.ntimeouts != 0 {
+		t.Fatal("we saw a timeout?")
+	}
+	if addrs != nil {
+		t.Fatal("expected nil addr here")
 	}
 }
 
