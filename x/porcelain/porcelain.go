@@ -79,6 +79,7 @@ type HTTPTransaction struct {
 type getHandler struct {
 	connects     []*model.ConnectEvent
 	handler      model.Handler
+	handshakes   []*model.TLSHandshakeDoneEvent
 	lastTxID     int64
 	mu           sync.Mutex
 	resolves     []*model.ResolveDoneEvent
@@ -89,6 +90,13 @@ func (h *getHandler) OnMeasurement(m model.Measurement) {
 	defer h.handler.OnMeasurement(m)
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	// Implementation details re: lastTxID:
+	//
+	// 1. the round trip should always be the last event but
+	// I've decided to make the code more robust
+	//
+	// 2. the TLS handshake should have a transaction ID since
+	// it's run by the net/http code, but again robustness
 	if m.ResolveDone != nil {
 		h.resolves = append(h.resolves, m.ResolveDone)
 		h.lastTxID = m.ResolveDone.TransactionID
@@ -96,6 +104,12 @@ func (h *getHandler) OnMeasurement(m model.Measurement) {
 	if m.Connect != nil {
 		h.connects = append(h.connects, m.Connect)
 		h.lastTxID = m.Connect.TransactionID
+	}
+	if m.TLSHandshakeDone != nil {
+		h.handshakes = append(h.handshakes, m.TLSHandshakeDone)
+		if m.TLSHandshakeDone.TransactionID != 0 {
+			h.lastTxID = m.TLSHandshakeDone.TransactionID
+		}
 	}
 	if m.HTTPRoundTripDone != nil {
 		rtinfo := m.HTTPRoundTripDone
@@ -126,6 +140,7 @@ func (h *getHandler) OnMeasurement(m model.Measurement) {
 type HTTPMeasurements struct {
 	Resolves   []*model.ResolveDoneEvent
 	Connects   []*model.ConnectEvent
+	Handshakes []*model.TLSHandshakeDoneEvent
 	Requests   []*HTTPTransaction
 	Scoreboard *scoreboard.Board
 }
@@ -162,8 +177,9 @@ func Get(
 	gethandler.mu.Lock() // probably superfluous
 	defer gethandler.mu.Unlock()
 	measurements.Resolves = gethandler.resolves
-	measurements.Requests = gethandler.transactions
 	measurements.Connects = gethandler.connects
+	measurements.Handshakes = gethandler.handshakes
+	measurements.Requests = gethandler.transactions
 	total := len(measurements.Requests)
 	if total >= 1 {
 		// We should always have a transaction but I've decided
