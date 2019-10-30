@@ -45,7 +45,6 @@ import (
 var (
 	flagBatch     = flag.Bool("batch", false, "Emit JSON events")
 	flagDNSServer = flag.String("dns-server", "system:///", "Server to use")
-	flagSNI       = flag.String("sni", "", "Force specific SNI")
 	flagURL       = flag.String("url", "https://ooni.io/", "URL to fetch")
 )
 
@@ -99,7 +98,7 @@ func mainfunc() (err error) {
 		err = errors.New("invalid -dns-server argument")
 	}
 	rtx.PanicOnError(err, "cannot configure DNS server")
-	err = client.ForceSpecificSNI(*flagSNI)
+	err = client.ForceSpecificSNI(*common.FlagSNI)
 	rtx.PanicOnError(err, "cannot force specific SNI")
 	err = fetch(client, *flagURL)
 	rtx.PanicOnError(err, "cannot fetch specific URL")

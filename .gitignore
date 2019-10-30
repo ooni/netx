@@ -2,3 +2,5 @@
 /dnsclient.exe
 /httpclient
 /httpclient.exe
+/tlsclient
+/tlsclient.exe

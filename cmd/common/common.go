@@ -3,5 +3,10 @@ package common
 
 import "flag"
 
-// FlagHelp is used to request the help screen
-var FlagHelp = flag.Bool("help", false, "Print usage")
+var (
+	// FlagHelp is used to request the help screen
+	FlagHelp = flag.Bool("help", false, "Print usage")
+
+	// FlagSNI forces using a specific SNI
+	FlagSNI = flag.String("sni", "", "Force specific SNI usage")
+)

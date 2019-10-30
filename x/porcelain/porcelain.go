@@ -5,12 +5,15 @@
 package porcelain
 
 import (
+	"crypto/x509"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/internal/errwrapper"
@@ -197,4 +200,89 @@ func Get(
 // NewHTTPXClient returns a new HTTPX client
 func NewHTTPXClient() *httpx.Client {
 	return httpx.NewClient(handlers.NoHandler)
+}
+
+// TLSMeasurements contains all the measurements performed
+// during a TLS connection attempt with a server.
+type TLSMeasurements struct {
+	Resolve            *model.ResolveDoneEvent
+	Connects           []*model.ConnectEvent
+	Error              error
+	ClientSNI          string
+	CipherSuite        uint16
+	NegotiatedProtocol string
+	PeerCertificates   []model.X509Certificate
+	Version            uint16
+}
+
+type tlsHandler struct {
+	resolve   *model.ResolveDoneEvent
+	connects  []*model.ConnectEvent
+	handler   model.Handler
+	handshake *model.TLSHandshakeDoneEvent
+	mu        sync.Mutex
+}
+
+func (h *tlsHandler) OnMeasurement(m model.Measurement) {
+	defer h.handler.OnMeasurement(m)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	// TODO(bassosimone): do I need to write paranoid code here and
+	// handle the case of multiple resolve, handshake events?
+	if m.ResolveDone != nil {
+		h.resolve = m.ResolveDone
+	}
+	if m.Connect != nil {
+		h.connects = append(h.connects, m.Connect)
+	}
+	if m.TLSHandshakeDone != nil {
+		h.handshake = m.TLSHandshakeDone
+	}
+}
+
+// TLSConnect connects to address and performs a TLS handshake
+// using the provided SNI name. This is the base building block
+// of an experiment for measuring TLS SNI based blocking.
+func TLSConnect(
+	handler model.Handler, address string, sni string,
+) (*TLSMeasurements, error) {
+	tlshandler := &tlsHandler{handler: handler}
+	dialer := netx.NewDialer(tlshandler)
+	dialer.ForceSpecificSNI(sni)
+	conn, err := dialer.DialTLS("tcp", address)
+	if conn != nil {
+		defer conn.Close()
+	}
+	tlshandler.mu.Lock()
+	defer tlshandler.mu.Unlock()
+	measurements := &TLSMeasurements{
+		Resolve:   tlshandler.resolve,
+		Connects:  tlshandler.connects,
+		Error:     err,
+		ClientSNI: sni,
+	}
+	if err != nil {
+		// Catch the case where we failed because the SNI is not valid
+		// and move the certificate and the SNI out of the error. Remove
+		// also the original error because it makes the JSON noisy and
+		// we have extracted all the information we needed anyway.
+		var wrapper *model.ErrWrapper
+		if errors.As(err, &wrapper) && wrapper.Failure == "ssl_invalid_hostname" {
+			var x509HostnameError x509.HostnameError
+			if errors.As(wrapper.WrappedErr, &x509HostnameError) {
+				wrapper.WrappedErr = nil
+				certs := []*x509.Certificate{x509HostnameError.Certificate}
+				measurements.PeerCertificates = model.SimplifyCerts(certs)
+				// TODO(bassosimone): is it too paranoid to make sure
+				// that x509HostnameError.Host == sni?
+			}
+		}
+	} else if tlshandler.handshake != nil {
+		state := tlshandler.handshake.ConnectionState
+		measurements.CipherSuite = state.CipherSuite
+		measurements.NegotiatedProtocol = state.NegotiatedProtocol
+		measurements.PeerCertificates = state.PeerCertificates
+		measurements.Version = state.Version
+	}
+	return measurements, err
 }
