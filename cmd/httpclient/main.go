@@ -23,11 +23,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 
@@ -64,7 +63,7 @@ func mainfunc() (err error) {
 	}()
 	log.SetLevel(log.DebugLevel)
 	log.SetHandler(cli.Default)
-	client := httpx.NewClient(handlers.NoHandler)
+	client := porcelain.NewHTTPXClient()
 	if *common.FlagHelp {
 		flag.CommandLine.SetOutput(os.Stdout)
 		fmt.Printf("Usage: httpclient -dns-server <URL> -sni <string> -url <url>\n")
@@ -102,29 +101,23 @@ func mainfunc() (err error) {
 	rtx.PanicOnError(err, "cannot configure DNS server")
 	err = client.ForceSpecificSNI(*flagSNI)
 	rtx.PanicOnError(err, "cannot force specific SNI")
-	err = fetch(client.HTTPClient, *flagURL)
+	err = fetch(client, *flagURL)
 	rtx.PanicOnError(err, "cannot fetch specific URL")
 	return
 }
 
-func fetch(client *http.Client, url string) (err error) {
+func fetch(client *httpx.Client, url string) (err error) {
 	defer func() {
 		if recover() != nil {
 			// JUST KNOW WE ARRIVED HERE
 		}
 	}()
-	req, err := porcelain.NewHTTPRequest("GET", url, nil)
-	rtx.PanicOnError(err, "porcelain.NewHTTPRequest failed")
-	root := porcelain.RequestMeasurementRoot(req)
-	root.Handler = makehandler()
-	defer func() {
-		fmt.Printf("%s\n", root.X.Scoreboard.Marshal())
-	}()
-	resp, err := client.Do(req)
-	rtx.PanicOnError(err, "client.Do failed")
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	rtx.PanicOnError(err, "ioutil.ReadAll failed")
+	measurements, err := porcelain.Get(
+		makehandler(), client, url, "ooniprobe-netx/0.1.0",
+	)
+	data, _ := json.MarshalIndent(measurements, "", "  ")
+	fmt.Printf("%s\n", data)
+	rtx.PanicOnError(err, "porcelain.Get failed")
 	return
 }
 
