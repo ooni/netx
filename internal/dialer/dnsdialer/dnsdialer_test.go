@@ -97,17 +97,21 @@ func TestReduceErrors(t *testing.T) {
 
 func TestIntegrationDivertLookupHost(t *testing.T) {
 	dialer := newdialer()
+	failure := errors.New("mocked error")
 	root := &model.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler:   handlers.NoHandler,
 		LookupHost: func(ctx context.Context, hostname string) ([]string, error) {
-			return nil, errors.New("mocked error")
+			return nil, failure
 		},
 	}
 	ctx := model.WithMeasurementRoot(context.Background(), root)
 	conn, err := dialer.DialContext(ctx, "tcp", "google.com:443")
 	if err == nil {
 		t.Fatal("expected an error here")
+	}
+	if !errors.Is(err, failure) {
+		t.Fatal("not the error we expected")
 	}
 	if conn != nil {
 		t.Fatal("expected a nil conn here")
