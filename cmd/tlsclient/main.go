@@ -27,7 +27,6 @@ import (
 
 var (
 	flagAddress = flag.String("address", "example.com:443", "Address to connect to")
-	flagSNI     = flag.String("sni", "ooni.io", "SNI to use")
 )
 
 func main() {
@@ -43,7 +42,7 @@ func main() {
 	log.SetHandler(cli.Default)
 	log.SetLevel(log.DebugLevel)
 	measurements, _ := porcelain.TLSConnect(
-		logger.NewHandler(log.Log), *flagAddress, *flagSNI,
+		logger.NewHandler(log.Log), *flagAddress, *common.FlagSNI,
 	)
 	prettyprint(measurements)
 }
