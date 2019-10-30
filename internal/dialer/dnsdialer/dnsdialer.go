@@ -46,32 +46,8 @@ func (d *Dialer) DialContext(
 	}
 	ctx = dialid.WithDialID(ctx)
 	dialID := dialid.ContextDialID(ctx)
-	txID := transactionid.ContextTransactionID(ctx)
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveStart: &model.ResolveStartEvent{
-			DialID:                 dialID,
-			DurationSinceBeginning: time.Now().Sub(root.Beginning),
-			Hostname:               onlyhost,
-			TransactionID:          txID,
-		},
-	})
 	var addrs []string
-	addrs, err = d.lookupHost(ctx, onlyhost)
-	err = errwrapper.SafeErrWrapperBuilder{
-		DialID:        dialID,
-		Error:         err,
-		TransactionID: txID,
-	}.MaybeBuild()
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveDone: &model.ResolveDoneEvent{
-			Addresses:              addrs,
-			DialID:                 dialID,
-			DurationSinceBeginning: time.Now().Sub(root.Beginning),
-			Error:                  err,
-			Hostname:               onlyhost,
-			TransactionID:          txID,
-		},
-	})
+	addrs, err = d.lookupHost(ctx, onlyhost, dialID)
 	if err != nil {
 		return
 	}
@@ -102,13 +78,41 @@ func reduceErrors(errorslist []error) error {
 	return errors.New("all connect attempts failed")
 }
 
-func (d *Dialer) lookupHost(ctx context.Context, hostname string) ([]string, error) {
+func (d *Dialer) lookupHost(
+	ctx context.Context, hostname string, dialID int64,
+) ([]string, error) {
 	if net.ParseIP(hostname) != nil {
 		return []string{hostname}, nil
 	}
+	txID := transactionid.ContextTransactionID(ctx)
 	root := model.ContextMeasurementRootOrDefault(ctx)
-	if root.LookupHost != nil {
-		return root.LookupHost(ctx, hostname)
+	root.Handler.OnMeasurement(model.Measurement{
+		ResolveStart: &model.ResolveStartEvent{
+			DialID:                 dialID,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Hostname:               hostname,
+			TransactionID:          txID,
+		},
+	})
+	lookupHost := root.LookupHost
+	if root.LookupHost == nil {
+		lookupHost = d.resolver.LookupHost
 	}
-	return d.resolver.LookupHost(ctx, hostname)
+	addrs, err := lookupHost(ctx, hostname)
+	err = errwrapper.SafeErrWrapperBuilder{
+		DialID:        dialID,
+		Error:         err,
+		TransactionID: txID,
+	}.MaybeBuild()
+	root.Handler.OnMeasurement(model.Measurement{
+		ResolveDone: &model.ResolveDoneEvent{
+			Addresses:              addrs,
+			DialID:                 dialID,
+			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			Error:                  err,
+			Hostname:               hostname,
+			TransactionID:          txID,
+		},
+	})
+	return addrs, err
 }
