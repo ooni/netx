@@ -494,12 +494,13 @@ func NewTLSConnectionState(s tls.ConnectionState) TLSConnectionState {
 	return TLSConnectionState{
 		CipherSuite:        s.CipherSuite,
 		NegotiatedProtocol: s.NegotiatedProtocol,
-		PeerCertificates:   simplifyCerts(s.PeerCertificates),
+		PeerCertificates:   SimplifyCerts(s.PeerCertificates),
 		Version:            s.Version,
 	}
 }
 
-func simplifyCerts(in []*x509.Certificate) (out []X509Certificate) {
+// SimplifyCerts simplifies a certificate chain for archival
+func SimplifyCerts(in []*x509.Certificate) (out []X509Certificate) {
 	for _, cert := range in {
 		out = append(out, X509Certificate{
 			Data: cert.Raw,

@@ -42,7 +42,7 @@ func TestGetWithRedirects(t *testing.T) {
 	measurements, err := Get(
 		handlers.NoHandler,
 		client,
-		"http://httpbin.org/redirect/4",
+		"https://httpbin.org/redirect/4",
 		"ooniprobe-netx/0.1.0",
 	)
 	if err != nil {
@@ -78,5 +78,62 @@ func TestGetWithInvalidURL(t *testing.T) {
 	}
 	if measurements != nil {
 		t.Fatal("expected nil measurements")
+	}
+}
+
+func TestTLSConnectNormal(t *testing.T) {
+	measurements, err := TLSConnect(
+		handlers.NoHandler,
+		"example.com:443",
+		"example.com",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if measurements == nil {
+		t.Fatal("expected measurements")
+	}
+	if measurements.Error != err {
+		t.Fatal("errors mismatch")
+	}
+}
+
+func TestTLSConnectWrongSNI(t *testing.T) {
+	measurements, err := TLSConnect(
+		handlers.NoHandler,
+		"example.com:443",
+		"ooni.io",
+	)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if err.Error() != "ssl_invalid_hostname" {
+		t.Fatal("not the error we expected")
+	}
+	if measurements == nil {
+		t.Fatal("expected measurements")
+	}
+	if measurements.Error != err {
+		t.Fatal("errors mismatch")
+	}
+}
+
+func TestTLSConnectWrongDomain(t *testing.T) {
+	measurements, err := TLSConnect(
+		handlers.NoHandler,
+		"antani.local:443",
+		"ooni.io",
+	)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if err.Error() != "dns_nxdomain_error" {
+		t.Fatal("not the error we expected")
+	}
+	if measurements == nil {
+		t.Fatal("expected measurements")
+	}
+	if measurements.Error != err {
+		t.Fatal("errors mismatch")
 	}
 }
