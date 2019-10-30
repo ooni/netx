@@ -235,6 +235,8 @@ func NewHTTPTransport(
 	dialer *Dialer,
 ) *HTTPTransport {
 	baseTransport := &http.Transport{
+		// The following values are copied from Go 1.12 docs and match
+		// what should be used by the default transport
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       90 * time.Second,
 		MaxIdleConns:          100,
@@ -259,6 +261,11 @@ func NewHTTPTransport(
 	// Better for Cloudflare DNS and also better because we have less
 	// noisy events and we can better understand what happened.
 	baseTransport.MaxConnsPerHost = 1
+	// The following (1) reduces the number of headers that Go will
+	// automatically send for us and (2) ensures that we always receive
+	// back the true headers, such as Content-Length. This change is
+	// functional to OONI's goal of observing the network.
+	baseTransport.DisableCompression = true
 	return &HTTPTransport{
 		Transport:    baseTransport,
 		Handler:      handler,
