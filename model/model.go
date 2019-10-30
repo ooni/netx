@@ -348,6 +348,23 @@ type HTTPRoundTripDoneEvent struct {
 	// Headers contains the response headers if error is nil.
 	Headers http.Header
 
+	// RedirectBody contains the redirect body that otherwise Go will
+	// ignore. We cap the maximum size to a reasonable value.
+	RedirectBody []byte
+
+	// RequestHeaders contain the original request headers. This is
+	// included here to make this event actionable without needing to
+	// join it with other events, as it's too important.
+	RequestHeaders http.Header
+
+	// RequestMethod is the original request method. This is here
+	// for the same reason of RequestHeaders.
+	RequestMethod string
+
+	// RequestURL is the original request URL. This is here
+	// for the same reason of RequestHeaders.
+	RequestURL string
+
 	// StatusCode contains the HTTP status code if error is nil.
 	StatusCode int64
 
