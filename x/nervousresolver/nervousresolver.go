@@ -134,7 +134,7 @@ func init() {
 	// this when integrating in probe-engine.
 	overhttps, err := internal.NewResolver(
 		time.Time{}, handlers.NoHandler,
-		"doh", "https://cloudflare-dns.com/dns-query",
+		"doh", "https://1.1.1.1/dns-query",
 	)
 	rtx.PanicOnError(err, "internal.NewResolver #2 failed")
 	Default = New(system, overhttps)
