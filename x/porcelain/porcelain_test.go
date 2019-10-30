@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/ooni/netx/handlers"
 )
 
 func TestIntegration(t *testing.T) {
@@ -32,5 +34,49 @@ func TestIntegration(t *testing.T) {
 	root := RequestMeasurementRoot(req)
 	if root == nil {
 		t.Fatal("unexpected nil root")
+	}
+}
+
+func TestGetWithRedirects(t *testing.T) {
+	client := NewHTTPXClient()
+	measurements, err := Get(
+		handlers.NoHandler,
+		client,
+		"http://httpbin.org/redirect/4",
+		"ooniprobe-netx/0.1.0",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if measurements == nil {
+		t.Fatal("nil measurements")
+	}
+	if len(measurements.Resolves) < 1 {
+		t.Fatal("no resolves?!")
+	}
+	if len(measurements.Connects) < 1 {
+		t.Fatal("no connects?!")
+	}
+	if len(measurements.Requests) < 1 {
+		t.Fatal("no requests?!")
+	}
+	if measurements.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
+	}
+}
+
+func TestGetWithInvalidURL(t *testing.T) {
+	client := NewHTTPXClient()
+	measurements, err := Get(
+		handlers.NoHandler,
+		client,
+		"\t", // invalid URL
+		"ooniprobe-netx/0.1.0",
+	)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if measurements != nil {
+		t.Fatal("expected nil measurements")
 	}
 }
