@@ -2,9 +2,14 @@
 package tracetripper
 
 import (
+	"bytes"
 	"crypto/tls"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/internal/connid"
@@ -16,12 +21,15 @@ import (
 
 // Transport performs single HTTP transactions.
 type Transport struct {
+	readAllErrs  int64
+	readAll      func(r io.Reader) ([]byte, error)
 	roundTripper http.RoundTripper
 }
 
 // New creates a new Transport.
 func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
+		readAll:      ioutil.ReadAll,
 		roundTripper: roundTripper,
 	}
 }
@@ -41,6 +49,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			URL:                    req.URL.String(),
 		},
 	})
+
+	var (
+		requestHeaders   = http.Header{}
+		requestHeadersMu sync.Mutex
+	)
 
 	// Prepare a tracer for delivering events
 	tracer := &httptrace.ClientTrace{
@@ -89,6 +102,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		WroteHeaderField: func(key string, values []string) {
+			requestHeadersMu.Lock()
+			requestHeaders[key] = values
+			requestHeadersMu.Unlock()
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
@@ -151,14 +167,41 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		Error:         err,
 		TransactionID: tid,
 	}.MaybeBuild()
+	// [*] Require less event joining work by providing info that
+	// makes this event alone actionable for OONI
 	event := &model.HTTPRoundTripDoneEvent{
 		DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		Error:                  err,
+		RequestHeaders:         requestHeaders,   // [*]
+		RequestMethod:          req.Method,       // [*]
+		RequestURL:             req.URL.String(), // [*]
 		TransactionID:          tid,
 	}
 	if resp != nil {
 		event.Headers = resp.Header
 		event.StatusCode = int64(resp.StatusCode)
+		// If this is a redirect then Go will ignore the body but we
+		// are OONI and we want to see it. Therefore, read it now,
+		// dispatch it to the RoundTripDone handler, and make sure we
+		// fail the whole round trip if we cannot read it.
+		//
+		// Also, because redirect responses are supposed to be small,
+		// cap their size to 64 KiB, to avoid reading too much.
+		//
+		// Also, the net/http code really ignores the body but just
+		// in case this changes in the future, give it something that
+		// implements the same interface as the body.
+		if resp.StatusCode >= 301 && resp.StatusCode <= 308 {
+			var data []byte
+			data, err = t.readAll(io.LimitReader(resp.Body, 1<<17))
+			resp.Body.Close()
+			event.RedirectBody = data
+			resp.Body = ioutil.NopCloser(bytes.NewReader(data))
+			if err != nil {
+				atomic.AddInt64(&t.readAllErrs, 1)
+				resp = nil // this is how net/http likes it
+			}
+		}
 	}
 	root.Handler.OnMeasurement(model.Measurement{
 		HTTPRoundTripDone: event,

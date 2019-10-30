@@ -2,6 +2,7 @@
 package logger
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"strings"
@@ -170,21 +171,16 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.HTTPRoundTripDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRoundTripDone.DurationSinceBeginning,
-			"error":         m.HTTPRoundTripDone.Error,
-			"statusCode":    m.HTTPRoundTripDone.StatusCode,
-			"transactionID": m.HTTPRoundTripDone.TransactionID,
+			"elapsed":         m.HTTPRoundTripDone.DurationSinceBeginning,
+			"error":           m.HTTPRoundTripDone.Error,
+			"headers":         m.HTTPRoundTripDone.Headers,
+			"redirect_body":   stringifyBody(m.HTTPRoundTripDone.RedirectBody),
+			"request_method":  m.HTTPRoundTripDone.RequestMethod,
+			"request_headers": m.HTTPRoundTripDone.RequestHeaders,
+			"request_url":     m.HTTPRoundTripDone.RequestURL,
+			"statusCode":      m.HTTPRoundTripDone.StatusCode,
+			"transactionID":   m.HTTPRoundTripDone.TransactionID,
 		}).Debug("http: round trip done")
-		for key, values := range m.HTTPRoundTripDone.Headers {
-			for _, value := range values {
-				h.logger.WithFields(log.Fields{
-					"elapsed":       m.HTTPRoundTripDone.DurationSinceBeginning,
-					"key":           key,
-					"transactionID": m.HTTPRoundTripDone.TransactionID,
-					"value":         value,
-				}).Debug("http: got header")
-			}
-		}
 	}
 
 	// HTTP response body
@@ -217,4 +213,8 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 
 func reformat(s string) string {
 	return strings.ReplaceAll(s, "\n", "\n\t")
+}
+
+func stringifyBody(d []byte) string {
+	return string(bytes.ReplaceAll(d, []byte("\n"), []byte(`\n`)))
 }
