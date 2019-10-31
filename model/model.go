@@ -450,7 +450,7 @@ type ResolveStartEvent struct {
 	TransactionID int64 `json:",omitempty"`
 
 	// TransportNetwork is the network used by the DNS transport, which
-	// can be only of "doh", "dot", "tcp", "udp", or empty.
+	// can be one of "doh", "dot", "tcp", "udp", or "system".
 	TransportNetwork string
 
 	// TransportAddress is the address used by the DNS transport, which
@@ -483,7 +483,7 @@ type ResolveDoneEvent struct {
 	TransactionID int64 `json:",omitempty"`
 
 	// TransportNetwork is the network used by the DNS transport, which
-	// can be only of "doh", "dot", "tcp", "udp", or empty.
+	// can be one of "doh", "dot", "tcp", "udp", or "system".
 	TransportNetwork string
 
 	// TransportAddress is the address used by the DNS transport, which
