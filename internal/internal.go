@@ -15,6 +15,7 @@ import (
 	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
+	"github.com/ooni/netx/internal/resolver/emitterresolver"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
 )
@@ -35,7 +36,7 @@ func NewDialer(
 	return &Dialer{
 		Beginning: beginning,
 		Handler:   handler,
-		Resolver:  new(net.Resolver),
+		Resolver:  resolver.NewResolverSystem(),
 		TLSConfig: new(tls.Config),
 	}
 }
@@ -146,7 +147,7 @@ func newResolverWrapper(
 	return &resolverWrapper{
 		beginning: beginning,
 		handler:   handler,
-		resolver:  resolver,
+		resolver:  emitterresolver.New(resolver),
 	}
 }
 

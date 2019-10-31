@@ -5,12 +5,9 @@ import (
 	"context"
 	"errors"
 	"net"
-	"time"
 
 	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/internal/dialid"
-	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
 )
 
@@ -44,10 +41,10 @@ func (d *Dialer) DialContext(
 	if err != nil {
 		return nil, err
 	}
-	ctx = dialid.WithDialID(ctx)
+	ctx = dialid.WithDialID(ctx) // important to create before lookupHost
 	dialID := dialid.ContextDialID(ctx)
 	var addrs []string
-	addrs, err = d.lookupHost(ctx, onlyhost, dialID)
+	addrs, err = d.lookupHost(ctx, onlyhost)
 	if err != nil {
 		return
 	}
@@ -79,40 +76,16 @@ func reduceErrors(errorslist []error) error {
 }
 
 func (d *Dialer) lookupHost(
-	ctx context.Context, hostname string, dialID int64,
+	ctx context.Context, hostname string,
 ) ([]string, error) {
 	if net.ParseIP(hostname) != nil {
 		return []string{hostname}, nil
 	}
-	txID := transactionid.ContextTransactionID(ctx)
 	root := model.ContextMeasurementRootOrDefault(ctx)
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveStart: &model.ResolveStartEvent{
-			DialID:                 dialID,
-			DurationSinceBeginning: time.Now().Sub(root.Beginning),
-			Hostname:               hostname,
-			TransactionID:          txID,
-		},
-	})
 	lookupHost := root.LookupHost
 	if root.LookupHost == nil {
 		lookupHost = d.resolver.LookupHost
 	}
 	addrs, err := lookupHost(ctx, hostname)
-	err = errwrapper.SafeErrWrapperBuilder{
-		DialID:        dialID,
-		Error:         err,
-		TransactionID: txID,
-	}.MaybeBuild()
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveDone: &model.ResolveDoneEvent{
-			Addresses:              addrs,
-			DialID:                 dialID,
-			DurationSinceBeginning: time.Now().Sub(root.Beginning),
-			Error:                  err,
-			Hostname:               hostname,
-			TransactionID:          txID,
-		},
-	})
 	return addrs, err
 }
