@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx"
@@ -20,7 +21,8 @@ import (
 )
 
 type channelHandler struct {
-	ch chan<- model.Measurement
+	ch         chan<- model.Measurement
+	lateWrites int64
 }
 
 func (h *channelHandler) OnMeasurement(m model.Measurement) {
@@ -32,6 +34,7 @@ func (h *channelHandler) OnMeasurement(m model.Measurement) {
 	select {
 	case h.ch <- m:
 	case <-time.After(100 * time.Millisecond):
+		atomic.AddInt64(&h.lateWrites, 1)
 	}
 }
 

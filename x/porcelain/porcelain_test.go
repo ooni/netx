@@ -2,8 +2,29 @@ package porcelain
 
 import (
 	"context"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/ooni/netx/model"
 )
+
+func TestUnitChannelHandlerWriteLateOnChannel(t *testing.T) {
+	handler := &channelHandler{
+		ch: make(chan model.Measurement),
+	}
+	var waitgroup sync.WaitGroup
+	waitgroup.Add(1)
+	go func() {
+		time.Sleep(1 * time.Second)
+		handler.OnMeasurement(model.Measurement{})
+		waitgroup.Done()
+	}()
+	waitgroup.Wait()
+	if handler.lateWrites != 1 {
+		t.Fatal("unexpected lateWrites value")
+	}
+}
 
 func TestIntegrationDNSLookupGood(t *testing.T) {
 	ctx := context.Background()
