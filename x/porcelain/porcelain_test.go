@@ -181,6 +181,24 @@ func TestIntegrationTLSConnectGood(t *testing.T) {
 	}
 }
 
+func TestIntegrationTLSConnectGoodWithDoT(t *testing.T) {
+	ctx := context.Background()
+	results, err := TLSConnect(ctx, TLSConnectConfig{
+		Address:          "ooni.io:443",
+		DNSServerNetwork: "dot",
+		DNSServerAddress: "9.9.9.9:853",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results.Error != nil {
+		t.Fatal(results.Error)
+	}
+	if results.TestKeys.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
+	}
+}
+
 func TestIntegrationTLSConnectCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(
 		context.Background(), time.Microsecond,
