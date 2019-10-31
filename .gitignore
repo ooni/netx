@@ -1,6 +1,6 @@
-/dnsclient
-/dnsclient.exe
-/httpclient
-/httpclient.exe
-/tlsclient
-/tlsclient.exe
+/dnslookup
+/dnslookup.exe
+/httpdo
+/httpdo.exe
+/tlsconnect
+/tlsconnect.exe

@@ -35,6 +35,8 @@ func NewDialer(handler model.Handler) *Dialer {
 //
 // The following is a list of all the possible network values:
 //
+// - "": behaves exactly like "system"
+//
 // - "system": this indicates that Go should use the system resolver
 // and prevents us from seeing any DNS packet. The value of the
 // address parameter is ignored when using "system". If you do

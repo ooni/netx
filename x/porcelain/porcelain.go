@@ -7,9 +7,7 @@
 package porcelain
 
 import (
-	"crypto/x509"
-	"errors"
-	"io"
+	"context"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -18,275 +16,227 @@ import (
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
-	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/model"
-	"github.com/ooni/netx/x/scoreboard"
 )
 
-// NewHTTPRequest is like http.NewRequest except that it also adds
-// to such request a configured MeasurementRoot.
-func NewHTTPRequest(method, URL string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(method, URL, body)
-	if err == nil {
-		root := &model.MeasurementRoot{
-			Beginning: time.Now(),
-			Handler:   handlers.NoHandler,
-		}
-		ctx := model.WithMeasurementRoot(req.Context(), root)
-		req = req.WithContext(ctx)
+type channelHandler struct {
+	ch chan<- model.Measurement
+}
+
+func (h *channelHandler) OnMeasurement(m model.Measurement) {
+	// Implementation note: when we're closing idle connections it
+	// may be that they're closed once we have stopped reading
+	// therefore (1) we MUST NOT close the channel to signal that
+	// we're done BECAUSE THIS IS A LIE and (2) we MUST instead
+	// arrange here for non-blocking sends.
+	select {
+	case h.ch <- m:
+	case <-time.After(100 * time.Millisecond):
 	}
-	return req, err
 }
 
-// RequestMeasurementRoot returns the MeasurementRoot that has been
-// configured into the context of a request, or nil.
-func RequestMeasurementRoot(req *http.Request) *model.MeasurementRoot {
-	return model.ContextMeasurementRoot(req.Context())
+// Results contains the results of any operation.
+type Results struct {
+	Connects      []*model.ConnectEvent
+	HTTPRequests  []*model.HTTPRoundTripDoneEvent
+	Queries       []*model.ResolveDoneEvent
+	TLSHandshakes []*model.TLSHandshakeDoneEvent
 }
 
-// HTTPRequest contains the request summary. This is structured so
-// that it's easy to generate OONI events.
-type HTTPRequest struct {
-	Method  string
-	URL     string
-	Headers http.Header
-	Body    string
-}
-
-// HTTPResponse contains the response summary. This is structured so
-// that it's easy to generate OONI events.
-type HTTPResponse struct {
-	StatusCode int64
-	Headers    http.Header
-	Body       string
-}
-
-// HTTPTransaction contains information on an HTTP transaction, i.e.
-// on an HTTP round trip plus the response body. This is structured so
-// that it's easy to generate OONI events.
-type HTTPTransaction struct {
-	// DurationSinceBeginning is the number of nanoseconds since
-	// the time configured as the "zero" time.
-	DurationSinceBeginning time.Duration
-
-	// Error contains the overall transaction error.
-	Error error
-
-	// Request contains information on the request.
-	Request HTTPRequest
-
-	// Response contains information on the response.
-	Response HTTPResponse
-
-	// TransactionID is the identifier of this transaction
-	TransactionID int64
-}
-
-type getHandler struct {
-	connects     []*model.ConnectEvent
-	handler      model.Handler
-	handshakes   []*model.TLSHandshakeDoneEvent
-	lastTxID     int64
-	mu           sync.Mutex
-	resolves     []*model.ResolveDoneEvent
-	transactions []*HTTPTransaction
-}
-
-func (h *getHandler) OnMeasurement(m model.Measurement) {
-	defer h.handler.OnMeasurement(m)
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	// Implementation details re: lastTxID:
-	//
-	// 1. the round trip should always be the last event but
-	// I've decided to make the code more robust
-	//
-	// 2. the TLS handshake should have a transaction ID since
-	// it's run by the net/http code, but again robustness
-	if m.ResolveDone != nil {
-		h.resolves = append(h.resolves, m.ResolveDone)
-		h.lastTxID = m.ResolveDone.TransactionID
-	}
+func (r *Results) onMeasurement(m model.Measurement) {
 	if m.Connect != nil {
-		h.connects = append(h.connects, m.Connect)
-		h.lastTxID = m.Connect.TransactionID
-	}
-	if m.TLSHandshakeDone != nil {
-		h.handshakes = append(h.handshakes, m.TLSHandshakeDone)
-		if m.TLSHandshakeDone.TransactionID != 0 {
-			h.lastTxID = m.TLSHandshakeDone.TransactionID
-		}
+		r.Connects = append(r.Connects, m.Connect)
 	}
 	if m.HTTPRoundTripDone != nil {
-		rtinfo := m.HTTPRoundTripDone
-		h.lastTxID = rtinfo.TransactionID
-		// We're saving the RedirectBody as body, which is correct for
-		// all requests in the chain except the last one. We will change
-		// the body later so it's always correct.
-		h.transactions = append(h.transactions, &HTTPTransaction{
-			DurationSinceBeginning: rtinfo.DurationSinceBeginning,
-			Error:                  rtinfo.Error,
-			Request: HTTPRequest{
-				Method:  rtinfo.RequestMethod,
-				URL:     rtinfo.RequestURL,
-				Headers: rtinfo.RequestHeaders,
-				Body:    string(rtinfo.RequestBodySnap),
-			},
-			Response: HTTPResponse{
-				StatusCode: rtinfo.StatusCode,
-				Headers:    rtinfo.Headers,
-				Body:       string(rtinfo.BodySnap),
-			},
-			TransactionID: rtinfo.TransactionID,
-		})
+		r.HTTPRequests = append(r.HTTPRequests, m.HTTPRoundTripDone)
+	}
+	if m.ResolveDone != nil {
+		r.Queries = append(r.Queries, m.ResolveDone)
+	}
+	if m.TLSHandshakeDone != nil {
+		r.TLSHandshakes = append(r.TLSHandshakes, m.TLSHandshakeDone)
 	}
 }
 
-// HTTPMeasurements contains all the measurements performed
-// during a full chain of GET redirects.
-type HTTPMeasurements struct {
-	Resolves   []*model.ResolveDoneEvent
-	Connects   []*model.ConnectEvent
-	Handshakes []*model.TLSHandshakeDoneEvent
-	Requests   []*HTTPTransaction
-	Scoreboard *scoreboard.Board
+func (r *Results) collect(
+	output <-chan model.Measurement,
+	handler model.Handler,
+	main func(),
+) {
+	if handler == nil {
+		handler = handlers.NoHandler
+	}
+	done := make(chan interface{})
+	go func() {
+		defer close(done)
+		main()
+	}()
+	for {
+		select {
+		case m := <-output:
+			handler.OnMeasurement(m)
+			r.onMeasurement(m)
+		case <-done:
+			return
+		}
+	}
 }
 
-// Get fetches the resources at URL using the specified User-Agent
-// string, using the specified events handler, and HTTPX client.
-//
-// This function will return the list of events seen, divided by
-// operation: RESOLVE, CONNECT, REQUEST, etc.
-func Get(
-	handler model.Handler, client *httpx.Client, URL, UserAgent string,
-) (*HTTPMeasurements, error) {
-	req, err := NewHTTPRequest("GET", URL, nil)
+// DNSLookupConfig contains DNSLookup settings.
+type DNSLookupConfig struct {
+	Handler       model.Handler
+	Hostname      string
+	ServerAddress string
+	ServerNetwork string
+}
+
+// DNSLookupResults contains the results of a DNSLookup
+type DNSLookupResults struct {
+	TestKeys  Results
+	Addresses []string
+	Error     error
+}
+
+// DNSLookup performs a DNS lookup.
+func DNSLookup(
+	ctx context.Context, config DNSLookupConfig,
+) (*DNSLookupResults, error) {
+	channel := make(chan model.Measurement)
+	// TODO(bassosimone): tell DoH to use specific CA bundle?
+	resolver, err := netx.NewResolver(&channelHandler{
+		ch: channel,
+	}, config.ServerNetwork, config.ServerAddress)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", UserAgent)
-	root := RequestMeasurementRoot(req)
-	gethandler := &getHandler{handler: handler}
-	root.Handler = gethandler
-	measurements := new(HTTPMeasurements)
-	resp, err := client.HTTPClient.Do(req)
-	err = errwrapper.SafeErrWrapperBuilder{
-		Error:         err,
-		TransactionID: gethandler.lastTxID,
-	}.MaybeBuild()
-	var body []byte
-	if err == nil {
-		// Important here to override the outer `err` rather
-		// than defining a new `err` in this small scope
-		body, err = ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-	}
-	gethandler.mu.Lock() // probably superfluous
-	defer gethandler.mu.Unlock()
-	measurements.Resolves = gethandler.resolves
-	measurements.Connects = gethandler.connects
-	measurements.Handshakes = gethandler.handshakes
-	measurements.Requests = gethandler.transactions
-	total := len(measurements.Requests)
-	if total >= 1 {
-		// We should always have a transaction but I've decided
-		// writing robust code here was better
-		measurements.Requests[total-1].Error = err
-		// As mentioned above, make sure the last transaction in
-		// the chain gets the correct body. It has the redirect body
-		// in it, which is not set for non-redirects.
-		measurements.Requests[total-1].Response.Body = string(body)
-	}
-	measurements.Scoreboard = &root.X.Scoreboard
-	return measurements, err
+	var (
+		mu      sync.Mutex
+		results = new(DNSLookupResults)
+	)
+	results.TestKeys.collect(channel, config.Handler, func() {
+		addrs, err := resolver.LookupHost(ctx, config.Hostname)
+		mu.Lock()
+		defer mu.Unlock()
+		results.Addresses, results.Error = addrs, err
+	})
+	// TODO(bassosimone): tell DoH to close idle connections?
+	return results, nil
 }
 
-// NewHTTPXClient returns a new HTTPX client
-func NewHTTPXClient() *httpx.Client {
-	return httpx.NewClient(handlers.NoHandler)
+// HTTPDoConfig contains HTTPDo settings.
+type HTTPDoConfig struct {
+	Body             []byte
+	DNSServerAddress string
+	DNSServerNetwork string
+	Handler          model.Handler
+	Method           string
+	URL              string
+	UserAgent        string
 }
 
-// TLSMeasurements contains all the measurements performed
-// during a TLS connection attempt with a server.
-type TLSMeasurements struct {
-	Resolve            *model.ResolveDoneEvent
-	Connects           []*model.ConnectEvent
-	Error              error
-	ClientSNI          string
-	CipherSuite        uint16
-	NegotiatedProtocol string
-	PeerCertificates   []model.X509Certificate
-	Version            uint16
+// HTTPDoResults contains the results of a HTTPDo
+type HTTPDoResults struct {
+	TestKeys   Results
+	StatusCode int64
+	Headers    http.Header
+	Body       []byte
+	Error      error
 }
 
-type tlsHandler struct {
-	resolve   *model.ResolveDoneEvent
-	connects  []*model.ConnectEvent
-	handler   model.Handler
-	handshake *model.TLSHandshakeDoneEvent
-	mu        sync.Mutex
-}
-
-func (h *tlsHandler) OnMeasurement(m model.Measurement) {
-	defer h.handler.OnMeasurement(m)
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	// TODO(bassosimone): do I need to write paranoid code here and
-	// handle the case of multiple resolve, handshake events?
-	if m.ResolveDone != nil {
-		h.resolve = m.ResolveDone
-	}
-	if m.Connect != nil {
-		h.connects = append(h.connects, m.Connect)
-	}
-	if m.TLSHandshakeDone != nil {
-		h.handshake = m.TLSHandshakeDone
-	}
-}
-
-// TLSConnect connects to address and performs a TLS handshake
-// using the provided SNI name. This is the base building block
-// of an experiment for measuring TLS SNI based blocking.
-func TLSConnect(
-	handler model.Handler, address string, sni string,
-) (*TLSMeasurements, error) {
-	tlshandler := &tlsHandler{handler: handler}
-	dialer := netx.NewDialer(tlshandler)
-	dialer.ForceSpecificSNI(sni)
-	conn, err := dialer.DialTLS("tcp", address)
-	if conn != nil {
-		defer conn.Close()
-	}
-	tlshandler.mu.Lock()
-	defer tlshandler.mu.Unlock()
-	measurements := &TLSMeasurements{
-		Resolve:   tlshandler.resolve,
-		Connects:  tlshandler.connects,
-		Error:     err,
-		ClientSNI: sni,
-	}
+// HTTPDo performs a HTTP request
+func HTTPDo(
+	ctx context.Context, config HTTPDoConfig,
+) (*HTTPDoResults, error) {
+	channel := make(chan model.Measurement)
+	// TODO(bassosimone): tell client to use specific CA bundle?
+	client := httpx.NewClient(&channelHandler{
+		ch: channel,
+	})
+	err := client.ConfigureDNS(
+		config.DNSServerNetwork, config.DNSServerAddress,
+	)
 	if err != nil {
-		// Catch the case where we failed because the SNI is not valid
-		// and move the certificate and the SNI out of the error. Remove
-		// also the original error because it makes the JSON noisy and
-		// we have extracted all the information we needed anyway.
-		var wrapper *model.ErrWrapper
-		if errors.As(err, &wrapper) && wrapper.Failure == "ssl_invalid_hostname" {
-			var x509HostnameError x509.HostnameError
-			if errors.As(wrapper.WrappedErr, &x509HostnameError) {
-				wrapper.WrappedErr = nil
-				certs := []*x509.Certificate{x509HostnameError.Certificate}
-				measurements.PeerCertificates = model.SimplifyCerts(certs)
-				// TODO(bassosimone): is it too paranoid to make sure
-				// that x509HostnameError.Host == sni?
-			}
-		}
-	} else if tlshandler.handshake != nil {
-		state := tlshandler.handshake.ConnectionState
-		measurements.CipherSuite = state.CipherSuite
-		measurements.NegotiatedProtocol = state.NegotiatedProtocol
-		measurements.PeerCertificates = state.PeerCertificates
-		measurements.Version = state.Version
+		return nil, err
 	}
-	return measurements, err
+	// TODO(bassosimone): implement sending body
+	req, err := http.NewRequest(config.Method, config.URL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", config.UserAgent)
+	req = req.WithContext(ctx)
+	var (
+		mu      sync.Mutex
+		results = new(HTTPDoResults)
+	)
+	results.TestKeys.collect(channel, config.Handler, func() {
+		defer client.HTTPClient.CloseIdleConnections()
+		// TODO(bassosimone): tell DoH to close idle connections?
+		resp, err := client.HTTPClient.Do(req)
+		if err != nil {
+			mu.Lock()
+			results.Error = err
+			mu.Unlock()
+			return
+		}
+		mu.Lock()
+		results.StatusCode = int64(resp.StatusCode)
+		results.Headers = resp.Header
+		mu.Unlock()
+		defer resp.Body.Close()
+		data, err := ioutil.ReadAll(resp.Body)
+		mu.Lock()
+		results.Body, results.Error = data, err
+		mu.Unlock()
+	})
+	return results, nil
+}
+
+// TLSConnectConfig contains TLSConnect settings.
+type TLSConnectConfig struct {
+	Address          string
+	DNSServerAddress string
+	DNSServerNetwork string
+	Handler          model.Handler
+	SNI              string
+}
+
+// TLSConnectResults contains the results of a TLSConnect
+type TLSConnectResults struct {
+	TestKeys Results
+	Error    error
+}
+
+// TLSConnect performs a TLS connect.
+func TLSConnect(
+	ctx context.Context, config TLSConnectConfig,
+) (*TLSConnectResults, error) {
+	channel := make(chan model.Measurement)
+	dialer := netx.NewDialer(&channelHandler{
+		ch: channel,
+	})
+	// TODO(bassosimone): tell dialer to use specific CA bundle?
+	err := dialer.ConfigureDNS(
+		config.DNSServerNetwork, config.DNSServerAddress,
+	)
+	if err != nil {
+		return nil, err
+	}
+	// TODO(bassosimone): can this call really fail?
+	dialer.ForceSpecificSNI(config.SNI)
+	var (
+		mu      sync.Mutex
+		results = new(TLSConnectResults)
+	)
+	results.TestKeys.collect(channel, config.Handler, func() {
+		// TODO(bassosimone): pass context to dialer
+		conn, err := dialer.DialTLS("tcp", config.Address)
+		if conn != nil {
+			defer conn.Close()
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		results.Error = err
+	})
+	return results, nil
 }

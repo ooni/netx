@@ -186,7 +186,7 @@ func NewResolver(
 ) (model.DNSResolver, error) {
 	// Implementation note: system need to be dealt with
 	// separately because it doesn't have any transport.
-	if network == "system" {
+	if network == "system" || network == "" {
 		return newResolverWrapper(
 			beginning, handler, resolver.NewResolverSystem()), nil
 	}
