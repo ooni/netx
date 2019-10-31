@@ -2,6 +2,8 @@
 //
 // This is the main package used by ooni/probe-engine. The objective
 // of this package is to make things simple in probe-engine.
+//
+// Also, this is currently experimental. So, no API promises here.
 package porcelain
 
 import (
@@ -48,6 +50,7 @@ type HTTPRequest struct {
 	Method  string
 	URL     string
 	Headers http.Header
+	Body    string
 }
 
 // HTTPResponse contains the response summary. This is structured so
@@ -127,11 +130,12 @@ func (h *getHandler) OnMeasurement(m model.Measurement) {
 				Method:  rtinfo.RequestMethod,
 				URL:     rtinfo.RequestURL,
 				Headers: rtinfo.RequestHeaders,
+				Body:    string(rtinfo.RequestBodySnap),
 			},
 			Response: HTTPResponse{
 				StatusCode: rtinfo.StatusCode,
 				Headers:    rtinfo.Headers,
-				Body:       string(rtinfo.RedirectBody),
+				Body:       string(rtinfo.BodySnap),
 			},
 			TransactionID: rtinfo.TransactionID,
 		})

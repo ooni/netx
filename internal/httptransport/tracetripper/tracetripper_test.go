@@ -1,6 +1,7 @@
 package tracetripper
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/miekg/dns"
 	"github.com/ooni/netx/model"
 )
 
@@ -30,12 +32,12 @@ func TestIntegration(t *testing.T) {
 	client.CloseIdleConnections()
 }
 
-type redirectHandler struct {
+type roundTripHandler struct {
 	roundTrips []*model.HTTPRoundTripDoneEvent
 	mu         sync.Mutex
 }
 
-func (h *redirectHandler) OnMeasurement(m model.Measurement) {
+func (h *roundTripHandler) OnMeasurement(m model.Measurement) {
 	if m.HTTPRoundTripDone != nil {
 		h.mu.Lock()
 		defer h.mu.Unlock()
@@ -43,49 +45,7 @@ func (h *redirectHandler) OnMeasurement(m model.Measurement) {
 	}
 }
 
-func TestIntegrationRedirect(t *testing.T) {
-	client := &http.Client{
-		Transport: New(http.DefaultTransport),
-	}
-	req, err := http.NewRequest("GET", "https://google.com", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	handler := &redirectHandler{}
-	ctx := model.WithMeasurementRoot(
-		context.Background(),
-		&model.MeasurementRoot{
-			Beginning: time.Now(),
-			Handler:   handler,
-		},
-	)
-	req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.CloseIdleConnections()
-	handler.mu.Lock()
-	defer handler.mu.Unlock()
-	var wrong bool
-	for _, ev := range handler.roundTrips {
-		if ev.StatusCode >= 301 && ev.StatusCode <= 308 {
-			if len(ev.RedirectBody) > 0 {
-				wrong = false
-			}
-		}
-	}
-	if wrong {
-		t.Fatal("seen a redirect without a body where it shouldn't")
-	}
-}
-
-func TestIntegrationRedirectReadAllFailure(t *testing.T) {
+func TestIntegrationReadAllFailure(t *testing.T) {
 	transport := New(http.DefaultTransport)
 	transport.readAll = func(r io.Reader) ([]byte, error) {
 		return nil, io.EOF
@@ -143,4 +103,170 @@ func TestIntegrationWithClientTrace(t *testing.T) {
 	}
 	resp.Body.Close()
 	client.CloseIdleConnections()
+}
+
+func TestIntegrationWithCorrectSnaps(t *testing.T) {
+	// Prepare a DNS query for dns.google.com A, for which we
+	// know the answer in terms of well know IP addresses
+	query := new(dns.Msg)
+	query.Id = dns.Id()
+	query.RecursionDesired = true
+	query.Question = make([]dns.Question, 1)
+	query.Question[0] = dns.Question{
+		Name:   dns.Fqdn("dns.google.com"),
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}
+	queryData, err := query.Pack()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare a new transport with limited snapshot size and
+	// use such transport to configure an ordinary client
+	transport := New(http.DefaultTransport)
+	const snapSize = 15
+	transport.snapSize = snapSize
+	client := &http.Client{Transport: transport}
+
+	// Prepare a new request for Cloudflare DNS, register
+	// a handler, issue the request, fetch the response.
+	req, err := http.NewRequest(
+		"POST", "https://cloudflare-dns.com/dns-query", bytes.NewReader(queryData),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/dns-message")
+	handler := &roundTripHandler{}
+	ctx := model.WithMeasurementRoot(
+		context.Background(), &model.MeasurementRoot{
+			Beginning: time.Now(),
+			Handler:   handler,
+		},
+	)
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != 200 {
+		t.Fatal("HTTP request failed")
+	}
+
+	// Read the whole response body, parse it as valid DNS
+	// reply and verify we obtained what we expected
+	replyData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	reply := new(dns.Msg)
+	err = reply.Unpack(replyData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reply.Rcode != 0 {
+		t.Fatal("unexpected Rcode")
+	}
+	if len(reply.Answer) < 1 {
+		t.Fatal("no answers?!")
+	}
+	found8888, found8844, foundother := false, false, false
+	for _, answer := range reply.Answer {
+		if rra, ok := answer.(*dns.A); ok {
+			ip := rra.A.String()
+			if ip == "8.8.8.8" {
+				found8888 = true
+			} else if ip == "8.8.4.4" {
+				found8844 = true
+			} else {
+				foundother = true
+			}
+		}
+	}
+	if !found8888 || !found8844 || foundother {
+		t.Fatal("unexpected reply")
+	}
+
+	// Finally, make sure we have captured the correct
+	// snapshots for the request and response bodies
+	if len(handler.roundTrips) != 1 {
+		t.Fatal("more round trips than expected")
+	}
+	roundTrip := handler.roundTrips[0]
+	if len(roundTrip.RequestBodySnap) != snapSize {
+		t.Fatal("unexpected request body snap length")
+	}
+	if len(roundTrip.BodySnap) != snapSize {
+		t.Fatal("unexpected response body snap length")
+	}
+	if !bytes.Equal(roundTrip.RequestBodySnap, queryData[:snapSize]) {
+		t.Fatal("the request body snap is wrong")
+	}
+	if !bytes.Equal(roundTrip.BodySnap, replyData[:snapSize]) {
+		t.Fatal("the response body snap is wrong")
+	}
+}
+
+func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
+	// Prepare a DNS query for dns.google.com A, for which we
+	// know the answer in terms of well know IP addresses
+	query := new(dns.Msg)
+	query.Id = dns.Id()
+	query.RecursionDesired = true
+	query.Question = make([]dns.Question, 1)
+	query.Question[0] = dns.Question{
+		Name:   dns.Fqdn("dns.google.com"),
+		Qtype:  dns.TypeA,
+		Qclass: dns.ClassINET,
+	}
+	queryData, err := query.Pack()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare a new transport with limited snapshot size and
+	// use such transport to configure an ordinary client
+	transport := New(http.DefaultTransport)
+	errorMocked := errors.New("mocked error")
+	transport.readAll = func(r io.Reader) ([]byte, error) {
+		return nil, errorMocked
+	}
+	const snapSize = 15
+	transport.snapSize = snapSize
+	client := &http.Client{Transport: transport}
+
+	// Prepare a new request for Cloudflare DNS, register
+	// a handler, issue the request, fetch the response.
+	req, err := http.NewRequest(
+		"POST", "https://cloudflare-dns.com/dns-query", bytes.NewReader(queryData),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/dns-message")
+	handler := &roundTripHandler{}
+	ctx := model.WithMeasurementRoot(
+		context.Background(), &model.MeasurementRoot{
+			Beginning: time.Now(),
+			Handler:   handler,
+		},
+	)
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if !errors.Is(err, errorMocked) {
+		t.Fatal("not the error we expected")
+	}
+	if resp != nil {
+		t.Fatal("expected nil response here")
+	}
+
+	// Finally, make sure we got something that makes sense
+	if len(handler.roundTrips) != 0 {
+		t.Fatal("more round trips than expected")
+	}
 }

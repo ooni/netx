@@ -178,10 +178,12 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 			"elapsed":         m.HTTPRoundTripDone.DurationSinceBeginning,
 			"error":           m.HTTPRoundTripDone.Error,
 			"headers":         m.HTTPRoundTripDone.Headers,
-			"redirect_body":   stringifyBody(m.HTTPRoundTripDone.RedirectBody),
+			"request_body":    stringifyBody(m.HTTPRoundTripDone.RequestBodySnap),
 			"request_method":  m.HTTPRoundTripDone.RequestMethod,
 			"request_headers": m.HTTPRoundTripDone.RequestHeaders,
 			"request_url":     m.HTTPRoundTripDone.RequestURL,
+			"response_body":   stringifyBody(m.HTTPRoundTripDone.BodySnap),
+			"snap_size":       m.HTTPRoundTripDone.SnapSize,
 			"statusCode":      m.HTTPRoundTripDone.StatusCode,
 			"transactionID":   m.HTTPRoundTripDone.TransactionID,
 		}).Debug("http: round trip done")

@@ -1,4 +1,4 @@
-package bodyreader
+package bodytracer
 
 import (
 	"io/ioutil"
