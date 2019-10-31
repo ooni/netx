@@ -26,23 +26,23 @@ func TestGettingTransport(t *testing.T) {
 
 func TestLookupAddr(t *testing.T) {
 	client := New(newtransport())
-	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")
+	names, err := client.LookupAddr(context.Background(), "8.8.8.8")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if names != nil {
+		t.Fatal("expected nil result here")
 	}
 }
 
 func TestLookupCNAME(t *testing.T) {
 	client := New(newtransport())
-	addrs, err := client.LookupCNAME(context.Background(), "www.ooni.io")
+	cname, err := client.LookupCNAME(context.Background(), "www.ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if cname != "" {
+		t.Fatal("expected empty result here")
 	}
 }
 
@@ -100,8 +100,8 @@ func TestLookupHost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if addrs == nil {
+		t.Fatal("expected non-nil result here")
 	}
 }
 
@@ -112,29 +112,29 @@ func TestLookupNonexistent(t *testing.T) {
 		t.Fatal("expected an error here")
 	}
 	if addrs != nil {
-		t.Fatal("expeced nil addr here")
+		t.Fatal("expected nil addr here")
 	}
 }
 
 func TestLookupMX(t *testing.T) {
 	client := New(newtransport())
-	addrs, err := client.LookupMX(context.Background(), "ooni.io")
+	records, err := client.LookupMX(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if records != nil {
+		t.Fatal("expected nil result here")
 	}
 }
 
 func TestLookupNS(t *testing.T) {
 	client := New(newtransport())
-	addrs, err := client.LookupNS(context.Background(), "ooni.io")
+	records, err := client.LookupNS(context.Background(), "ooni.io")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	for _, addr := range addrs {
-		t.Log(addr)
+	if records != nil {
+		t.Fatal("expected nil result here")
 	}
 }
 

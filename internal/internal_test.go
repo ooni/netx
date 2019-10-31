@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
+	"github.com/ooni/netx/internal/resolver/brokenresolver"
+	"github.com/ooni/netx/internal/resolver/systemresolver"
 )
 
 func TestIntegrationDial(t *testing.T) {
@@ -261,6 +263,20 @@ func TestIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	client.CloseIdleConnections()
+}
+
+func TestIntegrationChainResolvers(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	resolver := ChainResolvers(
+		brokenresolver.New(),
+		systemresolver.New(new(net.Resolver)),
+	)
+	dialer.SetResolver(resolver)
+	conn, err := dialer.Dial("tcp", "www.google.com:80")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
 }
 
 func TestIntegrationFailure(t *testing.T) {

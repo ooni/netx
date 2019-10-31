@@ -121,3 +121,9 @@ func (d *Dialer) SetCABundle(path string) error {
 func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return d.dialer.ForceSpecificSNI(sni)
 }
+
+// ChainResolvers chains a primary and a secondary resolver such that
+// we can fallback to the secondary if primary is broken.
+func ChainResolvers(primary, secondary model.DNSResolver) model.DNSResolver {
+	return internal.ChainResolvers(primary, secondary)
+}

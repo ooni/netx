@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-29   |
+| Last-Updated | 2019-10-30   |
 | Status       | approved     |
 
 ## Introduction
@@ -215,7 +215,7 @@ The `ConfigureDNS` method will behave exactly like the
 `ConfigureDNS` method of `netx.Resolver` (see below).
 
 ```Go
-func (c *Client) SetResolver(r model.DNSResolver) error
+func (c *Client) SetResolver(r model.DNSResolver)
 ```
 
 Also `SetResolver` is described below.
@@ -324,7 +324,7 @@ func (d *Dialer) ForceSpecificSNI(sni string) error
 ```
 
 ```Go
-func (d *Dialer) SetResolver(r model.DNSResolver) error
+func (d *Dialer) SetResolver(r model.DNSResolver)
 ```
 
 `SetCABundle` and `ForceSpecificSNI` behave exactly like the same
@@ -371,6 +371,16 @@ func NewResolver(handler model.Handler,
 The arguments have the same meaning of `ConfigureDNS` and
 the will return an interface replacement for `net.Resolver`
 as described below.
+
+The  `ChainResolvers` function allows to chain a fallback
+resolver to a primary resolver, so that the former is used
+whenever the latter fails:
+
+```Go
+func ChainResolvers(
+    primary, fallback model.DNSResolver
+) model.DNSResolver
+```
 
 ### The github.com/ooni/netx/x package
 
