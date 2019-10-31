@@ -24,7 +24,7 @@ type channelHandler struct {
 }
 
 func (h *channelHandler) OnMeasurement(m model.Measurement) {
-	// TODO(bassosimone): when we're closing idle connections it
+	// Implementation note: when we're closing idle connections it
 	// may be that they're closed once we have stopped reading
 	// therefore (1) we MUST NOT close the channel to signal that
 	// we're done BECAUSE THIS IS A LIE and (2) we MUST instead
