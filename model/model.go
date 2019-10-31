@@ -100,6 +100,7 @@ type ErrWrapper struct {
 	//
 	// - `connection_refused`: ECONNREFUSED
 	// - `connection_reset`: ECONNRESET
+	// - `dns_bogon_error`: detected bogon in DNS reply
 	// - `dns_nxdomain_error`: NXDOMAIN in DNS reply
 	// - `eof_error`: unexpected EOF on connection
 	// - `generic_timeout_error`: some timer has expired
@@ -109,7 +110,7 @@ type ErrWrapper struct {
 	// - `unknown_failure ...`: any other error
 	Failure string
 
-	// TransactionDI is the transaction ID, or zero if not known.
+	// TransactionID is the transaction ID, or zero if not known.
 	TransactionID int64
 
 	// WrappedErr is the error that we're wrapping.
