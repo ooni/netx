@@ -32,8 +32,27 @@ func (r *Resolver) LookupCNAME(ctx context.Context, host string) (string, error)
 	return r.resolver.LookupCNAME(ctx, host)
 }
 
+type queryableTransport interface {
+	Network() string
+	Address() string
+}
+
+type queryableResolver interface {
+	Transport() model.DNSRoundTripper
+}
+
+func (r *Resolver) queryTransport() (network string, address string) {
+	if reso, okay := r.resolver.(queryableResolver); okay {
+		if transport, okay := reso.Transport().(queryableTransport); okay {
+			network, address = transport.Network(), transport.Address()
+		}
+	}
+	return
+}
+
 // LookupHost returns the IP addresses of a host
 func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, error) {
+	network, address := r.queryTransport()
 	dialID := dialid.ContextDialID(ctx)
 	txID := transactionid.ContextTransactionID(ctx)
 	root := model.ContextMeasurementRootOrDefault(ctx)
@@ -43,6 +62,8 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Hostname:               hostname,
 			TransactionID:          txID,
+			TransportAddress:       address,
+			TransportNetwork:       network,
 		},
 	})
 	addrs, err := r.resolver.LookupHost(ctx, hostname)
@@ -59,6 +80,8 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 			Error:                  err,
 			Hostname:               hostname,
 			TransactionID:          txID,
+			TransportAddress:       address,
+			TransportNetwork:       network,
 		},
 	})
 	return addrs, err
