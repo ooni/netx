@@ -1,4 +1,4 @@
-package bogon
+package bogondetector
 
 import "testing"
 

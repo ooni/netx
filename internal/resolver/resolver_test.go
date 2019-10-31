@@ -29,6 +29,20 @@ func testresolverquick(t *testing.T, resolver model.DNSResolver) {
 	}
 }
 
+func TestIntegrationDetectBogon(t *testing.T) {
+	resolver := NewResolverSystem()
+	addrs, err := resolver.LookupHost(context.Background(), "localhost")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if err.Error() != "dns_bogon_error" {
+		t.Fatal("not the error we expected to see")
+	}
+	if addrs != nil {
+		t.Fatal("expected nil addrs here")
+	}
+}
+
 func TestIntegrationNewResolverSystem(t *testing.T) {
 	testresolverquick(t, NewResolverSystem())
 }

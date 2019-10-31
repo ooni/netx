@@ -1,4 +1,4 @@
-package emitterresolver
+package parentresolver
 
 import (
 	"context"
@@ -72,6 +72,30 @@ func TestLookupHost(t *testing.T) {
 	}
 	if handler.gotResolveDone == false {
 		t.Fatal("did not see resolve done event")
+	}
+}
+
+func TestLookupHostBogon(t *testing.T) {
+	client := New(systemresolver.New(new(net.Resolver)))
+	handler := new(emitterchecker)
+	ctx := model.WithMeasurementRoot(
+		context.Background(), &model.MeasurementRoot{
+			Beginning: time.Now(),
+			Handler:   handler,
+		})
+	addrs, err := client.LookupHost(ctx, "localhost")
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if err.Error() != "dns_bogon_error" {
+		t.Fatal("not the error that we expected")
+	}
+	if addrs != nil {
+		t.Fatal("expected nil addr here")
+	}
+	root := model.ContextMeasurementRoot(ctx)
+	if root.X.Scoreboard.DNSBogonInfo == nil {
+		t.Fatal("no bogon info added to scoreboard")
 	}
 }
 

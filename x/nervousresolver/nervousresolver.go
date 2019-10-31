@@ -17,7 +17,7 @@ import (
 	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
-	"github.com/ooni/netx/x/nervousresolver/bogon"
+	"github.com/ooni/netx/internal/resolver/bogondetector"
 	"github.com/ooni/netx/x/scoreboard"
 )
 
@@ -71,7 +71,7 @@ func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 		return c.secondary.LookupHost(ctx, hostname)
 	}
 	for _, addr := range addrs {
-		if bogon.Check(addr) == true {
+		if bogondetector.Check(addr) == true {
 			return c.detectedBogon(ctx, hostname, addrs)
 		}
 	}

@@ -85,7 +85,7 @@ func (d *Dialer) DialContext(
 
 // DialTLS is like Dial, but creates TLS connections.
 func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
-	return d.dialer.DialTLS(network, address)
+	return d.DialTLSContext(context.Background(), network, address)
 }
 
 // DialTLSContext is like DialTLS, but with context

@@ -1,20 +1,25 @@
-// Package emitterresolver contains the resolver that emits events
-package emitterresolver
+// Package parentresolver contains the parent resolver
+package parentresolver
 
 import (
 	"context"
+	"errors"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/ooni/netx/internal/dialid"
 	"github.com/ooni/netx/internal/errwrapper"
+	"github.com/ooni/netx/internal/resolver/bogondetector"
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Resolver is the emitter resolver
 type Resolver struct {
-	resolver model.DNSResolver
+	bogonsCount int64
+	resolver    model.DNSResolver
 }
 
 // New creates a new emitter resolver
@@ -66,7 +71,7 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 			TransportNetwork:       network,
 		},
 	})
-	addrs, err := r.resolver.LookupHost(ctx, hostname)
+	addrs, err := r.lookupHost(ctx, hostname)
 	err = errwrapper.SafeErrWrapperBuilder{
 		DialID:        dialID,
 		Error:         err,
@@ -84,7 +89,39 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 			TransportNetwork:       network,
 		},
 	})
+	// Respect general Go expectation that one doesn't return
+	// both a value and a non-nil error
+	if errors.Is(err, errwrapper.ErrDNSBogon) {
+		addrs = nil
+	}
 	return addrs, err
+}
+
+func (r *Resolver) lookupHost(ctx context.Context, hostname string) ([]string, error) {
+	addrs, err := r.resolver.LookupHost(ctx, hostname)
+	for _, addr := range addrs {
+		if bogondetector.Check(addr) == true {
+			return r.detectedBogon(ctx, hostname, addrs)
+		}
+	}
+	return addrs, err
+}
+
+func (r *Resolver) detectedBogon(
+	ctx context.Context, hostname string, addrs []string,
+) ([]string, error) {
+	atomic.AddInt64(&r.bogonsCount, 1)
+	root := model.ContextMeasurementRootOrDefault(ctx)
+	durationSinceBeginning := time.Now().Sub(root.Beginning)
+	root.X.Scoreboard.AddDNSBogonInfo(scoreboard.DNSBogonInfo{
+		Addresses:              addrs,
+		DurationSinceBeginning: durationSinceBeginning,
+		Domain:                 hostname,
+		FallbackPlan:           "let_caller_decide",
+	})
+	// We're returning non nil addrs so the caller logs it
+	// but the caller is assumed to not return addrs
+	return addrs, errwrapper.ErrDNSBogon
 }
 
 // LookupMX returns the MX records of a specific name

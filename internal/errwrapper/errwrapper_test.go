@@ -47,6 +47,11 @@ func TestToFailureString(t *testing.T) {
 			t.Fatal("unexpected result")
 		}
 	})
+	t.Run("for errwrapper.ErrDNSBogon", func(t *testing.T) {
+		if toFailureString(ErrDNSBogon) != "dns_bogon_error" {
+			t.Fatal("unexpected result")
+		}
+	})
 	t.Run("for x509.HostnameError", func(t *testing.T) {
 		var err x509.HostnameError
 		if toFailureString(err) != "ssl_invalid_hostname" {
