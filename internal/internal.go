@@ -35,7 +35,7 @@ func NewDialer(
 	return &Dialer{
 		Beginning: beginning,
 		Handler:   handler,
-		Resolver:  new(net.Resolver),
+		Resolver:  resolver.NewResolverSystem(),
 		TLSConfig: new(tls.Config),
 	}
 }
