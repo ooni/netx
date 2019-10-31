@@ -19,6 +19,7 @@ import (
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/x/scoreboard"
 )
 
 type channelHandler struct {
@@ -44,6 +45,7 @@ type Results struct {
 	Connects      []*model.ConnectEvent
 	HTTPRequests  []*model.HTTPRoundTripDoneEvent
 	Queries       []*model.ResolveDoneEvent
+	Scoreboard    *scoreboard.Board
 	TLSHandshakes []*model.TLSHandshakeDoneEvent
 }
 
@@ -107,9 +109,18 @@ func DNSLookup(
 ) (*DNSLookupResults, error) {
 	channel := make(chan model.Measurement)
 	// TODO(bassosimone): tell DoH to use specific CA bundle?
-	resolver, err := netx.NewResolver(&channelHandler{
-		ch: channel,
-	}, config.ServerNetwork, config.ServerAddress)
+	root := &model.MeasurementRoot{
+		Beginning: time.Now(),
+		Handler: &channelHandler{
+			ch: channel,
+		},
+	}
+	ctx = model.WithMeasurementRoot(ctx, root)
+	resolver, err := netx.NewResolver(
+		handlers.NoHandler,
+		config.ServerNetwork,
+		config.ServerAddress,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +134,7 @@ func DNSLookup(
 		defer mu.Unlock()
 		results.Addresses, results.Error = addrs, err
 	})
+	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	// TODO(bassosimone): tell DoH to close idle connections?
 	return results, nil
 }
@@ -153,9 +165,14 @@ func HTTPDo(
 ) (*HTTPDoResults, error) {
 	channel := make(chan model.Measurement)
 	// TODO(bassosimone): tell client to use specific CA bundle?
-	client := httpx.NewClient(&channelHandler{
-		ch: channel,
-	})
+	root := &model.MeasurementRoot{
+		Beginning: time.Now(),
+		Handler: &channelHandler{
+			ch: channel,
+		},
+	}
+	ctx = model.WithMeasurementRoot(ctx, root)
+	client := httpx.NewClient(handlers.NoHandler)
 	err := client.ConfigureDNS(
 		config.DNSServerNetwork, config.DNSServerAddress,
 	)
@@ -196,6 +213,7 @@ func HTTPDo(
 	results.Error = errwrapper.SafeErrWrapperBuilder{
 		Error: results.Error,
 	}.MaybeBuild()
+	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	return results, nil
 }
 
@@ -219,9 +237,14 @@ func TLSConnect(
 	ctx context.Context, config TLSConnectConfig,
 ) (*TLSConnectResults, error) {
 	channel := make(chan model.Measurement)
-	dialer := netx.NewDialer(&channelHandler{
-		ch: channel,
-	})
+	root := &model.MeasurementRoot{
+		Beginning: time.Now(),
+		Handler: &channelHandler{
+			ch: channel,
+		},
+	}
+	ctx = model.WithMeasurementRoot(ctx, root)
+	dialer := netx.NewDialer(handlers.NoHandler)
 	// TODO(bassosimone): tell dialer to use specific CA bundle?
 	err := dialer.ConfigureDNS(
 		config.DNSServerNetwork, config.DNSServerAddress,
@@ -244,5 +267,6 @@ func TLSConnect(
 		defer mu.Unlock()
 		results.Error = err
 	})
+	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	return results, nil
 }

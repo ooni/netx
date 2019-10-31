@@ -40,6 +40,9 @@ func TestIntegrationDNSLookupGood(t *testing.T) {
 	if len(results.Addresses) < 1 {
 		t.Fatal("no addresses returned?!")
 	}
+	if results.TestKeys.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
+	}
 }
 
 func TestIntegrationDNSLookupCancellation(t *testing.T) {
@@ -97,6 +100,9 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 	}
 	if len(results.Body) < 1 {
 		t.Fatal("no body?!")
+	}
+	if results.TestKeys.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
 	}
 }
 
@@ -169,6 +175,9 @@ func TestIntegrationTLSConnectGood(t *testing.T) {
 	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
+	}
+	if results.TestKeys.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
 	}
 }
 
