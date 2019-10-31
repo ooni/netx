@@ -36,10 +36,12 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	// DNS
 	if m.ResolveStart != nil {
 		h.logger.WithFields(log.Fields{
-			"dialID":        m.ResolveStart.DialID,
-			"elapsed":       m.ResolveStart.DurationSinceBeginning,
-			"hostname":      m.ResolveStart.Hostname,
-			"transactionID": m.ResolveStart.TransactionID,
+			"dialID":           m.ResolveStart.DialID,
+			"elapsed":          m.ResolveStart.DurationSinceBeginning,
+			"hostname":         m.ResolveStart.Hostname,
+			"transactionID":    m.ResolveStart.TransactionID,
+			"transportAddress": m.ResolveStart.TransportAddress,
+			"transportNetwork": m.ResolveStart.TransportNetwork,
 		}).Debug("dns: resolve domain name")
 	}
 	if m.DNSQuery != nil {
@@ -60,11 +62,13 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.ResolveDone != nil {
 		h.logger.WithFields(log.Fields{
-			"addresses":     m.ResolveDone.Addresses,
-			"dialID":        m.ResolveDone.DialID,
-			"elapsed":       m.ResolveDone.DurationSinceBeginning,
-			"error":         m.ResolveDone.Error,
-			"transactionID": m.ResolveDone.TransactionID,
+			"addresses":        m.ResolveDone.Addresses,
+			"dialID":           m.ResolveDone.DialID,
+			"elapsed":          m.ResolveDone.DurationSinceBeginning,
+			"error":            m.ResolveDone.Error,
+			"transactionID":    m.ResolveDone.TransactionID,
+			"transportAddress": m.ResolveDone.TransportAddress,
+			"transportNetwork": m.ResolveDone.TransportNetwork,
 		}).Debug("dns: resolution done")
 	}
 
