@@ -187,9 +187,8 @@ func NewResolver(
 	// Implementation note: system need to be dealt with
 	// separately because it doesn't have any transport.
 	if network == "system" {
-		return newResolverWrapper(beginning, handler, &net.Resolver{
-			PreferGo: false,
-		}), nil
+		return newResolverWrapper(
+			beginning, handler, resolver.NewResolverSystem()), nil
 	}
 	if network == "doh" {
 		return newResolverWrapper(beginning, handler, resolver.NewResolverHTTPS(
