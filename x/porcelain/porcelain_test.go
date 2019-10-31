@@ -35,10 +35,32 @@ func TestIntegrationDNSLookupGood(t *testing.T) {
 		t.Fatal(err)
 	}
 	if results.Error != nil {
-		t.Fatal(err)
+		t.Fatal(results.Error)
 	}
 	if len(results.Addresses) < 1 {
 		t.Fatal("no addresses returned?!")
+	}
+}
+
+func TestIntegrationDNSLookupCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(
+		context.Background(), time.Microsecond,
+	)
+	defer cancel()
+	results, err := DNSLookup(ctx, DNSLookupConfig{
+		Hostname: "ooni.io",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results.Error == nil {
+		t.Fatal("expected an error here")
+	}
+	if results.Error.Error() != "generic_timeout_error" {
+		t.Fatal("not the error we expected")
+	}
+	if len(results.Addresses) > 0 {
+		t.Fatal("addresses returned?!")
 	}
 }
 
@@ -65,7 +87,7 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 		t.Fatal(err)
 	}
 	if results.Error != nil {
-		t.Fatal(err)
+		t.Fatal(results.Error)
 	}
 	if results.StatusCode != 200 {
 		t.Fatal("request failed?!")
@@ -75,6 +97,25 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 	}
 	if len(results.Body) < 1 {
 		t.Fatal("no body?!")
+	}
+}
+
+func TestIntegrationHTTPDoCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(
+		context.Background(), time.Microsecond,
+	)
+	defer cancel()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL: "http://ooni.io",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results.Error == nil {
+		t.Fatal("expected an error here")
+	}
+	if results.Error.Error() != "generic_timeout_error" {
+		t.Fatal("not the error we expected")
 	}
 }
 
@@ -127,7 +168,26 @@ func TestIntegrationTLSConnectGood(t *testing.T) {
 		t.Fatal(err)
 	}
 	if results.Error != nil {
+		t.Fatal(results.Error)
+	}
+}
+
+func TestIntegrationTLSConnectCancellation(t *testing.T) {
+	ctx, cancel := context.WithTimeout(
+		context.Background(), time.Microsecond,
+	)
+	defer cancel()
+	results, err := TLSConnect(ctx, TLSConnectConfig{
+		Address: "ooni.io:443",
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if results.Error == nil {
+		t.Fatal("expected an error here")
+	}
+	if results.Error.Error() != "generic_timeout_error" {
+		t.Fatal("not the error we expected")
 	}
 }
 
