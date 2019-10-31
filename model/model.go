@@ -448,6 +448,14 @@ type ResolveStartEvent struct {
 	// TransactionID is the ID of the HTTP transaction that caused the
 	// current dial to run, or zero if there's no such transaction.
 	TransactionID int64 `json:",omitempty"`
+
+	// TransportNetwork is the network used by the DNS transport, which
+	// can be only of "doh", "dot", "tcp", "udp", or empty.
+	TransportNetwork string
+
+	// TransportAddress is the address used by the DNS transport, which
+	// is of course relative to the TransportNetwork.
+	TransportAddress string
 }
 
 // ResolveDoneEvent is emitted when we know the IP addresses of a
@@ -473,6 +481,14 @@ type ResolveDoneEvent struct {
 	// TransactionID is the ID of the HTTP transaction that caused the
 	// current dial to run, or zero if there's no such transaction.
 	TransactionID int64 `json:",omitempty"`
+
+	// TransportNetwork is the network used by the DNS transport, which
+	// can be only of "doh", "dot", "tcp", "udp", or empty.
+	TransportNetwork string
+
+	// TransportAddress is the address used by the DNS transport, which
+	// is of course relative to the TransportNetwork.
+	TransportAddress string
 }
 
 // X509Certificate is an x.509 certificate.

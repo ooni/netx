@@ -10,12 +10,13 @@ import (
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverudp"
 	"github.com/ooni/netx/internal/resolver/emitterresolver"
 	"github.com/ooni/netx/internal/resolver/ooniresolver"
+	"github.com/ooni/netx/internal/resolver/systemresolver"
 	"github.com/ooni/netx/model"
 )
 
 // NewResolverSystem creates a new Go/system resolver.
 func NewResolverSystem() *emitterresolver.Resolver {
-	return emitterresolver.New(new(net.Resolver))
+	return emitterresolver.New(systemresolver.New(new(net.Resolver)))
 }
 
 // NewResolverUDP creates a new UDP resolver.

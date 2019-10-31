@@ -26,6 +26,11 @@ func New(t model.DNSRoundTripper) *Resolver {
 	return &Resolver{transport: t}
 }
 
+// Transport returns the transport being used.
+func (c *Resolver) Transport() model.DNSRoundTripper {
+	return c.transport
+}
+
 var errNotImpl = errors.New("Not implemented")
 
 // LookupAddr returns the name of the provided IP address
