@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -18,12 +19,16 @@ func main() {
 	var (
 		flagAddress   = flag.String("dnslookup-address", "", "Transport dependent address")
 		flagName      = flag.String("dnslookup-name", "ooni.io", "Name to lookup")
+		flagTimeout   = flag.Duration("dnslookup-timeout", 60*time.Second, "Overall timeout")
 		flagTransport = flag.String("dnslookup-transport", "system", "DNS transport")
 	)
 	flag.Parse()
 	log.SetHandler(cli.Default)
 	log.SetLevel(log.DebugLevel)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(
+		context.Background(), *flagTimeout,
+	)
+	defer cancel()
 	results, err := porcelain.DNSLookup(ctx, porcelain.DNSLookupConfig{
 		Handler:       logger.NewHandler(log.Log),
 		Hostname:      *flagName,

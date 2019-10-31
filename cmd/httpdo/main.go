@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -19,12 +20,16 @@ func main() {
 		flagDNSAddress   = flag.String("httpdo-dns-address", "", "Transport dependent address")
 		flagDNSTransport = flag.String("httpdo-dns-transport", "system", "DNS transport")
 		flagMethod       = flag.String("httpdo-method", "GET", "Method to use")
+		flagTimeout      = flag.Duration("httpdo-timeout", 60*time.Second, "Overall timeout")
 		flagURL          = flag.String("httpdo-url", "https://ooni.io", "URL to use")
 	)
 	flag.Parse()
 	log.SetHandler(cli.Default)
 	log.SetLevel(log.DebugLevel)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(
+		context.Background(), *flagTimeout,
+	)
+	defer cancel()
 	results, err := porcelain.HTTPDo(ctx, porcelain.HTTPDoConfig{
 		DNSServerAddress: *flagDNSAddress,
 		DNSServerNetwork: *flagDNSTransport,

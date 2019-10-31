@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/cli"
@@ -20,11 +21,15 @@ func main() {
 		flagDNSAddress   = flag.String("tlsconnect-dns-address", "", "Transport dependent address")
 		flagDNSTransport = flag.String("tlsconnect-dns-transport", "system", "DNS transport")
 		flagSNI          = flag.String("tlsconnect-sni", "", "Force specific SNI")
+		flagTimeout      = flag.Duration("tlsconnect-timeout", 60*time.Second, "Overall timeout")
 	)
 	flag.Parse()
 	log.SetHandler(cli.Default)
 	log.SetLevel(log.DebugLevel)
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(
+		context.Background(), *flagTimeout,
+	)
+	defer cancel()
 	results, err := porcelain.TLSConnect(ctx, porcelain.TLSConnectConfig{
 		Address:          *flagAddress,
 		DNSServerAddress: *flagDNSAddress,

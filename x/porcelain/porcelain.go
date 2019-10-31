@@ -17,6 +17,7 @@ import (
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/model"
 )
 
@@ -192,6 +193,9 @@ func HTTPDo(
 		results.Body, results.Error = data, err
 		mu.Unlock()
 	})
+	results.Error = errwrapper.SafeErrWrapperBuilder{
+		Error: results.Error,
+	}.MaybeBuild()
 	return results, nil
 }
 
@@ -232,8 +236,7 @@ func TLSConnect(
 		results = new(TLSConnectResults)
 	)
 	results.TestKeys.collect(channel, config.Handler, func() {
-		// TODO(bassosimone): pass context to dialer
-		conn, err := dialer.DialTLS("tcp", config.Address)
+		conn, err := dialer.DialTLSContext(ctx, "tcp", config.Address)
 		if conn != nil {
 			defer conn.Close()
 		}

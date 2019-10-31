@@ -88,6 +88,13 @@ func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error) {
 	return d.dialer.DialTLS(network, address)
 }
 
+// DialTLSContext is like DialTLS, but with context
+func (d *Dialer) DialTLSContext(
+	ctx context.Context, network, address string,
+) (net.Conn, error) {
+	return d.dialer.DialTLSContext(ctx, network, address)
+}
+
 // NewResolver returns a new resolver using the same handler of this
 // Dialer. The arguments have the same meaning of ConfigureDNS. The
 // returned resolver will not be used by this Dialer, and will not use
