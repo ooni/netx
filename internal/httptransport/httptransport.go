@@ -5,7 +5,7 @@ package httptransport
 import (
 	"net/http"
 
-	"github.com/ooni/netx/internal/httptransport/bodyreader"
+	"github.com/ooni/netx/internal/httptransport/bodytracer"
 	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/internal/httptransport/transactioner"
 )
@@ -19,7 +19,7 @@ type Transport struct {
 // New creates a new Transport.
 func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
-		roundTripper: transactioner.New(bodyreader.New(
+		roundTripper: transactioner.New(bodytracer.New(
 			tracetripper.New(roundTripper))),
 	}
 }

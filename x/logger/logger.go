@@ -175,15 +175,18 @@ func (h *Handler) OnMeasurement(m model.Measurement) {
 	}
 	if m.HTTPRoundTripDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":         m.HTTPRoundTripDone.DurationSinceBeginning,
-			"error":           m.HTTPRoundTripDone.Error,
-			"headers":         m.HTTPRoundTripDone.Headers,
-			"redirect_body":   stringifyBody(m.HTTPRoundTripDone.RedirectBody),
-			"request_method":  m.HTTPRoundTripDone.RequestMethod,
-			"request_headers": m.HTTPRoundTripDone.RequestHeaders,
-			"request_url":     m.HTTPRoundTripDone.RequestURL,
-			"statusCode":      m.HTTPRoundTripDone.StatusCode,
-			"transactionID":   m.HTTPRoundTripDone.TransactionID,
+			"elapsed":                 m.HTTPRoundTripDone.DurationSinceBeginning,
+			"error":                   m.HTTPRoundTripDone.Error,
+			"headers":                 m.HTTPRoundTripDone.Headers,
+			"request_body":            stringifyBody(m.HTTPRoundTripDone.RequestBody),
+			"request_body_why_saved":  m.HTTPRoundTripDone.RequestBodyWhySaved,
+			"request_method":          m.HTTPRoundTripDone.RequestMethod,
+			"request_headers":         m.HTTPRoundTripDone.RequestHeaders,
+			"request_url":             m.HTTPRoundTripDone.RequestURL,
+			"response_body":           stringifyBody(m.HTTPRoundTripDone.ResponseBody),
+			"response_body_why_saved": m.HTTPRoundTripDone.ResponseBodyWhySaved,
+			"statusCode":              m.HTTPRoundTripDone.StatusCode,
+			"transactionID":           m.HTTPRoundTripDone.TransactionID,
 		}).Debug("http: round trip done")
 	}
 

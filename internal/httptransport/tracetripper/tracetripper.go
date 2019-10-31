@@ -24,6 +24,7 @@ type Transport struct {
 	readAllErrs  int64
 	readAll      func(r io.Reader) ([]byte, error)
 	roundTripper http.RoundTripper
+	snapSize     int64
 }
 
 // New creates a new Transport.
@@ -31,7 +32,44 @@ func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
 		readAll:      ioutil.ReadAll,
 		roundTripper: roundTripper,
+		snapSize:     1 << 17,
 	}
+}
+
+type readCloseWrapper struct {
+	closer io.Closer
+	reader io.Reader
+}
+
+func newReadCloseWrapper(
+	reader io.Reader, closer io.ReadCloser,
+) *readCloseWrapper {
+	return &readCloseWrapper{
+		closer: closer,
+		reader: reader,
+	}
+}
+
+func (c *readCloseWrapper) Read(p []byte) (int, error) {
+	return c.reader.Read(p)
+}
+
+func (c *readCloseWrapper) Close() error {
+	return c.closer.Close()
+}
+
+func readSnap(
+	source *io.ReadCloser, limit int64,
+	readAll func(r io.Reader) ([]byte, error),
+) (data []byte, err error) {
+	data, err = readAll(io.LimitReader(*source, limit))
+	if err == nil {
+		*source = newReadCloseWrapper(
+			io.MultiReader(bytes.NewReader(data), *source),
+			*source,
+		)
+	}
+	return
 }
 
 // RoundTrip executes a single HTTP transaction, returning
@@ -51,9 +89,19 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	})
 
 	var (
+		err              error
+		requestBody      []byte
 		requestHeaders   = http.Header{}
 		requestHeadersMu sync.Mutex
 	)
+
+	// Save a snapshot of the request body
+	if req.Body != nil {
+		requestBody, err = readSnap(&req.Body, t.snapSize, t.readAll)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Prepare a tracer for delivering events
 	tracer := &httptrace.ClientTrace{
@@ -103,7 +151,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		},
 		WroteHeaderField: func(key string, values []string) {
 			requestHeadersMu.Lock()
-			requestHeaders[key] = values
+			// Important: do not set directly into the headers map using
+			// the [] operator because net/http expects to be able to
+			// perform normalization of header names!
+			for _, value := range values {
+				requestHeaders.Add(key, value)
+			}
 			requestHeadersMu.Unlock()
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
@@ -172,35 +225,24 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	event := &model.HTTPRoundTripDoneEvent{
 		DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		Error:                  err,
+		RequestBodySnap:        requestBody,
 		RequestHeaders:         requestHeaders,   // [*]
 		RequestMethod:          req.Method,       // [*]
 		RequestURL:             req.URL.String(), // [*]
+		SnapSize:               t.snapSize,
 		TransactionID:          tid,
 	}
 	if resp != nil {
 		event.Headers = resp.Header
 		event.StatusCode = int64(resp.StatusCode)
-		// If this is a redirect then Go will ignore the body but we
-		// are OONI and we want to see it. Therefore, read it now,
-		// dispatch it to the RoundTripDone handler, and make sure we
-		// fail the whole round trip if we cannot read it.
-		//
-		// Also, because redirect responses are supposed to be small,
-		// cap their size to 64 KiB, to avoid reading too much.
-		//
-		// Also, the net/http code really ignores the body but just
-		// in case this changes in the future, give it something that
-		// implements the same interface as the body.
-		if resp.StatusCode >= 301 && resp.StatusCode <= 308 {
-			var data []byte
-			data, err = t.readAll(io.LimitReader(resp.Body, 1<<17))
-			resp.Body.Close()
-			event.RedirectBody = data
-			resp.Body = ioutil.NopCloser(bytes.NewReader(data))
-			if err != nil {
-				atomic.AddInt64(&t.readAllErrs, 1)
-				resp = nil // this is how net/http likes it
-			}
+		// Save a snapshot of the response body
+		var data []byte
+		data, err = readSnap(&resp.Body, t.snapSize, t.readAll)
+		if err != nil {
+			atomic.AddInt64(&t.readAllErrs, 1)
+			resp = nil // this is how net/http likes it
+		} else {
+			event.BodySnap = data
 		}
 	}
 	root.Handler.OnMeasurement(model.Measurement{

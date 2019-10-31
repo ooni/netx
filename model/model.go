@@ -348,9 +348,11 @@ type HTTPRoundTripDoneEvent struct {
 	// Headers contains the response headers if error is nil.
 	Headers http.Header
 
-	// RedirectBody contains the redirect body that otherwise Go will
-	// ignore. We cap the maximum size to a reasonable value.
-	RedirectBody []byte
+	// RequestBodySnap contains a snap of the request body. We'll
+	// not read more than SnapSize bytes of the body. Because typically
+	// you control the request bodies that you send, perhaps think
+	// about saving them using other means.
+	RequestBodySnap []byte
 
 	// RequestHeaders contain the original request headers. This is
 	// included here to make this event actionable without needing to
@@ -364,6 +366,15 @@ type HTTPRoundTripDoneEvent struct {
 	// RequestURL is the original request URL. This is here
 	// for the same reason of RequestHeaders.
 	RequestURL string
+
+	// BodySnap is like RequestBodySnap but for the response. You
+	// can still save the whole body by just reading it, if this
+	// is something that you need to do. We're using the snaps here
+	// mainly to log small stuff like DoH and redirects.
+	BodySnap []byte
+
+	// SnapSize is the size of the bodies snapshot
+	SnapSize int64
 
 	// StatusCode contains the HTTP status code if error is nil.
 	StatusCode int64
