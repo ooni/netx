@@ -15,6 +15,7 @@ import (
 	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
+	"github.com/ooni/netx/internal/resolver/chainresolver"
 	"github.com/ooni/netx/model"
 	"golang.org/x/net/http2"
 )
@@ -292,4 +293,10 @@ func (t *HTTPTransport) CloseIdleConnections() {
 	if tr, ok := t.roundTripper.(closeIdler); ok {
 		tr.CloseIdleConnections()
 	}
+}
+
+// ChainResolvers chains a primary and a secondary resolver such that
+// we can fallback to the secondary if primary is broken.
+func ChainResolvers(primary, secondary model.DNSResolver) model.DNSResolver {
+	return chainresolver.New(primary, secondary)
 }

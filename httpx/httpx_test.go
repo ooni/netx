@@ -2,11 +2,11 @@ package httpx_test
 
 import (
 	"io/ioutil"
+	"net"
 	"testing"
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
-	"github.com/ooni/netx/x/nervousresolver"
 )
 
 func TestIntegration(t *testing.T) {
@@ -30,7 +30,7 @@ func TestIntegration(t *testing.T) {
 func TestIntegrationSetResolver(t *testing.T) {
 	client := httpx.NewClient(handlers.NoHandler)
 	defer client.Transport.CloseIdleConnections()
-	client.SetResolver(nervousresolver.Default)
+	client.SetResolver(new(net.Resolver))
 	resp, err := client.HTTPClient.Get("https://www.google.com")
 	if err != nil {
 		t.Fatal(err)
