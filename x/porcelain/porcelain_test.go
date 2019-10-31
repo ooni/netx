@@ -1,139 +1,125 @@
 package porcelain
 
 import (
-	"bytes"
-	"io/ioutil"
-	"strings"
+	"context"
 	"testing"
-
-	"github.com/ooni/netx/handlers"
 )
 
-func TestIntegration(t *testing.T) {
-	body := strings.NewReader("antani")
-	req, err := NewHTTPRequest("POST", "http://www.x.org", body)
+func TestIntegrationDNSLookupGood(t *testing.T) {
+	ctx := context.Background()
+	results, err := DNSLookup(ctx, DNSLookupConfig{
+		Hostname: "ooni.io",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if req.Method != "POST" {
-		t.Fatal("unexpected method")
-	}
-	if req.URL.Scheme != "http" {
-		t.Fatal("unexpected scheme")
-	}
-	if req.URL.Host != "www.x.org" {
-		t.Fatal("unexpected host")
-	}
-	data, err := ioutil.ReadAll(req.Body)
-	if err != nil {
+	if results.Error != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(data, []byte("antani")) {
-		t.Fatal("unexpected body")
-	}
-	root := RequestMeasurementRoot(req)
-	if root == nil {
-		t.Fatal("unexpected nil root")
+	if len(results.Addresses) < 1 {
+		t.Fatal("no addresses returned?!")
 	}
 }
 
-func TestGetWithRedirects(t *testing.T) {
-	client := NewHTTPXClient()
-	measurements, err := Get(
-		handlers.NoHandler,
-		client,
-		"https://httpbin.org/redirect/4",
-		"ooniprobe-netx/0.1.0",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if measurements == nil {
-		t.Fatal("nil measurements")
-	}
-	if len(measurements.Resolves) < 1 {
-		t.Fatal("no resolves?!")
-	}
-	if len(measurements.Connects) < 1 {
-		t.Fatal("no connects?!")
-	}
-	if len(measurements.Requests) < 1 {
-		t.Fatal("no requests?!")
-	}
-	if measurements.Scoreboard == nil {
-		t.Fatal("no scoreboard?!")
-	}
-}
-
-func TestGetWithInvalidURL(t *testing.T) {
-	client := NewHTTPXClient()
-	measurements, err := Get(
-		handlers.NoHandler,
-		client,
-		"\t", // invalid URL
-		"ooniprobe-netx/0.1.0",
-	)
+func TestIntegrationDNSLookupUnknownDNS(t *testing.T) {
+	ctx := context.Background()
+	results, err := DNSLookup(ctx, DNSLookupConfig{
+		Hostname:      "ooni.io",
+		ServerNetwork: "antani",
+	})
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	if measurements != nil {
-		t.Fatal("expected nil measurements")
+	if results != nil {
+		t.Fatal("expected nil results here")
 	}
 }
 
-func TestTLSConnectNormal(t *testing.T) {
-	measurements, err := TLSConnect(
-		handlers.NoHandler,
-		"example.com:443",
-		"example.com",
-	)
+func TestIntegrationHTTPDoGood(t *testing.T) {
+	ctx := context.Background()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL: "http://ooni.io",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if measurements == nil {
-		t.Fatal("expected measurements")
+	if results.Error != nil {
+		t.Fatal(err)
 	}
-	if measurements.Error != err {
-		t.Fatal("errors mismatch")
+	if results.StatusCode != 200 {
+		t.Fatal("request failed?!")
 	}
-}
-
-func TestTLSConnectWrongSNI(t *testing.T) {
-	measurements, err := TLSConnect(
-		handlers.NoHandler,
-		"example.com:443",
-		"ooni.io",
-	)
-	if err == nil {
-		t.Fatal("expected an error here")
+	if len(results.Headers) < 1 {
+		t.Fatal("no headers?!")
 	}
-	if err.Error() != "ssl_invalid_hostname" {
-		t.Fatal("not the error we expected")
-	}
-	if measurements == nil {
-		t.Fatal("expected measurements")
-	}
-	if measurements.Error != err {
-		t.Fatal("errors mismatch")
+	if len(results.Body) < 1 {
+		t.Fatal("no body?!")
 	}
 }
 
-func TestTLSConnectWrongDomain(t *testing.T) {
-	measurements, err := TLSConnect(
-		handlers.NoHandler,
-		"antani.local:443",
-		"ooni.io",
-	)
+func TestIntegrationHTTPDoUnknownDNS(t *testing.T) {
+	ctx := context.Background()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL:              "http://ooni.io",
+		DNSServerNetwork: "antani",
+	})
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
-	if err.Error() != "dns_nxdomain_error" {
-		t.Fatal("not the error we expected")
+	if results != nil {
+		t.Fatal("expected nil results here")
 	}
-	if measurements == nil {
-		t.Fatal("expected measurements")
+}
+
+func TestIntegrationHTTPDoRoundTripError(t *testing.T) {
+	ctx := context.Background()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL: "http://ooni.io:443", // 443 with http
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if measurements.Error != err {
-		t.Fatal("errors mismatch")
+	if results.Error == nil {
+		t.Fatal("expected an error here")
+	}
+}
+
+func TestIntegrationHTTPDoBadURL(t *testing.T) {
+	ctx := context.Background()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL: "\t",
+	})
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if results != nil {
+		t.Fatal("expected nil results here")
+	}
+}
+
+func TestIntegrationTLSConnectGood(t *testing.T) {
+	ctx := context.Background()
+	results, err := TLSConnect(ctx, TLSConnectConfig{
+		Address: "ooni.io:443",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results.Error != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestIntegrationTLSConnectUnknownDNS(t *testing.T) {
+	ctx := context.Background()
+	results, err := TLSConnect(ctx, TLSConnectConfig{
+		Address:          "ooni.io:443",
+		DNSServerNetwork: "antani",
+	})
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if results != nil {
+		t.Fatal("expected nil results here")
 	}
 }
