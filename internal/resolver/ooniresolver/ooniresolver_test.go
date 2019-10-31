@@ -16,6 +16,14 @@ func newtransport() model.DNSRoundTripper {
 	return dnsovertcp.NewTransportTCP(&net.Dialer{}, "dns.quad9.net:53")
 }
 
+func TestGettingTransport(t *testing.T) {
+	transport := newtransport()
+	client := New(transport)
+	if transport != client.Transport() {
+		t.Fatal("the transport is not correctly set")
+	}
+}
+
 func TestLookupAddr(t *testing.T) {
 	client := New(newtransport())
 	addrs, err := client.LookupAddr(context.Background(), "130.192.91.211")

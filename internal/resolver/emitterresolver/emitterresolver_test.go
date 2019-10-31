@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ooni/netx/internal/resolver/systemresolver"
 	"github.com/ooni/netx/model"
 )
 
@@ -50,7 +51,7 @@ func (h *emitterchecker) OnMeasurement(m model.Measurement) {
 }
 
 func TestLookupHost(t *testing.T) {
-	client := New(new(net.Resolver))
+	client := New(systemresolver.New(new(net.Resolver)))
 	handler := new(emitterchecker)
 	ctx := model.WithMeasurementRoot(
 		context.Background(), &model.MeasurementRoot{

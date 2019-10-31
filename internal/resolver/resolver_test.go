@@ -29,6 +29,10 @@ func testresolverquick(t *testing.T, resolver model.DNSResolver) {
 	}
 }
 
+func TestIntegrationNewResolverSystem(t *testing.T) {
+	testresolverquick(t, NewResolverSystem())
+}
+
 func TestIntegrationNewResolverUDPAddress(t *testing.T) {
 	testresolverquick(t, NewResolverUDP(
 		new(net.Dialer), "8.8.8.8:53"))
