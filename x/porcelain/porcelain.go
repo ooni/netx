@@ -9,11 +9,13 @@ package porcelain
 import (
 	"context"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/m-lab/go/rtx"
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
@@ -86,6 +88,62 @@ func (r *Results) collect(
 			return
 		}
 	}
+}
+
+type dnsFallback struct {
+	network, address string
+}
+
+func configureDNS(seed int64, network, address string) (model.DNSResolver, error) {
+	resolver, err := netx.NewResolver(handlers.NoHandler, network, address)
+	if err != nil {
+		return nil, err
+	}
+	fallbacks := []dnsFallback{
+		dnsFallback{
+			network: "doh",
+			address: "https://cloudflare-dns.com/dns-query",
+		},
+		dnsFallback{
+			network: "doh",
+			address: "https://dns.google/dns-query",
+		},
+		dnsFallback{
+			network: "dot",
+			address: "8.8.8.8:853",
+		},
+		dnsFallback{
+			network: "dot",
+			address: "8.8.4.4:853",
+		},
+		dnsFallback{
+			network: "dot",
+			address: "1.1.1.1:853",
+		},
+		dnsFallback{
+			network: "dot",
+			address: "9.9.9.9:853",
+		},
+	}
+	random := rand.New(rand.NewSource(seed))
+	random.Shuffle(len(fallbacks), func(i, j int) {
+		fallbacks[i], fallbacks[j] = fallbacks[j], fallbacks[i]
+	})
+	var configured int
+	for i := 0; configured < 2 && i < len(fallbacks); i++ {
+		if fallbacks[i].network == network {
+			continue
+		}
+		var fallback model.DNSResolver
+		fallback, err = netx.NewResolver(
+			handlers.NoHandler, fallbacks[i].network,
+			fallbacks[i].address,
+		)
+		rtx.PanicOnError(err, "porcelain: invalid fallbacks table")
+		resolver = netx.ChainResolvers(resolver, fallback)
+		configured++
+	}
+	return resolver, nil
 }
 
 // DNSLookupConfig contains DNSLookup settings.
@@ -173,12 +231,15 @@ func HTTPDo(
 	}
 	ctx = model.WithMeasurementRoot(ctx, root)
 	client := httpx.NewClient(handlers.NoHandler)
-	err := client.ConfigureDNS(
-		config.DNSServerNetwork, config.DNSServerAddress,
+	resolver, err := configureDNS(
+		time.Now().UnixNano(),
+		config.DNSServerNetwork,
+		config.DNSServerAddress,
 	)
 	if err != nil {
 		return nil, err
 	}
+	client.SetResolver(resolver)
 	// TODO(bassosimone): implement sending body
 	req, err := http.NewRequest(config.Method, config.URL, nil)
 	if err != nil {
@@ -246,12 +307,15 @@ func TLSConnect(
 	ctx = model.WithMeasurementRoot(ctx, root)
 	dialer := netx.NewDialer(handlers.NoHandler)
 	// TODO(bassosimone): tell dialer to use specific CA bundle?
-	err := dialer.ConfigureDNS(
-		config.DNSServerNetwork, config.DNSServerAddress,
+	resolver, err := configureDNS(
+		time.Now().UnixNano(),
+		config.DNSServerNetwork,
+		config.DNSServerAddress,
 	)
 	if err != nil {
 		return nil, err
 	}
+	dialer.SetResolver(resolver)
 	// TODO(bassosimone): can this call really fail?
 	dialer.ForceSpecificSNI(config.SNI)
 	var (
