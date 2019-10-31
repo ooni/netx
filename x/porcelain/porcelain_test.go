@@ -44,7 +44,7 @@ func TestIntegrationDNSLookupGood(t *testing.T) {
 
 func TestIntegrationDNSLookupCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(
-		context.Background(), time.Millisecond,
+		context.Background(), time.Microsecond,
 	)
 	defer cancel()
 	results, err := DNSLookup(ctx, DNSLookupConfig{
@@ -102,7 +102,7 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 
 func TestIntegrationHTTPDoCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(
-		context.Background(), time.Millisecond,
+		context.Background(), time.Microsecond,
 	)
 	defer cancel()
 	results, err := HTTPDo(ctx, HTTPDoConfig{
@@ -174,7 +174,7 @@ func TestIntegrationTLSConnectGood(t *testing.T) {
 
 func TestIntegrationTLSConnectCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(
-		context.Background(), time.Millisecond,
+		context.Background(), time.Microsecond,
 	)
 	defer cancel()
 	results, err := TLSConnect(ctx, TLSConnectConfig{
