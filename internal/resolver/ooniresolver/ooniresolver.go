@@ -117,11 +117,15 @@ func (c *Resolver) roundTripWithRetry(
 		if err == nil {
 			return reply, nil
 		}
+		errorslist = append(errorslist, err)
 		var operr *net.OpError
 		if errors.As(err, &operr) == false || operr.Timeout() == false {
-			return nil, err
+			// bugfix: when running several queries in a loop, it may
+			// happen that later queries fail with context deadline. For
+			// this reason, better to always use the first error in the
+			// list, which hopefully is a network timeout.
+			break
 		}
-		errorslist = append(errorslist, err)
 		atomic.AddInt64(&c.ntimeouts, 1)
 	}
 	// bugfix: we MUST return one of the errors otherwise we confuse the
