@@ -67,12 +67,9 @@ GO111MODULE=on go test -v -race ./...
 To build the example commands:
 
 ```
-GO111MODULE=on go build -v ./cmd/dnsclient
-GO111MODULE=on go build -v ./cmd/httpclient
+GO111MODULE=on go build -v ./cmd/...
 ```
 
-Both commands will provide useful help messages when run with `-help`. When
+All commands will provide terse help messages when run with `-help`. When
 run without arguments they run against default input suitable to show
-at a first glance their functionality. They both emit the events they have
-measured on the standard ouput, using the JSONL format (i.e. newline
-separated serialized JSON documents).
+at a first glance their functionality.
