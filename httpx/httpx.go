@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/model"
 )
@@ -32,6 +33,14 @@ func newTransport(
 		proxyFunc,
 	)
 	return t
+}
+
+// NewTransportWithProxyFunc creates a transport without any
+// handler attached using the specified proxy func.
+func NewTransportWithProxyFunc(
+	proxyFunc func(*http.Request) (*url.URL, error),
+) *Transport {
+	return newTransport(time.Now(), handlers.NoHandler, proxyFunc)
 }
 
 // NewTransport creates a new Transport. The beginning argument is

@@ -9,23 +9,23 @@
 
 OONI experiments send and/or receive network traffic to
 determine if there is blocking. We want the implementation
-of OONI experiments to be as simple as possible.
+of OONI experiments to be as simple as possible. For this
+reason _we want to attribute errors to the major network
+or protocol operation that caused them_.
 
-At the same time, we want an experiment to collect as much
-low-level data as possible. For eample, we want to know
+At the same time, _we want an experiment to collect as much
+low-level data as possible_. For example, we want to know
 whether and when the TLS handshake completed; what certificates
 were provided by the server; what TLS version was selected;
 and so forth. These bits of information are very useful
 to analyze a measurement and better classify it.
 
-We also want to be able to change some configuration properties
-and repeat the measurement; e.g., we may want to configure DNS
-over HTTPS (DoH) and then attempt to fetch again an URL. Or
-we may want to force TLS to use a specific SNI.
-
-In this document we design a Go library that solves all the
-above problems by exposing to the user an API with simple replacements
-for standard Go interfaces, e.g. `http.RoundTripper`.
+We also want to _automatically or manually run follow-up
+measurements where we change some configuration properties
+and repeat the measurement_. For example, we may want to
+configure DNS over HTTPS (DoH) and then attempt to
+fetch again an URL. Or we may want to detect whether
+there is SNI bases blocking.
 
 ## Rationale
 
@@ -56,14 +56,16 @@ This approach based on combining low-level test helpers
 has two problems. First, the implementation of an
 experiment is rather low level, because you need to
 invoke the test helpers in sequence, to populate the
-measurement result object. Second, the test helpers API is likely
-to eventually change when new measurement techniques
-are added to the measurement engine.
+measurement result object. Second, the test helpers
+API is likely to eventually change when new measurement
+techniques are added to the measurement engine.
 
 Because Go has powerful interfaces, we propose in this
 document to use an alternative approach where we provide
 OONI-measurements-aware replacements for Go standard
-library interfaces, e.g., `http.RoundTripper`.
+library interfaces, e.g., `http.RoundTripper`. On top
+of that, we'll create all the required interfaces to
+achive the measurement goals mentioned above.
 
 This repository is separate from `ooni/probe-engine`
 because they solve different problems. Here we provide
@@ -73,9 +75,82 @@ implement OONI tests and clients for OONI backend
 services. Putting all the code into the same repository
 would have put too many concerns into the same repo.
 
-## Design
+## Definitions
 
-We want to provide moral replacements for the following
+Consistently with Go's terminology, we define
+_HTTP round trip_ the process where we get a request
+to send; we find a suitable connection for sending
+it, or we create one; we send headers and
+possibly body; and we receive response headers.
+
+We also define _HTTP transaction_ the process starting
+with an HTTP round trip and terminating by reading
+the full response body.
+
+We define _netx replacement_ a Go struct of interface that
+has the same interface of a Go standard library object
+but additionally performs measurements.
+
+## Enhanced error handling
+
+This library MUST wrap `error` such that:
+
+1. we can classify all errors we care about; and
+
+2. we can map them to major operations.
+
+The `github.com/ooni/netx/model` MUST contain a wrapper for
+Go `error` named `ErrWrapper` that is at least like:
+
+```Go
+type ErrWrapper struct {
+    Failure    string // error classification
+    Operation  string // operation that caused error
+    WrappedErr error  // the original error
+}
+
+func (e *ErrWrapper) Error() string {
+    return e.Failure
+}
+```
+
+Where `Failure` is one of the errors we care about, i.e.:
+
+- `connection_refused`: ECONNREFUSED
+- `connection_reset`: ECONNRESET
+- `dns_bogon_error`: detected bogon in DNS reply
+- `dns_nxdomain_error`: NXDOMAIN in DNS reply
+- `eof_error`: unexpected EOF on connection
+- `generic_timeout_error`: some timer has expired
+- `ssl_invalid_hostname`: certificate not valid for SNI
+- `ssl_unknown_autority`: cannot find CA validating certificate
+- `ssl_invalid_certificate`: e.g. certificate expried
+- `unknown_failure <string>`: any other error
+
+Note that we care about bogons in DNS replies because they are
+often used to censor specific websites.
+
+And where `Operation` is one of:
+
+- `resolve`: domain name resolution
+- `connect`: TCP connect
+- `tls_handshake`: TLS handshake
+- `http_round_trip`: reading/writing HTTP
+
+The code in this library MUST wrap returned errors such
+that we can cast back to `ErrWrapper` during the analysis
+phase, using Go 1.13 `errors` library as follows:
+
+```Go
+var wrapper *model.ErrWrapper
+if errors.As(err, &wrapper) == true {
+    // Do something with the error
+}
+```
+
+## Netx replacements
+
+We want to provide netx replacements for the following
 interfaces in the Go standard library:
 
 1. `http.RoundTripper`
@@ -86,37 +161,196 @@ interfaces in the Go standard library:
 
 4. `net.Resolver`
 
-Where possible (e.g. for `http.RoundTripper`) we will
-provide structures implementing the interface. Where
-instead this is not possible (e.g. for `net.Dialer`) we
-will provide structures implementing methods that are
-compatible with the originals. For example, in the
-case of `net.Dialer`, we will provide compatible
-functions, such as `Dial`, `DialContext`, and `DialTLS`.
+Accordingly, we'll define the following interfaces in
+the `github.com/ooni/next/model` package:
 
-This make it possible to use our `net.Dialer`
-replacement with other libraries. Both `http.Transport`
-and `gorilla/websocket`'s `websocket.Dialer` have 
+```Go
+type DNSResolver interface {
+	LookupAddr(ctx context.Context, addr string) ([]string, error)
+	LookupCNAME(ctx context.Context, host string) (string, error)
+	LookupHost(ctx context.Context, hostname string) ([]string, error)
+	LookupMX(ctx context.Context, name string) ([]*net.MX, error)
+	LookupNS(ctx context.Context, name string) ([]*net.NS, error)
+}
+
+type Dialer interface {
+	Dial(network, address string) (net.Conn, error)
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+type TLSDialer interface {
+	DialTLS(network, address string) (net.Conn, error)
+	DialTLSContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+```
+
+We won't need an interface for `http.RoundTripper`
+because it is already an interface, so we'll just use it.
+
+Our replacements will implement these interfaces.
+
+Using an API compatible with Go's standard libary makes
+it possible to use, say, our `net.Dialer` replacement with
+other libraries. Both `http.Transport` and
+`gorilla/websocket`'s `websocket.Dialer` have 
 functions like `Dial` and `DialContext` that can be
-overriden. Therefore, we will be able to use our
-replacements to collect measurements.
+overriden. By overriding such function pointers,
+we could use our replacements instead of the standard
+libary, thus we could collect measurements while
+using third party code to implement specific protocols.
 
-There will be a mechanism for gathering such low
-level measurements as they occur, for logging
-and/or storing purposes.
+Also, using interfaces allows us to combine code
+quite easily. For example, a resolver that detects
+bogons is easily implemented as a wrapper around
+another resolve that performs the real resolution.
 
-## Implementation
+## Dispatching events
 
-The actual implementation must follow this spec. It may include more
-methods or interfaces. The exact structure of measurements events
-is left unspecified, as they are likely to change. That said, we will
-be careful to not remove existing fields and/or change the meaning
-of existing fields unless that is necessary.
+The `github.com/ooni/netx/model` package will define
+an handler for low level events as:
 
-### The github.com/ooni/netx/model package
+```Go
+type Handler interface {
+    OnMeasurement(Measurement)
+}
+```
 
-This package will contain the definition of low-level
-events. We are interested in knowing the following:
+We will provide a mechanism to bind a specific
+handler to a `context.Context` such that the handler
+will receive all the measurements caused by code
+using such context. This mechanism is like:
+
+```Go
+type MeasurementRoot struct {
+	Beginning time.Time // the "zero" time
+	Handler Handler     // the handler to use
+}
+```
+
+You will be able to assign a `MeasurementRoot` to
+a context by using the following function:
+
+```Go
+func WithMeasurementRoot(
+    ctx context.Context, root *MeasurementRoot) context.Context
+```
+
+which will return a clone of the original context
+that uses the `MeasurementRoot`. Pass this context to
+any method of our replacements to get measurements.
+
+Given such context, or a subcontext, you can get
+back the original `MeasurementRoot` using:
+
+```Go
+func ContextMeasurementRoot(ctx context.Context) *MeasurementRoot
+```
+
+which will return the context `MeasurementRoot` or
+`nil` if none is set into the context. This is how our
+internal code gets access to the `MeasurementRoot`.
+
+## Constructing and configuring replacements
+
+The `github.com/ooni/netx` package MUST provide an API such
+that you can construct and configure a `net.Resolver` replacement
+as follows:
+
+```Go
+r, err := netx.NewResolverWithoutHandler(DNSNetwork, DNSAddress)
+if err != nil {
+    log.Fatal("cannot configure specifc resolver")
+}
+var resolver model.DNSResolver = r
+// now use resolver ...
+```
+
+where `DNSNetwork` and `DNSAddress` configure the type
+of the resolver as follows:
+
+- when `DNSNetwork` is `""` or `"system"`, `DNSAddress` does
+not matter and we use the system resolver
+
+- when `DNSNetwork` is `"udp"`, `DNSAddress` is the address
+or domain name, with optional port, of the DNS server
+(e.g., `8.8.8.8:53`)
+
+- when `DNSNetwork` is `"tcp"`, `DNSAddress` is the address
+or domain name, with optional port, of the DNS server
+(e.g., `8.8.8.8:53`)
+
+- when `DNSNetwork` is `"dot"`, `DNSAddress` is the address
+or domain name, with optional port, of the DNS server
+(e.g., `8.8.8.8:853`)
+
+- when `DNSNetwork` is `"doh"`, `DNSAddress` is the URL
+of the DNS server (e.g. `https://cloudflare-dns.com/dns-query`)
+
+When the resolve is not the system one, we'll also be able
+to emit events when performing resolution. Otherwise, we'll
+just emit the `DNSResolveDone` event defined below.
+
+Any resolver returned by this function will return the
+`dns_bogon_error` if any `LookupHost` lookup returns a bogon IP.
+
+This functionality allows us to use different resolvers.
+
+The package will also contain this function:
+
+```Go
+func ChainResolvers(
+    primary, secondary model.DNSResolver) model.DNSResolver
+```
+
+where you can create a new resolver where `secondary` will be
+invoked whenever `primary` fails. This functionality allows
+us to be more resilient and bypass automatically certain types
+of censorship, e.g., a resolver returning a bogon.
+
+The `github.com/ooni/netx` package MUST also provide an API such
+that you can construct and configure a `net.Dialer` replacement
+as follows:
+
+```Go
+d := netx.NewDialerWithoutHandler()
+d.SetResolver(resolver)
+d.ForceSpecificSNI("www.kernel.org")
+d.SetCABundle("/etc/ssl/cert.pem")
+var dialer model.Dialer = d
+// now use dialer
+```
+
+where `SetResolver` allows you to change the resolver,
+`ForceSpecificSNI` forces the TLS dials to use such SNI
+instead of using the provided domain, and `SetCABundle`
+allows to set a specific CA bundle. All these funcs
+MUST be invoked before using the dialer.
+
+The `github.com/ooni/netx/httpx` package MUST contain
+code so that we can do:
+
+```Go
+t := httpx.NewHTTPTransportWithProxyFunc(
+    http.ProxyFromEnvironment,
+)
+t.SetResolver(resolver)
+t.ForceSpecificSNI("www.kernel.org")
+t.SetCABundle("/etc/ssl/cert.pem")
+var transport http.RoundTripper = t
+// now use transport
+```
+
+where the functions have the same semantics as the
+namesake functions described before and the same caveats.
+
+We also have syntactic sugar on top of that and legacy
+methods, but this fully describes the design.
+
+## Structure of events
+
+The `github.com/ooni/netx/model` will contain the
+definition of low-level events. We are interested in
+knowing the following:
 
 1. the timing and result of each I/O operation.
 
@@ -130,258 +364,70 @@ what certificates the server has provided.
 4. DNS events, e.g. queries and replies, generated
 as part of using DoT and DoH.
 
-Hence, this package should define measurement events
-representing each of the above. We will use types
-as close as possible to standard Go types, e.g. we
-will use `time.Duration` to represent the elapsed
-time since a specific "zero", because this will allow
-for easy further processing of events.
-
-This package will also contain the definition of the
-following interface:
-
-```Go
-type Handler interface {
-    OnMeasurement(Measurement)
-}
-```
-
-Every replacement that we write will call the
-`OnMeasurement` method of the handler wherever
-there is a measurement event.
-
-In turn, the `Measurement` event will be defined
-as follows:
+We will represent time as a `time.Duration` since the
+beginning configured either in the context or when
+constructing an object. The `model` package will also
+define the `Measurement` event as follows:
 
 ```Go
 type Measurement struct {
-    Read  *ReadEvent
-    Write *WriteEvent
-
-    // more similar events ...
+    Connect             *ConnectEvent
+    HTTPConnectionReady *HTTPConnectionReadyEvent
+    HTTPRoundTripDone   *HTTPRoundTripDoneEvent
+    ResolveDone         *ResolveDoneEvent
+    TLSHandshakeDone    *TLSHandshakeDoneEvent
 }
 ```
 
-That is, it will contain a pointer for every event
-that we support. The events processing code will
-check what pointer or pointers are not `nil` to
-known which event or events have occurred.
+The events above MUST always be present, but more
+events will likely be available. The structure
+will contain a pointer for every event that
+we support. The events processing code will check
+what pointer or pointers are not `nil` to known
+which event or events have occurred.
 
-For every detail regarding the structure of the
-events, we defer to the current docs.
+To simplify joining events together the following holds:
 
-### The github.com/ooni/netx/httpx package
+1. when we're establishing a new connection there is a nonzero
+`DialID` shared by `Connect` and `ResolveDone`
 
-This package will contain HTTP extensions. The core
-structure that we will provide is as follows:
+2. a new connection has a nonzero `ConnID` that is emitted
+as part of a successful `ConnectDone` event
 
-```Go
-type Client struct {
-  HTTPClient *http.Client
-  Transport  *Transport
-}
-```
+3. during an HTTP transaction there is a nonzero `TransactionID`
+shared by `HTTPConnectionReady` and `HTTPRoundTripDone`
 
-Client code is expected to create a `*Client` instance
-using the `NewClient` constructor, configure it, and
-then pass to code that needs it `HTTPClient` as the real
-`*http.Client` instance.
+4. if the TLS handshake is invoked by HTTP code it will have a
+nonzero `TrasactionID` otherwise a nonzero `ConnID`
 
-To configure our `*Client` instance, one could use the
-`ConfigureDNS`, `SetCABundle`, `ForceSpecificSNI`,
-and `SetResolver` methods. They should all be called before using the
-`HTTPClient` field, as they'll not be goroutine safe.
+5. the `HTTPConnectionReady` will also see the `ConnID`
 
-```Go
-func (c *Client) SetCABundle(path string) error
-```
+6. when a transaction starts dialing, it will pass its
+`TransactionID` to `ResolveDone` and `Connect`
 
-The `SetCABundle` forces using a specific CA bundle,
-which is what we already do in OONI Probe.
+7. when we're dialing a connection for DoH, we pass the `DialID`
+to the `HTTPConnectionReady` event as well
 
-```Go
-func (c *Client) ForceSpecificSNI(sni string) error
-```
+Because of the following rules, it should always be possible
+to bind together events. Also, we define more events than the
+above, but they are ancillary to the above events. Also, the
+main reason why `HTTPConnectionReady` is here is because it is
+the event allowing to bind `ConnID` and `TransactionID`.
 
-The `ForceSpecificSNI` forces the TLS code to use a
-specific SNI when connecting. This allows us to check
-whether there is SNI-based blocking.
+## Automatically reacting to events
 
-```Go
-func (c *Client) ConfigureDNS(network, address string) error
-```
+We automatically configure fallbacks to well know DoT and DoH
+servers, and reissue queries when we detect bogons.
 
-The `ConfigureDNS` method will behave exactly like the
-`ConfigureDNS` method of `netx.Resolver` (see below).
+We automatically run a SNI injection mini experiment when we
+see that a TLS handshake failes with `connection_reset`.
 
-```Go
-func (c *Client) SetResolver(r model.DNSResolver)
-```
+We will be likely be adding more automation. The mechanism
+to communicate these information is called `scoreboard`
+and is currenly in the `github.com/ooni/netx/x` package in
+which we keep experimental extensions.
 
-Also `SetResolver` is described below.
+## Running OONI measurements
 
-Lastly, one will construct an `http.Client` using:
-
-```Go
-func NewClient(handler model.Handler) *Client
-```
-
-If you want a new client that will not honour the
-`HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` environment
-variables and that really uses no proxy, use:
-
-```Go
-func NewClientWithoutProxy(handler model.Handler) *Client
-```
-
-The `handler` shall point to a structure implementing the
-`model.Handler` interface. Also, this constructor will
-automatically record the current time as the "zero" time
-used to compute the `Time` field of every event.
-
-Passing a handler to an HTTP client is fine for logging
-but less optimal for recording events caused by each HTTP
-round trip. To this end, it may be more convenent to use
-_context rooted measurements_, instead:
-
-```Go
-import (
-    "net/http"
-    "time"
-
-    "github.com/ooni/netx/handlers"
-    "github.com/ooni/netx/httpx"
-)
-
-var client = httpx.NewClient(handlers.NoHandler).HTTPClient
-
-func fetchURL(URL string) (*http.Response, error) {
-    req, err := http.NewRequest("GET", URL, nil)
-    if err != nil {
-        return nil, err
-    }
-    // The following code will update the request context and cause
-    // events to be delivered to the specified handler.
-    root := &model.MeasurementRoot{
-        Beginning: time.Now(),
-        Handler:   handlers.StdoutHandler, // your handler here
-    }
-    ctx := req.Context()
-    ctx = model.WithMeasurementRoot(ctx, root)
-    req = req.WithContext(ctx)
-    return client.Do(req)
-}
-```
-
-This will cause code to use `root` for all requests
-using the specific `ctx`. This allows you to naturally
-organize events in different groups.
-
-### The github.com/ooni/netx package
-
-This package will contain a replacement for `net.Dialer`,
-called `netx.Dialer`, that exposes the following API:
-
-```Go
-func (d *Dialer) Dial(network, address string) (net.Conn, error)
-```
-
-```Go
-func (d *Dialer) DialContext(
-    ctx context.Context, network, address string,
-) (net.Conn, error)
-```
-
-```Go
-func (d *Dialer) DialTLS(network, address string) (conn net.Conn, err error)
-```
-
-These three functions will behave exactly as the same
-functions in the Go standard library, except that they
-will perform measurements. A `Dialer` replacement will be
-constructed like:
-
-```Go
-func NewDialer(handler model.Handler) *Dialer
-```
-
-This function is like `httpx.NewClient` and, specifically, it also
-uses the current time as "zero" for subsequent events.
-
-The `netx.Dialer` will also feature the following functions, to
-be called before using the dialer:
-
-```Go
-func (d *Dialer) ConfigureDNS(network, address string) error
-```
-
-```Go
-func (d *Dialer) SetCABundle(path string) error
-```
-
-```Go
-func (d *Dialer) ForceSpecificSNI(sni string) error
-```
-
-```Go
-func (d *Dialer) SetResolver(r model.DNSResolver)
-```
-
-`SetCABundle` and `ForceSpecificSNI` behave exactly like the same
-methods of `httpx.Client`.
-
-As far as `ConfigureDNS` is concerned it will work as follows:
-
-* when `network` is `"system"`, the system resolver will be
-used and no low-level events pertaining to the DNS will be
-emitted to the configured `handler`. This will be the default.
-
-* when `network` is `"udp"`, `address` must be a valid
-string following the `"<ip_or_domain>(:<port>)*"` pattern. If
-`<ip_or_domain>` is IPv6, it must be quoted using `[]`. If
-`<port>` is omitted, we will use port `53`. This value will
-indicate the code to use the selected DNS server using
-UDP transport. We will be able to observe all events including
-DNS messages sent and received.
-
-* when `network` is `"tcp"`, everything will be like when
-`network` is `"udp"`, except that we will speak the DNS
-over TCP protocol with the configured server.
-
-* when `network` is `"dot"`, `address` must be a valid
-domain name, or IP address, of a DNS over TLS server to use. If
-the port is omitted, we'll use port `853`. We will
-observe all events, which of course include the results
-of the TLS handshake with the server, the DNS messages
-sent and received, etc.
-
-* when `network` is `"doh"`, `address` must be a valid
-URL of a DNS over HTTPS server to use. We will observe all
-events, including the TLS handshake and HTTP events, the
-DNS messages sent and received, etc.
-
-As far as `SetResolver` is concerned, this is a way to
-set an arbitrary resolver. To create resolvers use:
-
-```Go
-func NewResolver(handler model.Handler,
-    network, address string) (model.DNSResolver, error)
-```
-
-The arguments have the same meaning of `ConfigureDNS` and
-the will return an interface replacement for `net.Resolver`
-as described below.
-
-The  `ChainResolvers` function allows to chain a fallback
-resolver to a primary resolver, so that the former is used
-whenever the latter fails:
-
-```Go
-func ChainResolvers(
-    primary, fallback model.DNSResolver
-) model.DNSResolver
-```
-
-### The github.com/ooni/netx/x package
-
-This is for experimental stuff.
+We have syntactic sugar for running OONI measurements as
+part of the `github.com/ooni/netx/x` package.

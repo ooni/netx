@@ -13,7 +13,7 @@ import (
 )
 
 func TestIntegrationDialer(t *testing.T) {
-	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer := netx.NewDialerWithoutHandler()
 	err := dialer.ConfigureDNS("udp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
@@ -76,6 +76,20 @@ func TestIntegrationResolver(t *testing.T) {
 
 func TestIntegrationStandaloneResolver(t *testing.T) {
 	resolver, err := netx.NewResolver(handlers.NoHandler, "tcp", "1.1.1.1:53")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addrs, err := resolver.LookupHost(context.Background(), "ooni.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(addrs) < 1 {
+		t.Fatal("No addresses returned")
+	}
+}
+
+func TestIntegrationStandaloneResolverWithoutHandler(t *testing.T) {
+	resolver, err := netx.NewResolverWithoutHandler("tcp", "1.1.1.1:53")
 	if err != nil {
 		t.Fatal(err)
 	}

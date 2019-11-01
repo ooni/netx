@@ -90,6 +90,12 @@ func TestNewTransportHonoursProxy(t *testing.T) {
 	proxyTestMain(t, client, 451)
 }
 
+func TestNewTransportWithoutAnyProxy(t *testing.T) {
+	transport := httpx.NewTransportWithProxyFunc(nil)
+	client := &http.Client{Transport: transport}
+	proxyTestMain(t, client, 200)
+}
+
 func proxyTestMain(t *testing.T, client *http.Client, expect int) {
 	req, err := http.NewRequest("GET", "http://www.google.com", nil)
 	if err != nil {
