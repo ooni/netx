@@ -121,3 +121,47 @@ func TestToFailureString(t *testing.T) {
 		}
 	})
 }
+
+func TestUnitToOperationString(t *testing.T) {
+	t.Run("for connect", func(t *testing.T) {
+		// You're doing HTTP and connect fails. You want to know
+		// that connect failed not that HTTP failed.
+		err := &model.ErrWrapper{Operation: "connect"}
+		if toOperationString(err, "http_round_trip") != "connect" {
+			t.Fatal("unexpected result")
+		}
+	})
+	t.Run("for http_round_trip", func(t *testing.T) {
+		// You're doing DoH and something fails inside HTTP. You want
+		// to know about the internal HTTP error, not resolve.
+		err := &model.ErrWrapper{Operation: "http_round_trip"}
+		if toOperationString(err, "resolve") != "http_round_trip" {
+			t.Fatal("unexpected result")
+		}
+	})
+	t.Run("for resolve", func(t *testing.T) {
+		// You're doing HTTP and the DNS fails. You want to
+		// know that resolve failed.
+		err := &model.ErrWrapper{Operation: "resolve"}
+		if toOperationString(err, "http_round_trip") != "resolve" {
+			t.Fatal("unexpected result")
+		}
+	})
+	t.Run("for tls_handshake", func(t *testing.T) {
+		// You're doing HTTP and the TLS handshake fails. You want
+		// to know about a TLS handshake error.
+		err := &model.ErrWrapper{Operation: "tls_handshake"}
+		if toOperationString(err, "http_round_trip") != "tls_handshake" {
+			t.Fatal("unexpected result")
+		}
+	})
+	t.Run("for minor operation", func(t *testing.T) {
+		// You just noticed that TLS handshake failed and you
+		// have a child error telling you that read failed. Here
+		// you want to know about a TLS handshake error.
+		err := &model.ErrWrapper{Operation: "read"}
+		if toOperationString(err, "tls_handshake") != "tls_handshake" {
+			t.Fatal("unexpected result")
+		}
+	})
+}

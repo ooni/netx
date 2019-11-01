@@ -90,6 +90,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	var (
 		err              error
+		majorOp          = "http_round_trip"
+		majorOpMu        sync.Mutex
 		requestBody      []byte
 		requestHeaders   = http.Header{}
 		requestHeadersMu sync.Mutex
@@ -106,6 +108,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Prepare a tracer for delivering events
 	tracer := &httptrace.ClientTrace{
 		TLSHandshakeStart: func() {
+			majorOpMu.Lock()
+			majorOp = "tls_handshake"
+			majorOpMu.Unlock()
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
 			root.Handler.OnMeasurement(model.Measurement{
@@ -120,6 +125,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// less confusing to users to see the wrapped name
 			err = errwrapper.SafeErrWrapperBuilder{
 				Error:         err,
+				Operation:     "tls_handshake",
 				TransactionID: tid,
 			}.MaybeBuild()
 			durationSinceBeginning := time.Now().Sub(root.Beginning)
@@ -138,6 +144,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
+			majorOpMu.Lock()
+			majorOp = "http_round_trip"
+			majorOpMu.Unlock()
 			root.Handler.OnMeasurement(model.Measurement{
 				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
 					ConnID: connid.Compute(
@@ -180,6 +189,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			// less confusing to users to see the wrapped name
 			err := errwrapper.SafeErrWrapperBuilder{
 				Error:         info.Err,
+				Operation:     "http_round_trip",
 				TransactionID: tid,
 			}.MaybeBuild()
 			root.Handler.OnMeasurement(model.Measurement{
@@ -218,6 +228,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := t.roundTripper.RoundTrip(req)
 	err = errwrapper.SafeErrWrapperBuilder{
 		Error:         err,
+		Operation:     majorOp,
 		TransactionID: tid,
 	}.MaybeBuild()
 	// [*] Require less event joining work by providing info that

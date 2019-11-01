@@ -25,6 +25,9 @@ type SafeErrWrapperBuilder struct {
 	// Error is the error, if any
 	Error error
 
+	// Operation is the operation that failed
+	Operation string
+
 	// TransactionID is the transaction ID, if any
 	TransactionID int64
 }
@@ -37,6 +40,7 @@ func (b SafeErrWrapperBuilder) MaybeBuild() (err error) {
 			ConnID:        b.ConnID,
 			DialID:        b.DialID,
 			Failure:       toFailureString(b.Error),
+			Operation:     toOperationString(b.Error, b.Operation),
 			TransactionID: b.TransactionID,
 			WrappedErr:    b.Error,
 		}
@@ -101,4 +105,26 @@ func toFailureString(err error) string {
 	}
 
 	return fmt.Sprintf("unknown_failure: %s", s)
+}
+
+func toOperationString(err error, operation string) string {
+	var errwrapper *model.ErrWrapper
+	if errors.As(err, &errwrapper) {
+		// Basically, as explained in model.ErrWrapper docs, let's
+		// keep the child major operation, if any.
+		if errwrapper.Operation == "connect" {
+			return errwrapper.Operation
+		}
+		if errwrapper.Operation == "http_round_trip" {
+			return errwrapper.Operation
+		}
+		if errwrapper.Operation == "resolve" {
+			return errwrapper.Operation
+		}
+		if errwrapper.Operation == "tls_handshake" {
+			return errwrapper.Operation
+		}
+		// FALLTHROUGH
+	}
+	return operation
 }

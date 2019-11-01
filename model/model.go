@@ -110,6 +110,30 @@ type ErrWrapper struct {
 	// - `unknown_failure ...`: any other error
 	Failure string
 
+	// Operation is the operation that failed. If possible, it
+	// SHOULD be a _major_ operation. Major operations are:
+	//
+	// - `resolve`: resolving a domain name failed
+	// - `connect`: connecting to an IP failed
+	// - `tls_handshake`: TLS handshaking failed
+	// - `http_round_trip`: other errors during round trip
+	//
+	// Because a network connection doesn't necessarily know
+	// what is the current major operation we also have the
+	// following _minor_ operations:
+	//
+	// - `close`: CLOSE failed
+	// - `read`: READ failed
+	// - `write`: WRITE failed
+	//
+	// If an ErrWrapper referring to a major operation is wrapping
+	// another ErrWrapper and such ErrWrapper already refers to
+	// a major operation, then the new ErrWrapper should use the
+	// child ErrWrapper major operation. Otherwise, it should use
+	// its own major operation. This way, the topmost wrapper is
+	// supposed to refer to the major operation that failed.
+	Operation string
+
 	// TransactionID is the transaction ID, or zero if not known.
 	TransactionID int64
 

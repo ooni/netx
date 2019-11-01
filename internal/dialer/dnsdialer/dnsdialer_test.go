@@ -86,10 +86,26 @@ func TestReduceErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("multiple error", func(t *testing.T) {
-		err := errors.New("mocked error")
-		result := reduceErrors([]error{err, err})
-		if result.Error() != "all connect attempts failed" {
+	t.Run("multiple errors", func(t *testing.T) {
+		err1 := errors.New("mocked error #1")
+		err2 := errors.New("mocked error #2")
+		result := reduceErrors([]error{err1, err2})
+		if result.Error() != "mocked error #1" {
+			t.Fatal("wrong result")
+		}
+	})
+
+	t.Run("multiple errors with meaningful ones", func(t *testing.T) {
+		err1 := errors.New("mocked error #1")
+		err2 := &model.ErrWrapper{
+			Failure: "unknown_error: antani",
+		}
+		err3 := &model.ErrWrapper{
+			Failure: "connection_refused",
+		}
+		err4 := errors.New("mocked error #3")
+		result := reduceErrors([]error{err1, err2, err3, err4})
+		if result.Error() != "connection_refused" {
 			t.Fatal("wrong result")
 		}
 	})

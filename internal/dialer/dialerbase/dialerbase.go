@@ -56,8 +56,9 @@ func (d *Dialer) DialContext(
 	err = errwrapper.SafeErrWrapperBuilder{
 		// ConnID does not make any sense if we've failed and the error
 		// does not make any sense (and is nil) if we succeded.
-		DialID: d.dialID,
-		Error:  err,
+		DialID:    d.dialID,
+		Error:     err,
+		Operation: "connect",
 	}.MaybeBuild()
 	connID := safeConnID(network, conn)
 	txID := transactionid.ContextTransactionID(ctx)

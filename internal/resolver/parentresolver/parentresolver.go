@@ -75,6 +75,7 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	err = errwrapper.SafeErrWrapperBuilder{
 		DialID:        dialID,
 		Error:         err,
+		Operation:     "resolve",
 		TransactionID: txID,
 	}.MaybeBuild()
 	root.Handler.OnMeasurement(model.Measurement{

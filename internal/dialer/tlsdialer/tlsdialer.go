@@ -81,8 +81,9 @@ func (d *TLSDialer) DialTLSContext(
 	})
 	err = tlsconn.Handshake()
 	err = errwrapper.SafeErrWrapperBuilder{
-		ConnID: connID,
-		Error:  err,
+		ConnID:    connID,
+		Error:     err,
+		Operation: "tls_handshake",
 	}.MaybeBuild()
 	root.Handler.OnMeasurement(model.Measurement{
 		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
