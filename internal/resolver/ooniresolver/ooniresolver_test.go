@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/miekg/dns"
@@ -111,6 +112,9 @@ func TestLookupNonexistent(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error here")
 	}
+	if !strings.HasSuffix(err.Error(), "no such host") {
+		t.Fatal("not the error we expected")
+	}
 	if addrs != nil {
 		t.Fatal("expected nil addr here")
 	}
@@ -212,5 +216,21 @@ func TestLookupHostResultAAAAError(t *testing.T) {
 	}
 	if addrs != nil {
 		t.Fatal("expected nil addrs")
+	}
+}
+
+func TestUnitMapError(t *testing.T) {
+	if mapError(dns.RcodeSuccess) != nil {
+		t.Fatal("unexpected return value")
+	}
+	if err := mapError(dns.RcodeNameError); !strings.HasSuffix(
+		err.Error(), "no such host",
+	) {
+		t.Fatal("unexpected return value")
+	}
+	if err := mapError(dns.RcodeBadName); !strings.HasSuffix(
+		err.Error(), "query failed",
+	) {
+		t.Fatal("unexpected return value")
 	}
 }

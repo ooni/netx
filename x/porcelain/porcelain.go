@@ -46,7 +46,7 @@ func (h *channelHandler) OnMeasurement(m model.Measurement) {
 type Results struct {
 	Connects      []*model.ConnectEvent
 	HTTPRequests  []*model.HTTPRoundTripDoneEvent
-	Queries       []*model.ResolveDoneEvent
+	Resolves      []*model.ResolveDoneEvent
 	Scoreboard    *scoreboard.Board
 	TLSHandshakes []*model.TLSHandshakeDoneEvent
 }
@@ -59,7 +59,7 @@ func (r *Results) onMeasurement(m model.Measurement) {
 		r.HTTPRequests = append(r.HTTPRequests, m.HTTPRoundTripDone)
 	}
 	if m.ResolveDone != nil {
-		r.Queries = append(r.Queries, m.ResolveDone)
+		r.Resolves = append(r.Resolves, m.ResolveDone)
 	}
 	if m.TLSHandshakeDone != nil {
 		r.TLSHandshakes = append(r.TLSHandshakes, m.TLSHandshakeDone)
@@ -369,7 +369,7 @@ func sniBlockingFollowup(
 		out = &model.XSNIBlockingFollowup{
 			Connects:      measurements.TestKeys.Connects,
 			HTTPRequests:  measurements.TestKeys.HTTPRequests,
-			Queries:       measurements.TestKeys.Queries,
+			Resolves:      measurements.TestKeys.Resolves,
 			TLSHandshakes: measurements.TestKeys.TLSHandshakes,
 		}
 	}

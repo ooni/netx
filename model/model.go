@@ -689,7 +689,7 @@ type XResults struct {
 type XSNIBlockingFollowup struct {
 	Connects      []*ConnectEvent
 	HTTPRequests  []*HTTPRoundTripDoneEvent
-	Queries       []*ResolveDoneEvent
+	Resolves      []*ResolveDoneEvent
 	TLSHandshakes []*TLSHandshakeDoneEvent
 }
 
