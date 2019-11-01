@@ -341,3 +341,21 @@ func TestLookupNSWrapper(t *testing.T) {
 		t.Fatal("unexpected result")
 	}
 }
+
+func TestUnitNewClientForDoH(t *testing.T) {
+	first := newHTTPClientForDoH(
+		time.Now(), handlers.NoHandler,
+	)
+	second := newHTTPClientForDoH(
+		time.Now(), handlers.NoHandler,
+	)
+	if first != second {
+		t.Fatal("expected to see same client here")
+	}
+	third := newHTTPClientForDoH(
+		time.Now(), handlers.StdoutHandler,
+	)
+	if first == third {
+		t.Fatal("expected to see different client here")
+	}
+}
