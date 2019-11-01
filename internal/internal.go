@@ -10,8 +10,10 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialer"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
@@ -118,7 +120,27 @@ func (d *Dialer) SetResolver(r model.DNSResolver) {
 	d.Resolver = r
 }
 
+var (
+	dohClientHandle *http.Client
+	dohClientOnce   sync.Once
+)
+
 func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
+	if handler == handlers.NoHandler {
+		// A bit of extra complexity for a good reason: if the user is not
+		// interested into setting a default handler, then it is fine to
+		// always return the same *http.Client for DoH. This means that we
+		// don't need to care about closing the connections used by this
+		// *http.Client, therefore we don't leak resources because we fail
+		// to close the idle connections.
+		dohClientOnce.Do(func() {
+			transport := NewHTTPTransport(
+				time.Time{}, handlers.NoHandler, NewDialer(
+					time.Time{}, handlers.NoHandler))
+			dohClientHandle = &http.Client{Transport: transport}
+		})
+		return dohClientHandle
+	}
 	transport := NewHTTPTransport(beginning, handler, NewDialer(beginning, handler))
 	return &http.Client{Transport: transport}
 }

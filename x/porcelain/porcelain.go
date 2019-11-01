@@ -166,7 +166,6 @@ func DNSLookup(
 	ctx context.Context, config DNSLookupConfig,
 ) (*DNSLookupResults, error) {
 	channel := make(chan model.Measurement)
-	// TODO(bassosimone): tell DoH to use specific CA bundle?
 	root := &model.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler: &channelHandler{
@@ -193,7 +192,6 @@ func DNSLookup(
 		results.Addresses, results.Error = addrs, err
 	})
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
-	// TODO(bassosimone): tell DoH to close idle connections?
 	return results, nil
 }
 
@@ -254,7 +252,6 @@ func HTTPDo(
 	)
 	results.TestKeys.collect(channel, config.Handler, func() {
 		defer client.HTTPClient.CloseIdleConnections()
-		// TODO(bassosimone): tell DoH to close idle connections?
 		resp, err := client.HTTPClient.Do(req)
 		if err != nil {
 			mu.Lock()
