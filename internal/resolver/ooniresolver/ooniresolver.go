@@ -120,10 +120,11 @@ func (c *Resolver) roundTripWithRetry(
 		errorslist = append(errorslist, err)
 		var operr *net.OpError
 		if errors.As(err, &operr) == false || operr.Timeout() == false {
-			// bugfix: when running several queries in a loop, it may
-			// happen that later queries fail with context deadline. For
-			// this reason, better to always use the first error in the
-			// list, which hopefully is a network timeout.
+			// The first error is the one that is most likely to be caused
+			// by the network. Subsequent errors are more likely to be caused
+			// by context deadlines. So, the first error is attached to an
+			// operation, while subsequent errors may possibly not be. If
+			// so, the resulting failing operation is not correct.
 			break
 		}
 		atomic.AddInt64(&c.ntimeouts, 1)
