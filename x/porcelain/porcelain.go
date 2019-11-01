@@ -210,16 +210,17 @@ type HTTPDoConfig struct {
 
 // HTTPDoResults contains the results of a HTTPDo
 type HTTPDoResults struct {
-	TestKeys   Results
-	StatusCode int64
-	Headers    http.Header
-	Body       []byte
-	Error      error
+	TestKeys            Results
+	StatusCode          int64
+	Headers             http.Header
+	Body                []byte
+	Error               error
+	SNIBlockingFollowup *model.XSNIBlockingFollowup
 }
 
 // HTTPDo performs a HTTP request
 func HTTPDo(
-	ctx context.Context, config HTTPDoConfig,
+	origCtx context.Context, config HTTPDoConfig,
 ) (*HTTPDoResults, error) {
 	channel := make(chan model.Measurement)
 	// TODO(bassosimone): tell client to use specific CA bundle?
@@ -229,7 +230,7 @@ func HTTPDo(
 			ch: channel,
 		},
 	}
-	ctx = model.WithMeasurementRoot(ctx, root)
+	ctx := model.WithMeasurementRoot(origCtx, root)
 	client := httpx.NewClient(handlers.NoHandler)
 	resolver, err := configureDNS(
 		time.Now().UnixNano(),
@@ -275,6 +276,9 @@ func HTTPDo(
 		Error: results.Error,
 	}.MaybeBuild()
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
+	results.SNIBlockingFollowup = maybeRunTLSChecks(
+		origCtx, config.Handler, &root.X,
+	)
 	return results, nil
 }
 
@@ -333,4 +337,41 @@ func TLSConnect(
 	})
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	return results, nil
+}
+
+func maybeRunTLSChecks(
+	ctx context.Context, handler model.Handler, x *model.XResults,
+) (out *model.XSNIBlockingFollowup) {
+	for _, ev := range x.Scoreboard.TLSHandshakeReset {
+		for _, followup := range ev.RecommendedFollowups {
+			if followup == "sni_blocking" {
+				out = sniBlockingFollowup(ctx, handler, ev.Domain)
+				break
+			}
+		}
+	}
+	return
+}
+
+// TODO(bassosimone): we should make this configurable
+const sniBlockingHelper = "example.com:443"
+
+func sniBlockingFollowup(
+	ctx context.Context, handler model.Handler, domain string,
+) (out *model.XSNIBlockingFollowup) {
+	config := TLSConnectConfig{
+		Address: sniBlockingHelper,
+		Handler: handler,
+		SNI:     domain,
+	}
+	measurements, err := TLSConnect(ctx, config)
+	if err == nil {
+		out = &model.XSNIBlockingFollowup{
+			Connects:      measurements.TestKeys.Connects,
+			HTTPRequests:  measurements.TestKeys.HTTPRequests,
+			Queries:       measurements.TestKeys.Queries,
+			TLSHandshakes: measurements.TestKeys.TLSHandshakes,
+		}
+	}
+	return
 }

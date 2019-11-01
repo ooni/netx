@@ -674,9 +674,23 @@ type MeasurementRoot struct {
 
 	// X contains experimental extensions. You are welcome to use
 	// the code in here. Just know we may change APIs often.
-	X struct {
-		Scoreboard scoreboard.Board
-	}
+	X XResults
+}
+
+// XResults contains experimental results fields.
+type XResults struct {
+	Scoreboard scoreboard.Board
+}
+
+// XSNIBlockingFollowup contains the follow-up measurement
+// performed when we detect a TLS handshake RST.
+//
+// This is currently poised-to-change experimental code.
+type XSNIBlockingFollowup struct {
+	Connects      []*ConnectEvent
+	HTTPRequests  []*HTTPRoundTripDoneEvent
+	Queries       []*ResolveDoneEvent
+	TLSHandshakes []*TLSHandshakeDoneEvent
 }
 
 type measurementRootContextKey struct{}
