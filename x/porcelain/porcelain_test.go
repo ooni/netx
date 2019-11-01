@@ -259,7 +259,7 @@ func TestMaybeRunTLSChecks(t *testing.T) {
 	if out.HTTPRequests != nil {
 		t.Fatal("http requests?!")
 	}
-	if out.Queries == nil {
+	if out.Resolves == nil {
 		t.Fatal("no queries?!")
 	}
 	if out.TLSHandshakes == nil {

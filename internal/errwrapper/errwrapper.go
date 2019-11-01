@@ -90,6 +90,9 @@ func toFailureString(err error) string {
 	if strings.HasSuffix(s, "i/o timeout") {
 		return "generic_timeout_error"
 	}
+	if strings.HasSuffix(s, "TLS handshake timeout") {
+		return "generic_timeout_error"
+	}
 	if strings.HasSuffix(s, "no such host") {
 		// This is dns_lookup_error in MK but such error is used as a
 		// generic "hey, the lookup failed" error. Instead, this error

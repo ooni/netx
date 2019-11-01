@@ -47,7 +47,6 @@ func (c *Resolver) LookupCNAME(ctx context.Context, host string) (cname string, 
 
 // LookupHost returns the IP addresses of a host
 func (c *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, error) {
-	// TODO(bassosimone): wrap errors as net.DNSError
 	var addrs []string
 	var reply *dns.Msg
 	reply, errA := c.roundTripWithRetry(ctx, hostname, dns.TypeA)
@@ -81,7 +80,7 @@ func lookupHostResult(addrs []string, errA, errAAAA error) ([]string, error) {
 	if errAAAA != nil {
 		return nil, errAAAA
 	}
-	return nil, errors.New("oodns: no response returned")
+	return nil, errors.New("ooniresolver: no response returned")
 }
 
 // LookupMX returns the MX records of a specific name
@@ -183,9 +182,18 @@ func (c *Resolver) mockableRoundTrip(
 			Msg:                    reply,
 		},
 	})
-	if reply.Rcode != dns.RcodeSuccess {
-		err = errors.New("oodns: query failed")
-		return
-	}
+	err = mapError(reply.Rcode)
 	return
+}
+
+func mapError(rcode int) error {
+	// TODO(bassosimone): map more errors to net.DNSError names
+	switch rcode {
+	case dns.RcodeSuccess:
+		return nil
+	case dns.RcodeNameError:
+		return errors.New("ooniresolver: no such host")
+	default:
+		return errors.New("ooniresolver: query failed")
+	}
 }
