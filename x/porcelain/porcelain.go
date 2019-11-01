@@ -229,7 +229,7 @@ func HTTPDo(
 		},
 	}
 	ctx := model.WithMeasurementRoot(origCtx, root)
-	client := httpx.NewClient(handlers.NoHandler)
+	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
 	resolver, err := configureDNS(
 		time.Now().UnixNano(),
 		config.DNSServerNetwork,

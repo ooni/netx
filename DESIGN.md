@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-10-30   |
+| Last-Updated | 2019-11-01   |
 | Status       | approved     |
 
 ## Introduction
@@ -220,18 +220,18 @@ func (c *Client) SetResolver(r model.DNSResolver)
 
 Also `SetResolver` is described below.
 
-```Go
-func (c *Client) SetProxyFunc(f func(*Request) (*url.URL, error) error
-```
-
-The `SetProxyFunc` will allow us to configure
-a specific proxy. This is useful to have precise
-measurements of requests over, say, Psiphon.
-
 Lastly, one will construct an `http.Client` using:
 
 ```Go
 func NewClient(handler model.Handler) *Client
+```
+
+If you want a new client that will not honour the
+`HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` environment
+variables and that really uses no proxy, use:
+
+```Go
+func NewClientWithoutProxy(handler model.Handler) *Client
 ```
 
 The `handler` shall point to a structure implementing the

@@ -252,6 +252,7 @@ func TestIntegration(t *testing.T) {
 			time.Now(), handlers.NoHandler,
 			NewDialer(time.Now(), handlers.NoHandler),
 			false,
+			http.ProxyFromEnvironment,
 		),
 	}
 	resp, err := client.Get("https://www.google.com")
@@ -286,6 +287,7 @@ func TestIntegrationFailure(t *testing.T) {
 			time.Now(), handlers.NoHandler,
 			NewDialer(time.Now(), handlers.NoHandler),
 			false,
+			http.ProxyFromEnvironment,
 		),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with

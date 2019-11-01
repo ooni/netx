@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -139,6 +140,7 @@ func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Clien
 				handlers.NoHandler,
 				NewDialer(time.Time{}, handlers.NoHandler),
 				false, // DisableKeepAlives
+				http.ProxyFromEnvironment,
 			)
 			dohClientHandle = &http.Client{Transport: transport}
 		})
@@ -151,6 +153,7 @@ func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Clien
 		handler,
 		NewDialer(beginning, handler),
 		true, // DisableKeepAlives
+		http.ProxyFromEnvironment,
 	)
 	return &http.Client{Transport: transport}
 }
@@ -266,6 +269,7 @@ func NewHTTPTransport(
 	handler model.Handler,
 	dialer *Dialer,
 	disableKeepAlives bool,
+	proxyFunc func(*http.Request) (*url.URL, error),
 ) *HTTPTransport {
 	baseTransport := &http.Transport{
 		// The following values are copied from Go 1.12 docs and match
@@ -273,7 +277,7 @@ func NewHTTPTransport(
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       90 * time.Second,
 		MaxIdleConns:          100,
-		Proxy:                 http.ProxyFromEnvironment,
+		Proxy:                 proxyFunc,
 		TLSHandshakeTimeout:   10 * time.Second,
 		DisableKeepAlives:     disableKeepAlives,
 	}

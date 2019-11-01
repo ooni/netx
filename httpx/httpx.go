@@ -5,6 +5,7 @@ package httpx
 
 import (
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ooni/netx/internal"
@@ -17,9 +18,10 @@ type Transport struct {
 	transport *internal.HTTPTransport
 }
 
-// NewTransport creates a new Transport. The beginning argument is
-// the time to use as zero for computing the elapsed time.
-func NewTransport(beginning time.Time, handler model.Handler) *Transport {
+func newTransport(
+	beginning time.Time, handler model.Handler,
+	proxyFunc func(*http.Request) (*url.URL, error),
+) *Transport {
 	t := new(Transport)
 	t.dialer = internal.NewDialer(beginning, handler)
 	t.transport = internal.NewHTTPTransport(
@@ -27,8 +29,15 @@ func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 		handler,
 		t.dialer,
 		false, // DisableKeepAlives
+		proxyFunc,
 	)
 	return t
+}
+
+// NewTransport creates a new Transport. The beginning argument is
+// the time to use as zero for computing the elapsed time.
+func NewTransport(beginning time.Time, handler model.Handler) *Transport {
+	return newTransport(beginning, handler, http.ProxyFromEnvironment)
 }
 
 // RoundTrip executes a single HTTP transaction, returning
@@ -76,15 +85,30 @@ type Client struct {
 	Transport *Transport
 }
 
-// NewClient creates a new client instance.
-func NewClient(handler model.Handler) *Client {
-	transport := NewTransport(time.Now(), handler)
+func newClient(
+	handler model.Handler,
+	proxyFunc func(*http.Request) (*url.URL, error),
+) *Client {
+	transport := newTransport(time.Now(), handler, proxyFunc)
 	return &Client{
 		HTTPClient: &http.Client{
 			Transport: transport,
 		},
 		Transport: transport,
 	}
+}
+
+// NewClient creates a new client instance.
+func NewClient(handler model.Handler) *Client {
+	return newClient(handler, http.ProxyFromEnvironment)
+}
+
+// NewClientWithoutProxy creates a client without any
+// configured proxy attached to it. This is suitable
+// for measurements where you don't want a proxy to be
+// in the middle and alter the measurements.
+func NewClientWithoutProxy(handler model.Handler) *Client {
+	return newClient(handler, nil)
 }
 
 // ConfigureDNS internally calls netx.Dialer.ConfigureDNS and
