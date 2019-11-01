@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/internal/dialid"
@@ -68,11 +69,22 @@ func reduceErrors(errorslist []error) error {
 	if len(errorslist) == 0 {
 		return nil
 	}
-	if len(errorslist) == 1 {
-		return errorslist[0]
+	// If we have a know error, let's consider this the real error
+	// since it's probably most relevant. Otherwise let's return the
+	// first considering that (1) local resolvers likely will give
+	// us IPv4 first and (2) also our resolver does that. So, in case
+	// the user has no IPv6 connectivity, an IPv6 error is going to
+	// appear later in the list of errors.
+	for _, err := range errorslist {
+		var wrapper *model.ErrWrapper
+		if errors.As(err, &wrapper) && !strings.HasPrefix(
+			err.Error(), "unknown_error",
+		) {
+			return err
+		}
 	}
 	// TODO(bassosimone): handle this case in a better way
-	return errors.New("all connect attempts failed")
+	return errorslist[0]
 }
 
 func (d *Dialer) lookupHost(

@@ -272,8 +272,12 @@ func HTTPDo(
 		results.Body, results.Error = data, err
 		mu.Unlock()
 	})
+	// For safety wrap the error as "http_round_trip" but this
+	// will only be used if the error chain does not contain any
+	// other major operation failure. See model.ErrWrapper.
 	results.Error = errwrapper.SafeErrWrapperBuilder{
-		Error: results.Error,
+		Error:     results.Error,
+		Operation: "http_round_trip",
 	}.MaybeBuild()
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	results.SNIBlockingFollowup = maybeRunTLSChecks(

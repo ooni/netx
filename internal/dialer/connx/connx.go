@@ -22,8 +22,9 @@ func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Read(b)
 	err = errwrapper.SafeErrWrapperBuilder{
-		ConnID: c.ID,
-		Error:  err,
+		ConnID:    c.ID,
+		Error:     err,
+		Operation: "read",
 	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
@@ -43,8 +44,9 @@ func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 	start := time.Now()
 	n, err = c.Conn.Write(b)
 	err = errwrapper.SafeErrWrapperBuilder{
-		ConnID: c.ID,
-		Error:  err,
+		ConnID:    c.ID,
+		Error:     err,
+		Operation: "write",
 	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{
@@ -64,8 +66,9 @@ func (c *MeasuringConn) Close() (err error) {
 	start := time.Now()
 	err = c.Conn.Close()
 	err = errwrapper.SafeErrWrapperBuilder{
-		ConnID: c.ID,
-		Error:  err,
+		ConnID:    c.ID,
+		Error:     err,
+		Operation: "close",
 	}.MaybeBuild()
 	stop := time.Now()
 	c.Handler.OnMeasurement(model.Measurement{

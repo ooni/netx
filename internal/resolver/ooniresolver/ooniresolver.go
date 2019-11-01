@@ -107,6 +107,7 @@ func (c *Resolver) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 func (c *Resolver) roundTripWithRetry(
 	ctx context.Context, hostname string, qtype uint16,
 ) (*dns.Msg, error) {
+	var errorslist []error
 	for i := 0; i < 3; i++ {
 		reply, err := c.roundTrip(ctx, c.newQueryWithQuestion(dns.Question{
 			Name:   dns.Fqdn(hostname),
@@ -120,9 +121,13 @@ func (c *Resolver) roundTripWithRetry(
 		if errors.As(err, &operr) == false || operr.Timeout() == false {
 			return nil, err
 		}
+		errorslist = append(errorslist, err)
 		atomic.AddInt64(&c.ntimeouts, 1)
 	}
-	return nil, context.DeadlineExceeded
+	// bugfix: we MUST return one of the errors otherwise we confuse the
+	// mechanism in errwrap that classifies the root cause operation, since
+	// it would not be able to find a child with a major operation error
+	return nil, errorslist[0]
 }
 
 func (c *Resolver) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Msg, err error) {
