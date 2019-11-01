@@ -251,6 +251,7 @@ func TestIntegration(t *testing.T) {
 		Transport: NewHTTPTransport(
 			time.Now(), handlers.NoHandler,
 			NewDialer(time.Now(), handlers.NoHandler),
+			false,
 		),
 	}
 	resp, err := client.Get("https://www.google.com")
@@ -284,6 +285,7 @@ func TestIntegrationFailure(t *testing.T) {
 		Transport: NewHTTPTransport(
 			time.Now(), handlers.NoHandler,
 			NewDialer(time.Now(), handlers.NoHandler),
+			false,
 		),
 	}
 	// This fails the request because we attempt to speak cleartext HTTP with
@@ -342,7 +344,7 @@ func TestLookupNSWrapper(t *testing.T) {
 	}
 }
 
-func TestUnitNewClientForDoH(t *testing.T) {
+func TestUnitNewHTTPClientForDoH(t *testing.T) {
 	first := newHTTPClientForDoH(
 		time.Now(), handlers.NoHandler,
 	)

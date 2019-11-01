@@ -22,7 +22,12 @@ type Transport struct {
 func NewTransport(beginning time.Time, handler model.Handler) *Transport {
 	t := new(Transport)
 	t.dialer = internal.NewDialer(beginning, handler)
-	t.transport = internal.NewHTTPTransport(beginning, handler, t.dialer)
+	t.transport = internal.NewHTTPTransport(
+		beginning,
+		handler,
+		t.dialer,
+		false, // DisableKeepAlives
+	)
 	return t
 }
 

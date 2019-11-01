@@ -135,13 +135,23 @@ func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Clien
 		// to close the idle connections.
 		dohClientOnce.Do(func() {
 			transport := NewHTTPTransport(
-				time.Time{}, handlers.NoHandler, NewDialer(
-					time.Time{}, handlers.NoHandler))
+				time.Time{},
+				handlers.NoHandler,
+				NewDialer(time.Time{}, handlers.NoHandler),
+				false, // DisableKeepAlives
+			)
 			dohClientHandle = &http.Client{Transport: transport}
 		})
 		return dohClientHandle
 	}
-	transport := NewHTTPTransport(beginning, handler, NewDialer(beginning, handler))
+	// Otherwise, if the user wants to have a default handler, we
+	// return a transport that does not leak connections.
+	transport := NewHTTPTransport(
+		beginning,
+		handler,
+		NewDialer(beginning, handler),
+		true, // DisableKeepAlives
+	)
 	return &http.Client{Transport: transport}
 }
 
@@ -255,6 +265,7 @@ func NewHTTPTransport(
 	beginning time.Time,
 	handler model.Handler,
 	dialer *Dialer,
+	disableKeepAlives bool,
 ) *HTTPTransport {
 	baseTransport := &http.Transport{
 		// The following values are copied from Go 1.12 docs and match
@@ -264,6 +275,7 @@ func NewHTTPTransport(
 		MaxIdleConns:          100,
 		Proxy:                 http.ProxyFromEnvironment,
 		TLSHandshakeTimeout:   10 * time.Second,
+		DisableKeepAlives:     disableKeepAlives,
 	}
 	ooniTransport := httptransport.New(baseTransport)
 	// Configure h2 and make sure that the custom TLSConfig we use for dialing
