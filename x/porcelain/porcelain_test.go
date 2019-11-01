@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/x/scoreboard"
 )
 
 func TestUnitChannelHandlerWriteLateOnChannel(t *testing.T) {
@@ -229,5 +231,38 @@ func TestIntegrationTLSConnectUnknownDNS(t *testing.T) {
 	}
 	if results != nil {
 		t.Fatal("expected nil results here")
+	}
+}
+
+func TestMaybeRunTLSChecks(t *testing.T) {
+	out := maybeRunTLSChecks(
+		context.Background(), handlers.NoHandler,
+		&model.XResults{
+			Scoreboard: scoreboard.Board{
+				TLSHandshakeReset: []scoreboard.TLSHandshakeReset{
+					scoreboard.TLSHandshakeReset{
+						Domain: "ooni.io",
+						RecommendedFollowups: []string{
+							"sni_blocking",
+						},
+					},
+				},
+			},
+		},
+	)
+	if out == nil {
+		t.Fatal("unexpected nil return value")
+	}
+	if out.Connects == nil {
+		t.Fatal("no connects?!")
+	}
+	if out.HTTPRequests != nil {
+		t.Fatal("http requests?!")
+	}
+	if out.Queries == nil {
+		t.Fatal("no queries?!")
+	}
+	if out.TLSHandshakes == nil {
+		t.Fatal("no TLS handshakes?!")
 	}
 }
