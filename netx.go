@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal"
 	"github.com/ooni/netx/model"
 )
@@ -23,6 +24,13 @@ type Dialer struct {
 func NewDialer(handler model.Handler) *Dialer {
 	return &Dialer{
 		dialer: internal.NewDialer(time.Now(), handler),
+	}
+}
+
+// NewDialerWithoutHandler returns a new Dialer instance.
+func NewDialerWithoutHandler() *Dialer {
+	return &Dialer{
+		dialer: internal.NewDialer(time.Now(), handlers.NoHandler),
 	}
 }
 
@@ -108,6 +116,11 @@ func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error)
 // NewResolver is a standalone Dialer.NewResolver
 func NewResolver(handler model.Handler, network, address string) (model.DNSResolver, error) {
 	return internal.NewResolver(time.Now(), handler, network, address)
+}
+
+// NewResolverWithoutHandler creates a standalone Resolver
+func NewResolverWithoutHandler(network, address string) (model.DNSResolver, error) {
+	return internal.NewResolver(time.Now(), handlers.NoHandler, network, address)
 }
 
 // SetCABundle configures the dialer to use a specific CA bundle. This
