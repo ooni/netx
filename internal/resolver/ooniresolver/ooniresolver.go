@@ -117,11 +117,16 @@ func (c *Resolver) roundTripWithRetry(
 		if err == nil {
 			return reply, nil
 		}
+		errorslist = append(errorslist, err)
 		var operr *net.OpError
 		if errors.As(err, &operr) == false || operr.Timeout() == false {
-			return nil, err
+			// The first error is the one that is most likely to be caused
+			// by the network. Subsequent errors are more likely to be caused
+			// by context deadlines. So, the first error is attached to an
+			// operation, while subsequent errors may possibly not be. If
+			// so, the resulting failing operation is not correct.
+			break
 		}
-		errorslist = append(errorslist, err)
 		atomic.AddInt64(&c.ntimeouts, 1)
 	}
 	// bugfix: we MUST return one of the errors otherwise we confuse the
