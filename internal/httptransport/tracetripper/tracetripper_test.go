@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/http/httptrace"
 	"sync"
@@ -126,7 +127,6 @@ func TestIntegrationWithCorrectSnaps(t *testing.T) {
 	// use such transport to configure an ordinary client
 	transport := New(http.DefaultTransport)
 	const snapSize = 15
-	transport.snapSize = snapSize
 	client := &http.Client{Transport: transport}
 
 	// Prepare a new request for Cloudflare DNS, register
@@ -141,8 +141,9 @@ func TestIntegrationWithCorrectSnaps(t *testing.T) {
 	handler := &roundTripHandler{}
 	ctx := modelx.WithMeasurementRoot(
 		context.Background(), &modelx.MeasurementRoot{
-			Beginning: time.Now(),
-			Handler:   handler,
+			Beginning:       time.Now(),
+			Handler:         handler,
+			MaxBodySnapSize: snapSize,
 		},
 	)
 	req = req.WithContext(ctx)
@@ -234,7 +235,6 @@ func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
 		return nil, errorMocked
 	}
 	const snapSize = 15
-	transport.snapSize = snapSize
 	client := &http.Client{Transport: transport}
 
 	// Prepare a new request for Cloudflare DNS, register
@@ -249,8 +249,9 @@ func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
 	handler := &roundTripHandler{}
 	ctx := modelx.WithMeasurementRoot(
 		context.Background(), &modelx.MeasurementRoot{
-			Beginning: time.Now(),
-			Handler:   handler,
+			Beginning:       time.Now(),
+			Handler:         handler,
+			MaxBodySnapSize: snapSize,
 		},
 	)
 	req = req.WithContext(ctx)
@@ -268,5 +269,17 @@ func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
 	// Finally, make sure we got something that makes sense
 	if len(handler.roundTrips) != 0 {
 		t.Fatal("more round trips than expected")
+	}
+}
+
+func TestUnitComputeBodySnapSize(t *testing.T) {
+	if ComputeBodySnapSize(-1) != math.MaxInt64 {
+		t.Fatal("unexpected result")
+	}
+	if ComputeBodySnapSize(0) != defaultBodySnapSize {
+		t.Fatal("unexpected result")
+	}
+	if ComputeBodySnapSize(127) != 127 {
+		t.Fatal("unexpected result")
 	}
 }

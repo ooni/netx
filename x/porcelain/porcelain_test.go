@@ -100,7 +100,7 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 	if len(results.Headers) < 1 {
 		t.Fatal("no headers?!")
 	}
-	if len(results.Body) < 1 {
+	if len(results.BodySnap) < 1 {
 		t.Fatal("no body?!")
 	}
 	if results.TestKeys.Scoreboard == nil {
@@ -264,5 +264,47 @@ func TestMaybeRunTLSChecks(t *testing.T) {
 	}
 	if out.TLSHandshakes == nil {
 		t.Fatal("no TLS handshakes?!")
+	}
+}
+
+func TestIntegrationBodySnapSizes(t *testing.T) {
+	const (
+		maxEventsBodySnapSize   = 1 << 7
+		maxResponseBodySnapSize = 1 << 8
+	)
+	ctx := context.Background()
+	results, err := HTTPDo(ctx, HTTPDoConfig{
+		URL:                     "https://ooni.io",
+		MaxEventsBodySnapSize:   maxEventsBodySnapSize,
+		MaxResponseBodySnapSize: maxResponseBodySnapSize,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results.Error != nil {
+		t.Fatal(results.Error)
+	}
+	if results.StatusCode != 200 {
+		t.Fatal("request failed?!")
+	}
+	if len(results.Headers) < 1 {
+		t.Fatal("no headers?!")
+	}
+	if len(results.BodySnap) != maxResponseBodySnapSize {
+		t.Fatal("invalid response body snap size")
+	}
+	if results.TestKeys.Scoreboard == nil {
+		t.Fatal("no scoreboard?!")
+	}
+	if results.TestKeys.HTTPRequests == nil {
+		t.Fatal("no HTTPRequests?!")
+	}
+	for _, req := range results.TestKeys.HTTPRequests {
+		if len(req.ResponseBodySnap) != maxEventsBodySnapSize {
+			t.Fatal("invalid length of ResponseBodySnap")
+		}
+		if req.MaxBodySnapSize != maxEventsBodySnapSize {
+			t.Fatal("unexpected value of MaxBodySnapSize")
+		}
 	}
 }

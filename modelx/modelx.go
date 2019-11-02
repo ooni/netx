@@ -401,8 +401,10 @@ type HTTPRoundTripDoneEvent struct {
 	// ResponseStatusCode contains the HTTP status code if error is nil.
 	ResponseStatusCode int64
 
-	// SnapSize is the size of the bodies snapshot
-	SnapSize int64
+	// MaxBodySnapSize is the maximum size of the bodies snapshot. If this
+	// value is negative, we use math.MaxInt64. If the value is zero, we
+	// use a reasonable large value. Otherwise, we'll use this value.
+	MaxBodySnapSize int64
 
 	// TransactionID is the identifier of this transaction
 	TransactionID int64
@@ -691,6 +693,14 @@ type MeasurementRoot struct {
 
 	// Handler is the handler that will handle events.
 	Handler Handler
+
+	// MaxBodySnapSize is the maximum size after which we'll stop
+	// reading request and response bodies. They will of course
+	// be fully transmitted, but we'll save only MaxBodySnapSize
+	// bytes as part of the event stream.
+	//
+	// See also HTTPRoundTripDoneEvent.MaxBodySnapSize docs.
+	MaxBodySnapSize int64
 
 	// LookupHost allows to override the host lookup for all the request
 	// and dials that use this measurement root.
