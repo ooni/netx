@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // MeasuringConn is a net.Conn used to perform measurements
 type MeasuringConn struct {
 	net.Conn
 	Beginning time.Time
-	Handler   model.Handler
+	Handler   modelx.Handler
 	ID        int64
 }
 
@@ -27,8 +27,8 @@ func (c *MeasuringConn) Read(b []byte) (n int, err error) {
 		Operation: "read",
 	}.MaybeBuild()
 	stop := time.Now()
-	c.Handler.OnMeasurement(model.Measurement{
-		Read: &model.ReadEvent{
+	c.Handler.OnMeasurement(modelx.Measurement{
+		Read: &modelx.ReadEvent{
 			ConnID:                 c.ID,
 			DurationSinceBeginning: stop.Sub(c.Beginning),
 			Error:                  err,
@@ -49,8 +49,8 @@ func (c *MeasuringConn) Write(b []byte) (n int, err error) {
 		Operation: "write",
 	}.MaybeBuild()
 	stop := time.Now()
-	c.Handler.OnMeasurement(model.Measurement{
-		Write: &model.WriteEvent{
+	c.Handler.OnMeasurement(modelx.Measurement{
+		Write: &modelx.WriteEvent{
 			ConnID:                 c.ID,
 			DurationSinceBeginning: stop.Sub(c.Beginning),
 			Error:                  err,
@@ -71,8 +71,8 @@ func (c *MeasuringConn) Close() (err error) {
 		Operation: "close",
 	}.MaybeBuild()
 	stop := time.Now()
-	c.Handler.OnMeasurement(model.Measurement{
-		Close: &model.CloseEvent{
+	c.Handler.OnMeasurement(modelx.Measurement{
+		Close: &modelx.CloseEvent{
 			ConnID:                 c.ID,
 			DurationSinceBeginning: stop.Sub(c.Beginning),
 			Error:                  err,

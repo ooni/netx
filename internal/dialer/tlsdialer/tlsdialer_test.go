@@ -9,7 +9,7 @@ import (
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialer/dialerbase"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
@@ -88,6 +88,6 @@ func TestIntegrationFailureSetDeadline(t *testing.T) {
 	}
 }
 
-func newdialer() model.TLSDialer {
+func newdialer() modelx.TLSDialer {
 	return New(new(net.Dialer), new(tls.Config))
 }

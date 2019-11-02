@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-// Transport is a DNS over HTTPS model.DNSRoundTripper.
+// Transport is a DNS over HTTPS modelx.DNSRoundTripper.
 //
 // As a known bug, this implementation does not cache the domain
 // name in the URL for reuse, but this should be easy to fix.

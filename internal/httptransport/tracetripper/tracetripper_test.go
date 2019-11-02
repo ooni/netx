@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegration(t *testing.T) {
@@ -33,11 +33,11 @@ func TestIntegration(t *testing.T) {
 }
 
 type roundTripHandler struct {
-	roundTrips []*model.HTTPRoundTripDoneEvent
+	roundTrips []*modelx.HTTPRoundTripDoneEvent
 	mu         sync.Mutex
 }
 
-func (h *roundTripHandler) OnMeasurement(m model.Measurement) {
+func (h *roundTripHandler) OnMeasurement(m modelx.Measurement) {
 	if m.HTTPRoundTripDone != nil {
 		h.mu.Lock()
 		defer h.mu.Unlock()
@@ -139,8 +139,8 @@ func TestIntegrationWithCorrectSnaps(t *testing.T) {
 	}
 	req.Header.Set("Content-Type", "application/dns-message")
 	handler := &roundTripHandler{}
-	ctx := model.WithMeasurementRoot(
-		context.Background(), &model.MeasurementRoot{
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
 			Beginning: time.Now(),
 			Handler:   handler,
 		},
@@ -247,8 +247,8 @@ func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
 	}
 	req.Header.Set("Content-Type", "application/dns-message")
 	handler := &roundTripHandler{}
-	ctx := model.WithMeasurementRoot(
-		context.Background(), &model.MeasurementRoot{
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
 			Beginning: time.Now(),
 			Handler:   handler,
 		},

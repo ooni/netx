@@ -12,7 +12,7 @@ import (
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Dialer performs measurements while dialing.
@@ -21,7 +21,7 @@ type Dialer struct {
 }
 
 // NewDialer returns a new Dialer instance.
-func NewDialer(handler model.Handler) *Dialer {
+func NewDialer(handler modelx.Handler) *Dialer {
 	return &Dialer{
 		dialer: internal.NewDialer(time.Now(), handler),
 	}
@@ -74,7 +74,7 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 
 // SetResolver is a more flexible way of configuring a resolver
 // that should perhaps be used instead of ConfigureDNS.
-func (d *Dialer) SetResolver(r model.DNSResolver) {
+func (d *Dialer) SetResolver(r modelx.DNSResolver) {
 	d.dialer.SetResolver(r)
 }
 
@@ -109,17 +109,17 @@ func (d *Dialer) DialTLSContext(
 // this Dialer as well. The fact that it's a method of Dialer rather
 // than an independent method is an historical oddity. There is also a
 // standalone NewResolver factory and you should probably use it.
-func (d *Dialer) NewResolver(network, address string) (model.DNSResolver, error) {
+func (d *Dialer) NewResolver(network, address string) (modelx.DNSResolver, error) {
 	return internal.NewResolver(d.dialer.Beginning, d.dialer.Handler, network, address)
 }
 
 // NewResolver is a standalone Dialer.NewResolver
-func NewResolver(handler model.Handler, network, address string) (model.DNSResolver, error) {
+func NewResolver(handler modelx.Handler, network, address string) (modelx.DNSResolver, error) {
 	return internal.NewResolver(time.Now(), handler, network, address)
 }
 
 // NewResolverWithoutHandler creates a standalone Resolver
-func NewResolverWithoutHandler(network, address string) (model.DNSResolver, error) {
+func NewResolverWithoutHandler(network, address string) (modelx.DNSResolver, error) {
 	return internal.NewResolver(time.Now(), handlers.NoHandler, network, address)
 }
 
@@ -137,6 +137,6 @@ func (d *Dialer) ForceSpecificSNI(sni string) error {
 
 // ChainResolvers chains a primary and a secondary resolver such that
 // we can fallback to the secondary if primary is broken.
-func ChainResolvers(primary, secondary model.DNSResolver) model.DNSResolver {
+func ChainResolvers(primary, secondary modelx.DNSResolver) modelx.DNSResolver {
 	return internal.ChainResolvers(primary, secondary)
 }

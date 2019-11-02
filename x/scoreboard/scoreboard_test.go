@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
 
@@ -56,7 +56,7 @@ func TestIntegrationTLSHandshake(t *testing.T) {
 	}, errors.New("connection_reset"))
 	board.MaybeTLSHandshakeReset(11, &url.URL{
 		Host: "www.x.org",
-	}, &model.ErrWrapper{
+	}, &modelx.ErrWrapper{
 		Failure: "connection_reset",
 		WrappedErr: &net.OpError{
 			Addr: &net.TCPAddr{

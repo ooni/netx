@@ -12,18 +12,18 @@ import (
 	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/resolver/bogondetector"
 	"github.com/ooni/netx/internal/transactionid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Resolver is the emitter resolver
 type Resolver struct {
 	bogonsCount int64
-	resolver    model.DNSResolver
+	resolver    modelx.DNSResolver
 }
 
 // New creates a new emitter resolver
-func New(resolver model.DNSResolver) *Resolver {
+func New(resolver modelx.DNSResolver) *Resolver {
 	return &Resolver{resolver: resolver}
 }
 
@@ -43,7 +43,7 @@ type queryableTransport interface {
 }
 
 type queryableResolver interface {
-	Transport() model.DNSRoundTripper
+	Transport() modelx.DNSRoundTripper
 }
 
 func (r *Resolver) queryTransport() (network string, address string) {
@@ -60,9 +60,9 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	network, address := r.queryTransport()
 	dialID := dialid.ContextDialID(ctx)
 	txID := transactionid.ContextTransactionID(ctx)
-	root := model.ContextMeasurementRootOrDefault(ctx)
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveStart: &model.ResolveStartEvent{
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
+	root.Handler.OnMeasurement(modelx.Measurement{
+		ResolveStart: &modelx.ResolveStartEvent{
 			DialID:                 dialID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Hostname:               hostname,
@@ -78,8 +78,8 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 		Operation:     "resolve",
 		TransactionID: txID,
 	}.MaybeBuild()
-	root.Handler.OnMeasurement(model.Measurement{
-		ResolveDone: &model.ResolveDoneEvent{
+	root.Handler.OnMeasurement(modelx.Measurement{
+		ResolveDone: &modelx.ResolveDoneEvent{
 			Addresses:              addrs,
 			DialID:                 dialID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
@@ -112,7 +112,7 @@ func (r *Resolver) detectedBogon(
 	ctx context.Context, hostname string, addrs []string,
 ) ([]string, error) {
 	atomic.AddInt64(&r.bogonsCount, 1)
-	root := model.ContextMeasurementRootOrDefault(ctx)
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
 	durationSinceBeginning := time.Now().Sub(root.Beginning)
 	root.X.Scoreboard.AddDNSBogonInfo(scoreboard.DNSBogonInfo{
 		Addresses:              addrs,

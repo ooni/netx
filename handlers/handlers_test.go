@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegration(t *testing.T) {
-	handlers.NoHandler.OnMeasurement(model.Measurement{})
-	handlers.StdoutHandler.OnMeasurement(model.Measurement{})
+	handlers.NoHandler.OnMeasurement(modelx.Measurement{})
+	handlers.StdoutHandler.OnMeasurement(modelx.Measurement{})
 }

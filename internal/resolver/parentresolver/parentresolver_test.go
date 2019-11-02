@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/resolver/systemresolver"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestLookupAddr(t *testing.T) {
@@ -39,7 +39,7 @@ type emitterchecker struct {
 	mu              sync.Mutex
 }
 
-func (h *emitterchecker) OnMeasurement(m model.Measurement) {
+func (h *emitterchecker) OnMeasurement(m modelx.Measurement) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if m.ResolveStart != nil {
@@ -53,8 +53,8 @@ func (h *emitterchecker) OnMeasurement(m model.Measurement) {
 func TestLookupHost(t *testing.T) {
 	client := New(systemresolver.New(new(net.Resolver)))
 	handler := new(emitterchecker)
-	ctx := model.WithMeasurementRoot(
-		context.Background(), &model.MeasurementRoot{
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
 			Beginning: time.Now(),
 			Handler:   handler,
 		})
@@ -78,8 +78,8 @@ func TestLookupHost(t *testing.T) {
 func TestLookupHostBogon(t *testing.T) {
 	client := New(systemresolver.New(new(net.Resolver)))
 	handler := new(emitterchecker)
-	ctx := model.WithMeasurementRoot(
-		context.Background(), &model.MeasurementRoot{
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
 			Beginning: time.Now(),
 			Handler:   handler,
 		})
@@ -93,7 +93,7 @@ func TestLookupHostBogon(t *testing.T) {
 	if addrs != nil {
 		t.Fatal("expected nil addr here")
 	}
-	root := model.ContextMeasurementRoot(ctx)
+	root := modelx.ContextMeasurementRoot(ctx)
 	if root.X.Scoreboard.DNSBogonInfo == nil {
 		t.Fatal("no bogon info added to scoreboard")
 	}

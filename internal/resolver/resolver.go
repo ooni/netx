@@ -11,7 +11,7 @@ import (
 	"github.com/ooni/netx/internal/resolver/ooniresolver"
 	"github.com/ooni/netx/internal/resolver/parentresolver"
 	"github.com/ooni/netx/internal/resolver/systemresolver"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // NewResolverSystem creates a new Go/system resolver.
@@ -22,21 +22,21 @@ func NewResolverSystem() *parentresolver.Resolver {
 }
 
 // NewResolverUDP creates a new UDP resolver.
-func NewResolverUDP(dialer model.Dialer, address string) *parentresolver.Resolver {
+func NewResolverUDP(dialer modelx.Dialer, address string) *parentresolver.Resolver {
 	return parentresolver.New(
 		ooniresolver.New(dnsoverudp.NewTransport(dialer, address)),
 	)
 }
 
 // NewResolverTCP creates a new TCP resolver.
-func NewResolverTCP(dialer model.Dialer, address string) *parentresolver.Resolver {
+func NewResolverTCP(dialer modelx.Dialer, address string) *parentresolver.Resolver {
 	return parentresolver.New(
 		ooniresolver.New(dnsovertcp.NewTransportTCP(dialer, address)),
 	)
 }
 
 // NewResolverTLS creates a new DoT resolver.
-func NewResolverTLS(dialer model.TLSDialer, address string) *parentresolver.Resolver {
+func NewResolverTLS(dialer modelx.TLSDialer, address string) *parentresolver.Resolver {
 	return parentresolver.New(
 		ooniresolver.New(dnsovertcp.NewTransportTLS(dialer, address)),
 	)

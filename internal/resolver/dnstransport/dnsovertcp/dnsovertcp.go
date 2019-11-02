@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/m-lab/go/rtx"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
-// Transport is a DNS over TCP/TLS model.DNSRoundTripper.
+// Transport is a DNS over TCP/TLS modelx.DNSRoundTripper.
 //
 // As a known bug, this implementation always creates a new connection
 // for each incoming query, thus increasing the response delay.
@@ -23,12 +23,12 @@ type Transport struct {
 }
 
 type dialerAdapter interface {
-	model.Dialer
+	modelx.Dialer
 	Network() string
 }
 
 // NewTransportTCP creates a new TCP Transport
-func NewTransportTCP(dialer model.Dialer, address string) *Transport {
+func NewTransportTCP(dialer modelx.Dialer, address string) *Transport {
 	return &Transport{
 		dialer:  newTCPDialerAdapter(dialer),
 		address: address,
@@ -36,7 +36,7 @@ func NewTransportTCP(dialer model.Dialer, address string) *Transport {
 }
 
 // NewTransportTLS creates a new TLS Transport
-func NewTransportTLS(dialer model.TLSDialer, address string) *Transport {
+func NewTransportTLS(dialer modelx.TLSDialer, address string) *Transport {
 	return &Transport{
 		dialer:  newTLSDialerAdapter(dialer),
 		address: address,
@@ -83,10 +83,10 @@ func (t *Transport) doWithConn(conn net.Conn, query []byte) (reply []byte, err e
 }
 
 type tlsDialerAdapter struct {
-	dialer model.TLSDialer
+	dialer modelx.TLSDialer
 }
 
-func newTLSDialerAdapter(dialer model.TLSDialer) *tlsDialerAdapter {
+func newTLSDialerAdapter(dialer modelx.TLSDialer) *tlsDialerAdapter {
 	return &tlsDialerAdapter{dialer: dialer}
 }
 
@@ -105,10 +105,10 @@ func (d *tlsDialerAdapter) Network() string {
 }
 
 type tcpDialerAdapter struct {
-	model.Dialer
+	modelx.Dialer
 }
 
-func newTCPDialerAdapter(dialer model.Dialer) *tcpDialerAdapter {
+func newTCPDialerAdapter(dialer modelx.Dialer) *tcpDialerAdapter {
 	return &tcpDialerAdapter{Dialer: dialer}
 }
 

@@ -5,17 +5,17 @@ import (
 	"context"
 	"net"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Resolver is a chain resolver.
 type Resolver struct {
-	primary   model.DNSResolver
-	secondary model.DNSResolver
+	primary   modelx.DNSResolver
+	secondary modelx.DNSResolver
 }
 
 // New creates a new chain Resolver instance.
-func New(primary, secondary model.DNSResolver) *Resolver {
+func New(primary, secondary modelx.DNSResolver) *Resolver {
 	return &Resolver{
 		primary:   primary,
 		secondary: secondary,

@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 type queryableTransport interface {
@@ -14,11 +14,11 @@ type queryableTransport interface {
 }
 
 type queryableResolver interface {
-	Transport() model.DNSRoundTripper
+	Transport() modelx.DNSRoundTripper
 }
 
 func TestCanQuery(t *testing.T) {
-	var client model.DNSResolver = New(new(net.Resolver))
+	var client modelx.DNSResolver = New(new(net.Resolver))
 	transport := client.(queryableResolver).Transport()
 	reply, err := transport.RoundTrip(context.Background(), nil)
 	if err == nil {

@@ -11,23 +11,23 @@ import (
 	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/transactionid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Dialer is a net.Dialer that is only able to connect to
 // remote TCP/UDP endpoints. DNS is not supported.
 type Dialer struct {
-	dialer    model.Dialer
+	dialer    modelx.Dialer
 	beginning time.Time
-	handler   model.Handler
+	handler   modelx.Handler
 	dialID    int64
 }
 
 // New creates a new dialer
 func New(
 	beginning time.Time,
-	handler model.Handler,
-	dialer model.Dialer,
+	handler modelx.Handler,
+	dialer modelx.Dialer,
 	dialID int64,
 ) *Dialer {
 	return &Dialer{
@@ -62,8 +62,8 @@ func (d *Dialer) DialContext(
 	}.MaybeBuild()
 	connID := safeConnID(network, conn)
 	txID := transactionid.ContextTransactionID(ctx)
-	d.handler.OnMeasurement(model.Measurement{
-		Connect: &model.ConnectEvent{
+	d.handler.OnMeasurement(modelx.Measurement{
+		Connect: &modelx.ConnectEvent{
 			ConnID:                 connID,
 			DialID:                 d.dialID,
 			DurationSinceBeginning: stop.Sub(d.beginning),

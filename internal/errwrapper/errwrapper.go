@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // ErrDNSBogon indicates that we found a bogon address
 var ErrDNSBogon = errors.New("dns: detected bogon address")
 
-// SafeErrWrapperBuilder contains a builder for model.ErrWrapper that
+// SafeErrWrapperBuilder contains a builder for modelx.ErrWrapper that
 // is safe, i.e., behaves correctly when the error is nil.
 type SafeErrWrapperBuilder struct {
 	// ConnID is the connection ID, if any
@@ -32,11 +32,11 @@ type SafeErrWrapperBuilder struct {
 	TransactionID int64
 }
 
-// MaybeBuild builds a new model.ErrWrapper, if b.Error is not nil, and returns
+// MaybeBuild builds a new modelx.ErrWrapper, if b.Error is not nil, and returns
 // a nil error value, instead, if b.Error is nil.
 func (b SafeErrWrapperBuilder) MaybeBuild() (err error) {
 	if b.Error != nil {
-		err = &model.ErrWrapper{
+		err = &modelx.ErrWrapper{
 			ConnID:        b.ConnID,
 			DialID:        b.DialID,
 			Failure:       toFailureString(b.Error),
@@ -52,7 +52,7 @@ func toFailureString(err error) string {
 	// The list returned here matches the values used by MK unless
 	// explicitly noted otherwise with a comment.
 
-	var errwrapper *model.ErrWrapper
+	var errwrapper *modelx.ErrWrapper
 	if errors.As(err, &errwrapper) {
 		return errwrapper.Error() // we've already wrapped it
 	}
@@ -108,9 +108,9 @@ func toFailureString(err error) string {
 }
 
 func toOperationString(err error, operation string) string {
-	var errwrapper *model.ErrWrapper
+	var errwrapper *modelx.ErrWrapper
 	if errors.As(err, &errwrapper) {
-		// Basically, as explained in model.ErrWrapper docs, let's
+		// Basically, as explained in modelx.ErrWrapper docs, let's
 		// keep the child major operation, if any.
 		if errwrapper.Operation == "connect" {
 			return errwrapper.Operation

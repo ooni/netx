@@ -20,16 +20,16 @@ import (
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
 
 type channelHandler struct {
-	ch         chan<- model.Measurement
+	ch         chan<- modelx.Measurement
 	lateWrites int64
 }
 
-func (h *channelHandler) OnMeasurement(m model.Measurement) {
+func (h *channelHandler) OnMeasurement(m modelx.Measurement) {
 	// Implementation note: when we're closing idle connections it
 	// may be that they're closed once we have stopped reading
 	// therefore (1) we MUST NOT close the channel to signal that
@@ -44,14 +44,14 @@ func (h *channelHandler) OnMeasurement(m model.Measurement) {
 
 // Results contains the results of any operation.
 type Results struct {
-	Connects      []*model.ConnectEvent
-	HTTPRequests  []*model.HTTPRoundTripDoneEvent
-	Resolves      []*model.ResolveDoneEvent
+	Connects      []*modelx.ConnectEvent
+	HTTPRequests  []*modelx.HTTPRoundTripDoneEvent
+	Resolves      []*modelx.ResolveDoneEvent
 	Scoreboard    *scoreboard.Board
-	TLSHandshakes []*model.TLSHandshakeDoneEvent
+	TLSHandshakes []*modelx.TLSHandshakeDoneEvent
 }
 
-func (r *Results) onMeasurement(m model.Measurement) {
+func (r *Results) onMeasurement(m modelx.Measurement) {
 	if m.Connect != nil {
 		r.Connects = append(r.Connects, m.Connect)
 	}
@@ -67,8 +67,8 @@ func (r *Results) onMeasurement(m model.Measurement) {
 }
 
 func (r *Results) collect(
-	output <-chan model.Measurement,
-	handler model.Handler,
+	output <-chan modelx.Measurement,
+	handler modelx.Handler,
 	main func(),
 ) {
 	if handler == nil {
@@ -94,7 +94,7 @@ type dnsFallback struct {
 	network, address string
 }
 
-func configureDNS(seed int64, network, address string) (model.DNSResolver, error) {
+func configureDNS(seed int64, network, address string) (modelx.DNSResolver, error) {
 	resolver, err := netx.NewResolver(handlers.NoHandler, network, address)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func configureDNS(seed int64, network, address string) (model.DNSResolver, error
 		if fallbacks[i].network == network {
 			continue
 		}
-		var fallback model.DNSResolver
+		var fallback modelx.DNSResolver
 		fallback, err = netx.NewResolver(
 			handlers.NoHandler, fallbacks[i].network,
 			fallbacks[i].address,
@@ -148,7 +148,7 @@ func configureDNS(seed int64, network, address string) (model.DNSResolver, error
 
 // DNSLookupConfig contains DNSLookup settings.
 type DNSLookupConfig struct {
-	Handler       model.Handler
+	Handler       modelx.Handler
 	Hostname      string
 	ServerAddress string
 	ServerNetwork string
@@ -165,14 +165,14 @@ type DNSLookupResults struct {
 func DNSLookup(
 	ctx context.Context, config DNSLookupConfig,
 ) (*DNSLookupResults, error) {
-	channel := make(chan model.Measurement)
-	root := &model.MeasurementRoot{
+	channel := make(chan modelx.Measurement)
+	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler: &channelHandler{
 			ch: channel,
 		},
 	}
-	ctx = model.WithMeasurementRoot(ctx, root)
+	ctx = modelx.WithMeasurementRoot(ctx, root)
 	resolver, err := netx.NewResolver(
 		handlers.NoHandler,
 		config.ServerNetwork,
@@ -200,7 +200,7 @@ type HTTPDoConfig struct {
 	Body             []byte
 	DNSServerAddress string
 	DNSServerNetwork string
-	Handler          model.Handler
+	Handler          modelx.Handler
 	Method           string
 	URL              string
 	UserAgent        string
@@ -213,22 +213,22 @@ type HTTPDoResults struct {
 	Headers             http.Header
 	Body                []byte
 	Error               error
-	SNIBlockingFollowup *model.XSNIBlockingFollowup
+	SNIBlockingFollowup *modelx.XSNIBlockingFollowup
 }
 
 // HTTPDo performs a HTTP request
 func HTTPDo(
 	origCtx context.Context, config HTTPDoConfig,
 ) (*HTTPDoResults, error) {
-	channel := make(chan model.Measurement)
+	channel := make(chan modelx.Measurement)
 	// TODO(bassosimone): tell client to use specific CA bundle?
-	root := &model.MeasurementRoot{
+	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler: &channelHandler{
 			ch: channel,
 		},
 	}
-	ctx := model.WithMeasurementRoot(origCtx, root)
+	ctx := modelx.WithMeasurementRoot(origCtx, root)
 	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
 	resolver, err := configureDNS(
 		time.Now().UnixNano(),
@@ -271,7 +271,7 @@ func HTTPDo(
 	})
 	// For safety wrap the error as "http_round_trip" but this
 	// will only be used if the error chain does not contain any
-	// other major operation failure. See model.ErrWrapper.
+	// other major operation failure. See modelx.ErrWrapper.
 	results.Error = errwrapper.SafeErrWrapperBuilder{
 		Error:     results.Error,
 		Operation: "http_round_trip",
@@ -288,7 +288,7 @@ type TLSConnectConfig struct {
 	Address          string
 	DNSServerAddress string
 	DNSServerNetwork string
-	Handler          model.Handler
+	Handler          modelx.Handler
 	SNI              string
 }
 
@@ -302,14 +302,14 @@ type TLSConnectResults struct {
 func TLSConnect(
 	ctx context.Context, config TLSConnectConfig,
 ) (*TLSConnectResults, error) {
-	channel := make(chan model.Measurement)
-	root := &model.MeasurementRoot{
+	channel := make(chan modelx.Measurement)
+	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler: &channelHandler{
 			ch: channel,
 		},
 	}
-	ctx = model.WithMeasurementRoot(ctx, root)
+	ctx = modelx.WithMeasurementRoot(ctx, root)
 	dialer := netx.NewDialer(handlers.NoHandler)
 	// TODO(bassosimone): tell dialer to use specific CA bundle?
 	resolver, err := configureDNS(
@@ -341,8 +341,8 @@ func TLSConnect(
 }
 
 func maybeRunTLSChecks(
-	ctx context.Context, handler model.Handler, x *model.XResults,
-) (out *model.XSNIBlockingFollowup) {
+	ctx context.Context, handler modelx.Handler, x *modelx.XResults,
+) (out *modelx.XSNIBlockingFollowup) {
 	for _, ev := range x.Scoreboard.TLSHandshakeReset {
 		for _, followup := range ev.RecommendedFollowups {
 			if followup == "sni_blocking" {
@@ -358,8 +358,8 @@ func maybeRunTLSChecks(
 const sniBlockingHelper = "example.com:443"
 
 func sniBlockingFollowup(
-	ctx context.Context, handler model.Handler, domain string,
-) (out *model.XSNIBlockingFollowup) {
+	ctx context.Context, handler modelx.Handler, domain string,
+) (out *modelx.XSNIBlockingFollowup) {
 	config := TLSConnectConfig{
 		Address: sniBlockingHelper,
 		Handler: handler,
@@ -367,7 +367,7 @@ func sniBlockingFollowup(
 	}
 	measurements, err := TLSConnect(ctx, config)
 	if err == nil {
-		out = &model.XSNIBlockingFollowup{
+		out = &modelx.XSNIBlockingFollowup{
 			Connects:      measurements.TestKeys.Connects,
 			HTTPRequests:  measurements.TestKeys.HTTPRequests,
 			Resolves:      measurements.TestKeys.Resolves,

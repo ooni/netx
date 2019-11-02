@@ -10,7 +10,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/internal/dialid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Resolver is OONI's DNS client. It is a simplistic client where we
@@ -18,16 +18,16 @@ import (
 // for DNS supported by this library, however.
 type Resolver struct {
 	ntimeouts int64
-	transport model.DNSRoundTripper
+	transport modelx.DNSRoundTripper
 }
 
 // New creates a new OONI Resolver instance.
-func New(t model.DNSRoundTripper) *Resolver {
+func New(t modelx.DNSRoundTripper) *Resolver {
 	return &Resolver{transport: t}
 }
 
 // Transport returns the transport being used.
-func (c *Resolver) Transport() model.DNSRoundTripper {
+func (c *Resolver) Transport() modelx.DNSRoundTripper {
 	return c.transport
 }
 
@@ -140,7 +140,7 @@ func (c *Resolver) roundTrip(ctx context.Context, query *dns.Msg) (reply *dns.Ms
 		ctx, query, func(msg *dns.Msg) ([]byte, error) {
 			return msg.Pack()
 		},
-		func(t model.DNSRoundTripper, query []byte) (reply []byte, err error) {
+		func(t modelx.DNSRoundTripper, query []byte) (reply []byte, err error) {
 			// Pass ctx to round tripper for cancellation as well
 			// as to propagate context information
 			return t.RoundTrip(ctx, query)
@@ -155,7 +155,7 @@ func (c *Resolver) mockableRoundTrip(
 	ctx context.Context,
 	query *dns.Msg,
 	pack func(msg *dns.Msg) ([]byte, error),
-	roundTrip func(t model.DNSRoundTripper, query []byte) (reply []byte, err error),
+	roundTrip func(t modelx.DNSRoundTripper, query []byte) (reply []byte, err error),
 	unpack func(msg *dns.Msg, data []byte) (err error),
 ) (reply *dns.Msg, err error) {
 	var (
@@ -166,9 +166,9 @@ func (c *Resolver) mockableRoundTrip(
 	if err != nil {
 		return
 	}
-	root := model.ContextMeasurementRootOrDefault(ctx)
-	root.Handler.OnMeasurement(model.Measurement{
-		DNSQuery: &model.DNSQueryEvent{
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
+	root.Handler.OnMeasurement(modelx.Measurement{
+		DNSQuery: &modelx.DNSQueryEvent{
 			Data:                   querydata,
 			DialID:                 dialid.ContextDialID(ctx),
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
@@ -184,8 +184,8 @@ func (c *Resolver) mockableRoundTrip(
 	if err != nil {
 		return
 	}
-	root.Handler.OnMeasurement(model.Measurement{
-		DNSReply: &model.DNSReplyEvent{
+	root.Handler.OnMeasurement(modelx.Measurement{
+		DNSReply: &modelx.DNSReplyEvent{
 			Data:                   replydata,
 			DialID:                 dialid.ContextDialID(ctx),
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),

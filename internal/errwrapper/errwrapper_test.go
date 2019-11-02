@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestMaybeBuildFactory(t *testing.T) {
@@ -19,7 +19,7 @@ func TestMaybeBuildFactory(t *testing.T) {
 		Error:         errors.New("mocked error"),
 		TransactionID: 100,
 	}.MaybeBuild()
-	var target *model.ErrWrapper
+	var target *modelx.ErrWrapper
 	if errors.As(err, &target) == false {
 		t.Fatal("not the expected error type")
 	}
@@ -126,7 +126,7 @@ func TestUnitToOperationString(t *testing.T) {
 	t.Run("for connect", func(t *testing.T) {
 		// You're doing HTTP and connect fails. You want to know
 		// that connect failed not that HTTP failed.
-		err := &model.ErrWrapper{Operation: "connect"}
+		err := &modelx.ErrWrapper{Operation: "connect"}
 		if toOperationString(err, "http_round_trip") != "connect" {
 			t.Fatal("unexpected result")
 		}
@@ -134,7 +134,7 @@ func TestUnitToOperationString(t *testing.T) {
 	t.Run("for http_round_trip", func(t *testing.T) {
 		// You're doing DoH and something fails inside HTTP. You want
 		// to know about the internal HTTP error, not resolve.
-		err := &model.ErrWrapper{Operation: "http_round_trip"}
+		err := &modelx.ErrWrapper{Operation: "http_round_trip"}
 		if toOperationString(err, "resolve") != "http_round_trip" {
 			t.Fatal("unexpected result")
 		}
@@ -142,7 +142,7 @@ func TestUnitToOperationString(t *testing.T) {
 	t.Run("for resolve", func(t *testing.T) {
 		// You're doing HTTP and the DNS fails. You want to
 		// know that resolve failed.
-		err := &model.ErrWrapper{Operation: "resolve"}
+		err := &modelx.ErrWrapper{Operation: "resolve"}
 		if toOperationString(err, "http_round_trip") != "resolve" {
 			t.Fatal("unexpected result")
 		}
@@ -150,7 +150,7 @@ func TestUnitToOperationString(t *testing.T) {
 	t.Run("for tls_handshake", func(t *testing.T) {
 		// You're doing HTTP and the TLS handshake fails. You want
 		// to know about a TLS handshake error.
-		err := &model.ErrWrapper{Operation: "tls_handshake"}
+		err := &modelx.ErrWrapper{Operation: "tls_handshake"}
 		if toOperationString(err, "http_round_trip") != "tls_handshake" {
 			t.Fatal("unexpected result")
 		}
@@ -159,7 +159,7 @@ func TestUnitToOperationString(t *testing.T) {
 		// You just noticed that TLS handshake failed and you
 		// have a child error telling you that read failed. Here
 		// you want to know about a TLS handshake error.
-		err := &model.ErrWrapper{Operation: "read"}
+		err := &modelx.ErrWrapper{Operation: "read"}
 		if toOperationString(err, "tls_handshake") != "tls_handshake" {
 			t.Fatal("unexpected result")
 		}

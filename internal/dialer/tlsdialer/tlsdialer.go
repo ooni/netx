@@ -9,7 +9,7 @@ import (
 
 	"github.com/ooni/netx/internal/dialer/connx"
 	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // TLSDialer is the TLS dialer
@@ -17,12 +17,12 @@ type TLSDialer struct {
 	ConnectTimeout      time.Duration // default: 30 second
 	TLSHandshakeTimeout time.Duration // default: 10 second
 	config              *tls.Config
-	dialer              model.Dialer
+	dialer              modelx.Dialer
 	setDeadline         func(net.Conn, time.Time) error
 }
 
 // New creates a new TLS dialer
-func New(dialer model.Dialer, config *tls.Config) *TLSDialer {
+func New(dialer modelx.Dialer, config *tls.Config) *TLSDialer {
 	return &TLSDialer{
 		ConnectTimeout:      30 * time.Second,
 		TLSHandshakeTimeout: 10 * time.Second,
@@ -68,13 +68,13 @@ func (d *TLSDialer) DialTLSContext(
 	if mconn, ok := conn.(*connx.MeasuringConn); ok {
 		connID = mconn.ID
 	}
-	root := model.ContextMeasurementRootOrDefault(ctx)
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
 	// Implementation note: when DialTLS is not set, the code in
 	// net/http will perform the handshake. Otherwise, if DialTLS
 	// is set, we will end up here. This code is still used when
 	// performing non-HTTP TLS-enabled dial operations.
-	root.Handler.OnMeasurement(model.Measurement{
-		TLSHandshakeStart: &model.TLSHandshakeStartEvent{
+	root.Handler.OnMeasurement(modelx.Measurement{
+		TLSHandshakeStart: &modelx.TLSHandshakeStartEvent{
 			ConnID:                 connID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		},
@@ -85,10 +85,10 @@ func (d *TLSDialer) DialTLSContext(
 		Error:     err,
 		Operation: "tls_handshake",
 	}.MaybeBuild()
-	root.Handler.OnMeasurement(model.Measurement{
-		TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
+	root.Handler.OnMeasurement(modelx.Measurement{
+		TLSHandshakeDone: &modelx.TLSHandshakeDoneEvent{
 			ConnID:                 connID,
-			ConnectionState:        model.NewTLSConnectionState(tlsconn.ConnectionState()),
+			ConnectionState:        modelx.NewTLSConnectionState(tlsconn.ConnectionState()),
 			Error:                  err,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		},

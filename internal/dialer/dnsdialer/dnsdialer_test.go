@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegrationDial(t *testing.T) {
@@ -66,7 +66,7 @@ func TestIntegrationDialTCPFailure(t *testing.T) {
 	}
 }
 
-func newdialer() model.Dialer {
+func newdialer() modelx.Dialer {
 	return New(new(net.Resolver), new(net.Dialer))
 }
 
@@ -97,10 +97,10 @@ func TestReduceErrors(t *testing.T) {
 
 	t.Run("multiple errors with meaningful ones", func(t *testing.T) {
 		err1 := errors.New("mocked error #1")
-		err2 := &model.ErrWrapper{
+		err2 := &modelx.ErrWrapper{
 			Failure: "unknown_error: antani",
 		}
-		err3 := &model.ErrWrapper{
+		err3 := &modelx.ErrWrapper{
 			Failure: "connection_refused",
 		}
 		err4 := errors.New("mocked error #3")
@@ -114,14 +114,14 @@ func TestReduceErrors(t *testing.T) {
 func TestIntegrationDivertLookupHost(t *testing.T) {
 	dialer := newdialer()
 	failure := errors.New("mocked error")
-	root := &model.MeasurementRoot{
+	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
 		Handler:   handlers.NoHandler,
 		LookupHost: func(ctx context.Context, hostname string) ([]string, error) {
 			return nil, failure
 		},
 	}
-	ctx := model.WithMeasurementRoot(context.Background(), root)
+	ctx := modelx.WithMeasurementRoot(context.Background(), root)
 	conn, err := dialer.DialContext(ctx, "tcp", "google.com:443")
 	if err == nil {
 		t.Fatal("expected an error here")

@@ -7,19 +7,19 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
 
 func TestUnitChannelHandlerWriteLateOnChannel(t *testing.T) {
 	handler := &channelHandler{
-		ch: make(chan model.Measurement),
+		ch: make(chan modelx.Measurement),
 	}
 	var waitgroup sync.WaitGroup
 	waitgroup.Add(1)
 	go func() {
 		time.Sleep(1 * time.Second)
-		handler.OnMeasurement(model.Measurement{})
+		handler.OnMeasurement(modelx.Measurement{})
 		waitgroup.Done()
 	}()
 	waitgroup.Wait()
@@ -237,7 +237,7 @@ func TestIntegrationTLSConnectUnknownDNS(t *testing.T) {
 func TestMaybeRunTLSChecks(t *testing.T) {
 	out := maybeRunTLSChecks(
 		context.Background(), handlers.NoHandler,
-		&model.XResults{
+		&modelx.XResults{
 			Scoreboard: scoreboard.Board{
 				TLSHandshakeReset: []scoreboard.TLSHandshakeReset{
 					scoreboard.TLSHandshakeReset{

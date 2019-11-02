@@ -1,4 +1,4 @@
-// Package handlers contains default model.Handler handlers.
+// Package handlers contains default modelx.Handler handlers.
 package handlers
 
 import (
@@ -6,12 +6,12 @@ import (
 	"fmt"
 
 	"github.com/m-lab/go/rtx"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 type stdoutHandler struct{}
 
-func (stdoutHandler) OnMeasurement(m model.Measurement) {
+func (stdoutHandler) OnMeasurement(m modelx.Measurement) {
 	data, err := json.Marshal(m)
 	rtx.Must(err, "unexpected json.Marshal failure")
 	fmt.Printf("%s\n", string(data))
@@ -22,7 +22,7 @@ var StdoutHandler stdoutHandler
 
 type noHandler struct{}
 
-func (noHandler) OnMeasurement(m model.Measurement) {
+func (noHandler) OnMeasurement(m modelx.Measurement) {
 }
 
 // NoHandler is a Handler that does not print anything

@@ -6,16 +6,16 @@ import (
 	"errors"
 	"net"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Resolver is the system resolver
 type Resolver struct {
-	resolver model.DNSResolver
+	resolver modelx.DNSResolver
 }
 
 // New creates a new system resolver
-func New(resolver model.DNSResolver) *Resolver {
+func New(resolver modelx.DNSResolver) *Resolver {
 	return &Resolver{resolver: resolver}
 }
 
@@ -46,7 +46,7 @@ func (*fakeTransport) Address() string {
 }
 
 // Transport returns the transport being used
-func (r *Resolver) Transport() model.DNSRoundTripper {
+func (r *Resolver) Transport() modelx.DNSRoundTripper {
 	return &fakeTransport{}
 }
 

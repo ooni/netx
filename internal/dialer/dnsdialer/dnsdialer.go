@@ -9,18 +9,18 @@ import (
 
 	"github.com/ooni/netx/internal/dialer/dialerbase"
 	"github.com/ooni/netx/internal/dialid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Dialer defines the dialer API. We implement the most basic form
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
-	dialer   model.Dialer
-	resolver model.DNSResolver
+	dialer   modelx.Dialer
+	resolver modelx.DNSResolver
 }
 
 // New creates a new Dialer.
-func New(resolver model.DNSResolver, dialer model.Dialer) (d *Dialer) {
+func New(resolver modelx.DNSResolver, dialer modelx.Dialer) (d *Dialer) {
 	return &Dialer{
 		dialer:   dialer,
 		resolver: resolver,
@@ -37,7 +37,7 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 func (d *Dialer) DialContext(
 	ctx context.Context, network, address string,
 ) (conn net.Conn, err error) {
-	root := model.ContextMeasurementRootOrDefault(ctx)
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
 	onlyhost, onlyport, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func reduceErrors(errorslist []error) error {
 	// the user has no IPv6 connectivity, an IPv6 error is going to
 	// appear later in the list of errors.
 	for _, err := range errorslist {
-		var wrapper *model.ErrWrapper
+		var wrapper *modelx.ErrWrapper
 		if errors.As(err, &wrapper) && !strings.HasPrefix(
 			err.Error(), "unknown_error",
 		) {
@@ -93,7 +93,7 @@ func (d *Dialer) lookupHost(
 	if net.ParseIP(hostname) != nil {
 		return []string{hostname}, nil
 	}
-	root := model.ContextMeasurementRootOrDefault(ctx)
+	root := modelx.ContextMeasurementRootOrDefault(ctx)
 	lookupHost := root.LookupHost
 	if root.LookupHost == nil {
 		lookupHost = d.resolver.LookupHost

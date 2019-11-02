@@ -5,17 +5,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
-// Transport is a DNS over UDP model.DNSRoundTripper.
+// Transport is a DNS over UDP modelx.DNSRoundTripper.
 type Transport struct {
-	dialer  model.Dialer
+	dialer  modelx.Dialer
 	address string
 }
 
 // NewTransport creates a new Transport
-func NewTransport(dialer model.Dialer, address string) *Transport {
+func NewTransport(dialer modelx.Dialer, address string) *Transport {
 	return &Transport{
 		dialer:  dialer,
 		address: address,

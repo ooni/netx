@@ -10,10 +10,10 @@ import (
 	"github.com/miekg/dns"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsovertcp"
 	"github.com/ooni/netx/internal/resolver/dnstransport/dnsoverudp"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
-func newtransport() model.DNSRoundTripper {
+func newtransport() modelx.DNSRoundTripper {
 	return dnsovertcp.NewTransportTCP(&net.Dialer{}, "dns.quad9.net:53")
 }
 
@@ -149,7 +149,7 @@ func TestRoundTripExPackFailure(t *testing.T) {
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, errors.New("mocked error")
 		},
-		func(t model.DNSRoundTripper, query []byte) (reply []byte, err error) {
+		func(t modelx.DNSRoundTripper, query []byte) (reply []byte, err error) {
 			return nil, nil
 		},
 		func(msg *dns.Msg, data []byte) (err error) {
@@ -168,7 +168,7 @@ func TestRoundTripExRoundTripFailure(t *testing.T) {
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, nil
 		},
-		func(t model.DNSRoundTripper, query []byte) (reply []byte, err error) {
+		func(t modelx.DNSRoundTripper, query []byte) (reply []byte, err error) {
 			return nil, errors.New("mocked error")
 		},
 		func(msg *dns.Msg, data []byte) (err error) {
@@ -187,7 +187,7 @@ func TestRoundTripExUnpackFailure(t *testing.T) {
 		func(msg *dns.Msg) ([]byte, error) {
 			return nil, nil
 		},
-		func(t model.DNSRoundTripper, query []byte) (reply []byte, err error) {
+		func(t modelx.DNSRoundTripper, query []byte) (reply []byte, err error) {
 			return nil, nil
 		},
 		func(msg *dns.Msg, data []byte) (err error) {
