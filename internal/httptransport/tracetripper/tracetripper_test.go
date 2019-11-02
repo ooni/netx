@@ -198,13 +198,13 @@ func TestIntegrationWithCorrectSnaps(t *testing.T) {
 	if len(roundTrip.RequestBodySnap) != snapSize {
 		t.Fatal("unexpected request body snap length")
 	}
-	if len(roundTrip.BodySnap) != snapSize {
+	if len(roundTrip.ResponseBodySnap) != snapSize {
 		t.Fatal("unexpected response body snap length")
 	}
 	if !bytes.Equal(roundTrip.RequestBodySnap, queryData[:snapSize]) {
 		t.Fatal("the request body snap is wrong")
 	}
-	if !bytes.Equal(roundTrip.BodySnap, replyData[:snapSize]) {
+	if !bytes.Equal(roundTrip.ResponseBodySnap, replyData[:snapSize]) {
 		t.Fatal("the response body snap is wrong")
 	}
 }
