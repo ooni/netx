@@ -175,17 +175,17 @@ func (h *Handler) OnMeasurement(m modelx.Measurement) {
 	}
 	if m.HTTPRoundTripDone != nil {
 		h.logger.WithFields(log.Fields{
-			"elapsed":         m.HTTPRoundTripDone.DurationSinceBeginning,
-			"error":           m.HTTPRoundTripDone.Error,
-			"headers":         m.HTTPRoundTripDone.Headers,
-			"request_body":    stringifyBody(m.HTTPRoundTripDone.RequestBodySnap),
-			"request_method":  m.HTTPRoundTripDone.RequestMethod,
-			"request_headers": m.HTTPRoundTripDone.RequestHeaders,
-			"request_url":     m.HTTPRoundTripDone.RequestURL,
-			"response_body":   stringifyBody(m.HTTPRoundTripDone.BodySnap),
-			"snap_size":       m.HTTPRoundTripDone.SnapSize,
-			"statusCode":      m.HTTPRoundTripDone.StatusCode,
-			"transactionID":   m.HTTPRoundTripDone.TransactionID,
+			"elapsed":            m.HTTPRoundTripDone.DurationSinceBeginning,
+			"error":              m.HTTPRoundTripDone.Error,
+			"requestBody":        stringifyBody(m.HTTPRoundTripDone.RequestBodySnap),
+			"requestMethod":      m.HTTPRoundTripDone.RequestMethod,
+			"requestHeaders":     m.HTTPRoundTripDone.RequestHeaders,
+			"requestURL":         m.HTTPRoundTripDone.RequestURL,
+			"responseBody":       stringifyBody(m.HTTPRoundTripDone.ResponseBodySnap),
+			"responseHeaders":    m.HTTPRoundTripDone.ResponseHeaders,
+			"responseStatusCode": m.HTTPRoundTripDone.ResponseStatusCode,
+			"snapSize":           m.HTTPRoundTripDone.SnapSize,
+			"transactionID":      m.HTTPRoundTripDone.TransactionID,
 		}).Debug("http: round trip done")
 	}
 

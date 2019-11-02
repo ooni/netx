@@ -244,8 +244,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		TransactionID:          tid,
 	}
 	if resp != nil {
-		event.Headers = resp.Header
-		event.StatusCode = int64(resp.StatusCode)
+		event.ResponseHeaders = resp.Header
+		event.ResponseStatusCode = int64(resp.StatusCode)
 		// Save a snapshot of the response body
 		var data []byte
 		data, err = readSnap(&resp.Body, t.snapSize, t.readAll)
@@ -253,7 +253,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			atomic.AddInt64(&t.readAllErrs, 1)
 			resp = nil // this is how net/http likes it
 		} else {
-			event.BodySnap = data
+			event.ResponseBodySnap = data
 		}
 	}
 	root.Handler.OnMeasurement(modelx.Measurement{

@@ -370,9 +370,6 @@ type HTTPRoundTripDoneEvent struct {
 	// error was in sending the request or receiving the response.
 	Error error
 
-	// Headers contains the response headers if error is nil.
-	Headers http.Header
-
 	// RequestBodySnap contains a snap of the request body. We'll
 	// not read more than SnapSize bytes of the body. Because typically
 	// you control the request bodies that you send, perhaps think
@@ -392,17 +389,20 @@ type HTTPRoundTripDoneEvent struct {
 	// for the same reason of RequestHeaders.
 	RequestURL string
 
-	// BodySnap is like RequestBodySnap but for the response. You
+	// ResponseBodySnap is like RequestBodySnap but for the response. You
 	// can still save the whole body by just reading it, if this
 	// is something that you need to do. We're using the snaps here
 	// mainly to log small stuff like DoH and redirects.
-	BodySnap []byte
+	ResponseBodySnap []byte
+
+	// ResponseHeaders contains the response headers if error is nil.
+	ResponseHeaders http.Header
+
+	// ResponseStatusCode contains the HTTP status code if error is nil.
+	ResponseStatusCode int64
 
 	// SnapSize is the size of the bodies snapshot
 	SnapSize int64
-
-	// StatusCode contains the HTTP status code if error is nil.
-	StatusCode int64
 
 	// TransactionID is the identifier of this transaction
 	TransactionID int64
