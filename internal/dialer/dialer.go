@@ -7,15 +7,15 @@ import (
 
 	"github.com/ooni/netx/internal/dialer/dnsdialer"
 	"github.com/ooni/netx/internal/dialer/tlsdialer"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
-// New creates a new model.Dialer
-func New(resolver model.DNSResolver, dialer model.Dialer) *dnsdialer.Dialer {
+// New creates a new modelx.Dialer
+func New(resolver modelx.DNSResolver, dialer modelx.Dialer) *dnsdialer.Dialer {
 	return dnsdialer.New(resolver, dialer)
 }
 
-// NewTLS creates a new model.TLSDialer
-func NewTLS(dialer model.Dialer, config *tls.Config) *tlsdialer.TLSDialer {
+// NewTLS creates a new modelx.TLSDialer
+func NewTLS(dialer modelx.Dialer, config *tls.Config) *tlsdialer.TLSDialer {
 	return tlsdialer.New(dialer, config)
 }

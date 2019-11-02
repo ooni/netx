@@ -10,7 +10,7 @@ import (
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Transport performs measurements during HTTP round trips.
@@ -20,7 +20,7 @@ type Transport struct {
 }
 
 func newTransport(
-	beginning time.Time, handler model.Handler,
+	beginning time.Time, handler modelx.Handler,
 	proxyFunc func(*http.Request) (*url.URL, error),
 ) *Transport {
 	t := new(Transport)
@@ -45,7 +45,7 @@ func NewTransportWithProxyFunc(
 
 // NewTransport creates a new Transport. The beginning argument is
 // the time to use as zero for computing the elapsed time.
-func NewTransport(beginning time.Time, handler model.Handler) *Transport {
+func NewTransport(beginning time.Time, handler modelx.Handler) *Transport {
 	return newTransport(beginning, handler, http.ProxyFromEnvironment)
 }
 
@@ -68,7 +68,7 @@ func (t *Transport) ConfigureDNS(network, address string) error {
 }
 
 // SetResolver is exactly like netx.Dialer.SetResolver.
-func (t *Transport) SetResolver(r model.DNSResolver) {
+func (t *Transport) SetResolver(r modelx.DNSResolver) {
 	t.dialer.SetResolver(r)
 }
 
@@ -95,7 +95,7 @@ type Client struct {
 }
 
 func newClient(
-	handler model.Handler,
+	handler modelx.Handler,
 	proxyFunc func(*http.Request) (*url.URL, error),
 ) *Client {
 	transport := newTransport(time.Now(), handler, proxyFunc)
@@ -108,7 +108,7 @@ func newClient(
 }
 
 // NewClient creates a new client instance.
-func NewClient(handler model.Handler) *Client {
+func NewClient(handler modelx.Handler) *Client {
 	return newClient(handler, http.ProxyFromEnvironment)
 }
 
@@ -116,7 +116,7 @@ func NewClient(handler model.Handler) *Client {
 // configured proxy attached to it. This is suitable
 // for measurements where you don't want a proxy to be
 // in the middle and alter the measurements.
-func NewClientWithoutProxy(handler model.Handler) *Client {
+func NewClientWithoutProxy(handler modelx.Handler) *Client {
 	return newClient(handler, nil)
 }
 
@@ -127,7 +127,7 @@ func (c *Client) ConfigureDNS(network, address string) error {
 }
 
 // SetResolver internally calls netx.Dialer.SetResolver
-func (c *Client) SetResolver(r model.DNSResolver) {
+func (c *Client) SetResolver(r modelx.DNSResolver) {
 	c.Transport.SetResolver(r)
 }
 

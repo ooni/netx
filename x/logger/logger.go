@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/apex/log"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 var (
@@ -32,7 +32,7 @@ func NewHandler(logger log.Interface) *Handler {
 }
 
 // OnMeasurement logs the specific measurement
-func (h *Handler) OnMeasurement(m model.Measurement) {
+func (h *Handler) OnMeasurement(m modelx.Measurement) {
 	// DNS
 	if m.ResolveStart != nil {
 		h.logger.WithFields(log.Fields{

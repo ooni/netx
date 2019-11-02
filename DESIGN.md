@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-11-01   |
+| Last-Updated | 2019-11-02   |
 | Status       | approved     |
 
 ## Introduction
@@ -99,7 +99,7 @@ This library MUST wrap `error` such that:
 
 2. we can map them to major operations.
 
-The `github.com/ooni/netx/model` MUST contain a wrapper for
+The `github.com/ooni/netx/modelx` MUST contain a wrapper for
 Go `error` named `ErrWrapper` that is at least like:
 
 ```Go
@@ -142,7 +142,7 @@ that we can cast back to `ErrWrapper` during the analysis
 phase, using Go 1.13 `errors` library as follows:
 
 ```Go
-var wrapper *model.ErrWrapper
+var wrapper *modelx.ErrWrapper
 if errors.As(err, &wrapper) == true {
     // Do something with the error
 }
@@ -162,7 +162,7 @@ interfaces in the Go standard library:
 4. `net.Resolver`
 
 Accordingly, we'll define the following interfaces in
-the `github.com/ooni/next/model` package:
+the `github.com/ooni/next/modelx` package:
 
 ```Go
 type DNSResolver interface {
@@ -206,7 +206,7 @@ another resolve that performs the real resolution.
 
 ## Dispatching events
 
-The `github.com/ooni/netx/model` package will define
+The `github.com/ooni/netx/modelx` package will define
 an handler for low level events as:
 
 ```Go
@@ -261,7 +261,7 @@ r, err := netx.NewResolverWithoutHandler(DNSNetwork, DNSAddress)
 if err != nil {
     log.Fatal("cannot configure specifc resolver")
 }
-var resolver model.DNSResolver = r
+var resolver modelx.DNSResolver = r
 // now use resolver ...
 ```
 
@@ -299,7 +299,7 @@ The package will also contain this function:
 
 ```Go
 func ChainResolvers(
-    primary, secondary model.DNSResolver) model.DNSResolver
+    primary, secondary modelx.DNSResolver) modelx.DNSResolver
 ```
 
 where you can create a new resolver where `secondary` will be
@@ -316,7 +316,7 @@ d := netx.NewDialerWithoutHandler()
 d.SetResolver(resolver)
 d.ForceSpecificSNI("www.kernel.org")
 d.SetCABundle("/etc/ssl/cert.pem")
-var dialer model.Dialer = d
+var dialer modelx.Dialer = d
 // now use dialer
 ```
 
@@ -348,7 +348,7 @@ methods, but this fully describes the design.
 
 ## Structure of events
 
-The `github.com/ooni/netx/model` will contain the
+The `github.com/ooni/netx/modelx` will contain the
 definition of low-level events. We are interested in
 knowing the following:
 
@@ -366,7 +366,7 @@ as part of using DoT and DoH.
 
 We will represent time as a `time.Duration` since the
 beginning configured either in the context or when
-constructing an object. The `model` package will also
+constructing an object. The `modelx` package will also
 define the `Measurement` event as follows:
 
 ```Go

@@ -19,7 +19,7 @@ import (
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/internal/resolver/chainresolver"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 	"golang.org/x/net/http2"
 )
 
@@ -27,14 +27,14 @@ import (
 // of DNS, but more advanced resolutions are possible.
 type Dialer struct {
 	Beginning time.Time
-	Handler   model.Handler
-	Resolver  model.DNSResolver
+	Handler   modelx.Handler
+	Resolver  modelx.DNSResolver
 	TLSConfig *tls.Config
 }
 
 // NewDialer creates a new Dialer.
 func NewDialer(
-	beginning time.Time, handler model.Handler,
+	beginning time.Time, handler modelx.Handler,
 ) (d *Dialer) {
 	return &Dialer{
 		Beginning: beginning,
@@ -50,12 +50,12 @@ func (d *Dialer) Dial(network, address string) (net.Conn, error) {
 }
 
 func maybeWithMeasurementRoot(
-	ctx context.Context, beginning time.Time, handler model.Handler,
+	ctx context.Context, beginning time.Time, handler modelx.Handler,
 ) context.Context {
-	if model.ContextMeasurementRoot(ctx) != nil {
+	if modelx.ContextMeasurementRoot(ctx) != nil {
 		return ctx
 	}
-	return model.WithMeasurementRoot(ctx, &model.MeasurementRoot{
+	return modelx.WithMeasurementRoot(ctx, &modelx.MeasurementRoot{
 		Beginning: beginning,
 		Handler:   handler,
 	})
@@ -117,7 +117,7 @@ func (d *Dialer) ConfigureDNS(network, address string) error {
 }
 
 // SetResolver implements netx.Dialer.SetResolver.
-func (d *Dialer) SetResolver(r model.DNSResolver) {
+func (d *Dialer) SetResolver(r modelx.DNSResolver) {
 	d.Resolver = r
 }
 
@@ -126,7 +126,7 @@ var (
 	dohClientOnce   sync.Once
 )
 
-func newHTTPClientForDoH(beginning time.Time, handler model.Handler) *http.Client {
+func newHTTPClientForDoH(beginning time.Time, handler modelx.Handler) *http.Client {
 	if handler == handlers.NoHandler {
 		// A bit of extra complexity for a good reason: if the user is not
 		// interested into setting a default handler, then it is fine to
@@ -171,13 +171,13 @@ func withPort(address, port string) string {
 
 type resolverWrapper struct {
 	beginning time.Time
-	handler   model.Handler
-	resolver  model.DNSResolver
+	handler   modelx.Handler
+	resolver  modelx.DNSResolver
 }
 
 func newResolverWrapper(
-	beginning time.Time, handler model.Handler,
-	resolver model.DNSResolver,
+	beginning time.Time, handler modelx.Handler,
+	resolver modelx.DNSResolver,
 ) *resolverWrapper {
 	return &resolverWrapper{
 		beginning: beginning,
@@ -218,8 +218,8 @@ func (r *resolverWrapper) LookupNS(ctx context.Context, name string) ([]*net.NS,
 
 // NewResolver returns a new resolver
 func NewResolver(
-	beginning time.Time, handler model.Handler, network, address string,
-) (model.DNSResolver, error) {
+	beginning time.Time, handler modelx.Handler, network, address string,
+) (modelx.DNSResolver, error) {
 	// Implementation note: system need to be dealt with
 	// separately because it doesn't have any transport.
 	if network == "system" || network == "" {
@@ -258,7 +258,7 @@ func NewResolver(
 // measurement events as they happen.
 type HTTPTransport struct {
 	Transport    *http.Transport
-	Handler      model.Handler
+	Handler      modelx.Handler
 	Beginning    time.Time
 	roundTripper http.RoundTripper
 }
@@ -266,7 +266,7 @@ type HTTPTransport struct {
 // NewHTTPTransport creates a new Transport.
 func NewHTTPTransport(
 	beginning time.Time,
-	handler model.Handler,
+	handler modelx.Handler,
 	dialer *Dialer,
 	disableKeepAlives bool,
 	proxyFunc func(*http.Request) (*url.URL, error),
@@ -335,6 +335,6 @@ func (t *HTTPTransport) CloseIdleConnections() {
 
 // ChainResolvers chains a primary and a secondary resolver such that
 // we can fallback to the secondary if primary is broken.
-func ChainResolvers(primary, secondary model.DNSResolver) model.DNSResolver {
+func ChainResolvers(primary, secondary modelx.DNSResolver) modelx.DNSResolver {
 	return chainresolver.New(primary, secondary)
 }

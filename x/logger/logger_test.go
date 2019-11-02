@@ -7,7 +7,7 @@ import (
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/discard"
 	"github.com/ooni/netx/httpx"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegration(t *testing.T) {
@@ -31,7 +31,7 @@ func TestIntegration(t *testing.T) {
 
 func TestExtension(t *testing.T) {
 	logger := NewHandler(log.Log)
-	logger.OnMeasurement(model.Measurement{
-		Extension: &model.ExtensionEvent{},
+	logger.OnMeasurement(modelx.Measurement{
+		Extension: &modelx.ExtensionEvent{},
 	})
 }

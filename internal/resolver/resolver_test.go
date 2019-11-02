@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
-func testresolverquick(t *testing.T, resolver model.DNSResolver) {
+func testresolverquick(t *testing.T, resolver modelx.DNSResolver) {
 	addrs, err := resolver.LookupHost(context.Background(), "dns.google.com")
 	if err != nil {
 		t.Fatal(err)

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ooni/netx/handlers"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 func TestIntegrationSuccess(t *testing.T) {
@@ -36,7 +36,7 @@ func TestIntegrationErrorNoConnect(t *testing.T) {
 }
 
 // see whether we implement the interface
-func newdialer() model.Dialer {
+func newdialer() modelx.Dialer {
 	return New(
 		time.Now(), handlers.NoHandler, new(net.Dialer), 17,
 	)

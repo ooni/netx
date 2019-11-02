@@ -1,5 +1,5 @@
-// Package model contains the data model.
-package model
+// Package modelx contains the data modelx.
+package modelx
 
 import (
 	"context"

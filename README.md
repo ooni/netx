@@ -24,10 +24,10 @@ are also able to intercept and save DNS messages, as well as any
 other interaction with the remote server (e.g., the result of the
 TLS handshake for DoT and DoH).
 
-### github.com/ooni/netx/model
+### github.com/ooni/netx/modelx
 
-[![GoDoc](https://godoc.org/github.com/ooni/netx/model?status.svg)](
-https://godoc.org/github.com/ooni/netx/model)
+[![GoDoc](https://godoc.org/github.com/ooni/netx/modelx?status.svg)](
+https://godoc.org/github.com/ooni/netx/modelx)
 
 The base package, that defines everything that other packages
 will use. Among others, it defines the measurement model.

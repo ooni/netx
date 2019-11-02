@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ooni/netx/internal/transactionid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Transport performs single HTTP transactions and emits
@@ -34,7 +34,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 	//  a zero-length body." (from the docs)
 	resp.Body = &bodyWrapper{
 		ReadCloser: resp.Body,
-		root:       model.ContextMeasurementRootOrDefault(req.Context()),
+		root:       modelx.ContextMeasurementRootOrDefault(req.Context()),
 		tid:        transactionid.ContextTransactionID(req.Context()),
 	}
 	return
@@ -53,14 +53,14 @@ func (t *Transport) CloseIdleConnections() {
 
 type bodyWrapper struct {
 	io.ReadCloser
-	root *model.MeasurementRoot
+	root *modelx.MeasurementRoot
 	tid  int64
 }
 
 func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 	n, err = bw.ReadCloser.Read(b)
-	bw.root.Handler.OnMeasurement(model.Measurement{
-		HTTPResponseBodyPart: &model.HTTPResponseBodyPartEvent{
+	bw.root.Handler.OnMeasurement(modelx.Measurement{
+		HTTPResponseBodyPart: &modelx.HTTPResponseBodyPartEvent{
 			// "Read reads up to len(p) bytes into p. It returns the number of
 			// bytes read (0 <= n <= len(p)) and any error encountered."
 			Data:                   b[:n],
@@ -74,8 +74,8 @@ func (bw *bodyWrapper) Read(b []byte) (n int, err error) {
 
 func (bw *bodyWrapper) Close() (err error) {
 	err = bw.ReadCloser.Close()
-	bw.root.Handler.OnMeasurement(model.Measurement{
-		HTTPResponseDone: &model.HTTPResponseDoneEvent{
+	bw.root.Handler.OnMeasurement(modelx.Measurement{
+		HTTPResponseDone: &modelx.HTTPResponseDoneEvent{
 			DurationSinceBeginning: time.Now().Sub(bw.root.Beginning),
 			TransactionID:          bw.tid,
 		},

@@ -16,7 +16,7 @@ import (
 	"github.com/ooni/netx/internal/dialid"
 	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/transactionid"
-	"github.com/ooni/netx/model"
+	"github.com/ooni/netx/modelx"
 )
 
 // Transport performs single HTTP transactions.
@@ -75,11 +75,11 @@ func readSnap(
 // RoundTrip executes a single HTTP transaction, returning
 // a Response for the provided Request.
 func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	root := model.ContextMeasurementRootOrDefault(req.Context())
+	root := modelx.ContextMeasurementRootOrDefault(req.Context())
 
 	tid := transactionid.ContextTransactionID(req.Context())
-	root.Handler.OnMeasurement(model.Measurement{
-		HTTPRoundTripStart: &model.HTTPRoundTripStartEvent{
+	root.Handler.OnMeasurement(modelx.Measurement{
+		HTTPRoundTripStart: &modelx.HTTPRoundTripStartEvent{
 			DialID:                 dialid.ContextDialID(req.Context()),
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Method:                 req.Method,
@@ -113,8 +113,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			majorOpMu.Unlock()
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
-			root.Handler.OnMeasurement(model.Measurement{
-				TLSHandshakeStart: &model.TLSHandshakeStartEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				TLSHandshakeStart: &modelx.TLSHandshakeStartEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
 					TransactionID:          tid,
 				},
@@ -134,9 +134,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			)
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
-			root.Handler.OnMeasurement(model.Measurement{
-				TLSHandshakeDone: &model.TLSHandshakeDoneEvent{
-					ConnectionState:        model.NewTLSConnectionState(state),
+			root.Handler.OnMeasurement(modelx.Measurement{
+				TLSHandshakeDone: &modelx.TLSHandshakeDoneEvent{
+					ConnectionState:        modelx.NewTLSConnectionState(state),
 					Error:                  err,
 					DurationSinceBeginning: durationSinceBeginning,
 					TransactionID:          tid,
@@ -147,8 +147,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			majorOpMu.Lock()
 			majorOp = "http_round_trip"
 			majorOpMu.Unlock()
-			root.Handler.OnMeasurement(model.Measurement{
-				HTTPConnectionReady: &model.HTTPConnectionReadyEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				HTTPConnectionReady: &modelx.HTTPConnectionReadyEvent{
 					ConnID: connid.Compute(
 						info.Conn.LocalAddr().Network(),
 						info.Conn.LocalAddr().String(),
@@ -167,8 +167,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 				requestHeaders.Add(key, value)
 			}
 			requestHeadersMu.Unlock()
-			root.Handler.OnMeasurement(model.Measurement{
-				HTTPRequestHeader: &model.HTTPRequestHeaderEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				HTTPRequestHeader: &modelx.HTTPRequestHeaderEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
 					Key:                    key,
 					TransactionID:          tid,
@@ -177,8 +177,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		WroteHeaders: func() {
-			root.Handler.OnMeasurement(model.Measurement{
-				HTTPRequestHeadersDone: &model.HTTPRequestHeadersDoneEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				HTTPRequestHeadersDone: &modelx.HTTPRequestHeadersDoneEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
 					TransactionID:          tid,
 				},
@@ -192,8 +192,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 				Operation:     "http_round_trip",
 				TransactionID: tid,
 			}.MaybeBuild()
-			root.Handler.OnMeasurement(model.Measurement{
-				HTTPRequestDone: &model.HTTPRequestDoneEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				HTTPRequestDone: &modelx.HTTPRequestDoneEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
 					Error:                  err,
 					TransactionID:          tid,
@@ -201,8 +201,8 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			})
 		},
 		GotFirstResponseByte: func() {
-			root.Handler.OnMeasurement(model.Measurement{
-				HTTPResponseStart: &model.HTTPResponseStartEvent{
+			root.Handler.OnMeasurement(modelx.Measurement{
+				HTTPResponseStart: &modelx.HTTPResponseStartEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
 					TransactionID:          tid,
 				},
@@ -233,7 +233,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}.MaybeBuild()
 	// [*] Require less event joining work by providing info that
 	// makes this event alone actionable for OONI
-	event := &model.HTTPRoundTripDoneEvent{
+	event := &modelx.HTTPRoundTripDoneEvent{
 		DurationSinceBeginning: time.Now().Sub(root.Beginning),
 		Error:                  err,
 		RequestBodySnap:        requestBody,
@@ -256,7 +256,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			event.BodySnap = data
 		}
 	}
-	root.Handler.OnMeasurement(model.Measurement{
+	root.Handler.OnMeasurement(modelx.Measurement{
 		HTTPRoundTripDone: event,
 	})
 	return resp, err
