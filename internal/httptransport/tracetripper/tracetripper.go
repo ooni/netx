@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/http/httptrace"
 	"sync"
@@ -19,12 +20,23 @@ import (
 	"github.com/ooni/netx/modelx"
 )
 
+const defaultBodySnapSize int64 = 1 << 20
+
+// ComputeBodySnapSize computes the body snap size
+func ComputeBodySnapSize(snapSize int64) int64 {
+	if snapSize < 0 {
+		snapSize = math.MaxInt64
+	} else if snapSize == 0 {
+		snapSize = defaultBodySnapSize
+	}
+	return snapSize
+}
+
 // Transport performs single HTTP transactions.
 type Transport struct {
 	readAllErrs  int64
 	readAll      func(r io.Reader) ([]byte, error)
 	roundTripper http.RoundTripper
-	snapSize     int64
 }
 
 // New creates a new Transport.
@@ -32,7 +44,6 @@ func New(roundTripper http.RoundTripper) *Transport {
 	return &Transport{
 		readAll:      ioutil.ReadAll,
 		roundTripper: roundTripper,
-		snapSize:     1 << 17,
 	}
 }
 
@@ -95,11 +106,12 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		requestBody      []byte
 		requestHeaders   = http.Header{}
 		requestHeadersMu sync.Mutex
+		snapSize         = ComputeBodySnapSize(root.MaxBodySnapSize)
 	)
 
 	// Save a snapshot of the request body
 	if req.Body != nil {
-		requestBody, err = readSnap(&req.Body, t.snapSize, t.readAll)
+		requestBody, err = readSnap(&req.Body, snapSize, t.readAll)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +252,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		RequestHeaders:         requestHeaders,   // [*]
 		RequestMethod:          req.Method,       // [*]
 		RequestURL:             req.URL.String(), // [*]
-		SnapSize:               t.snapSize,
+		MaxBodySnapSize:        snapSize,
 		TransactionID:          tid,
 	}
 	if resp != nil {
@@ -248,7 +260,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		event.ResponseStatusCode = int64(resp.StatusCode)
 		// Save a snapshot of the response body
 		var data []byte
-		data, err = readSnap(&resp.Body, t.snapSize, t.readAll)
+		data, err = readSnap(&resp.Body, snapSize, t.readAll)
 		if err != nil {
 			atomic.AddInt64(&t.readAllErrs, 1)
 			resp = nil // this is how net/http likes it

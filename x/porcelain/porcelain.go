@@ -8,6 +8,7 @@ package porcelain
 
 import (
 	"context"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/internal/errwrapper"
+	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
@@ -204,6 +206,18 @@ type HTTPDoConfig struct {
 	Method           string
 	URL              string
 	UserAgent        string
+
+	// MaxEventsBodySnapSize controls the snap size that
+	// we're using for bodies returned as modelx.Measurement.
+	//
+	// Same rules as modelx.MeasurementRoot.MaxBodySnapSize.
+	MaxEventsBodySnapSize int64
+
+	// MaxResponseBodySnapSize controls the snap size that
+	// we're using for the HTTPDoResults.BodySnap.
+	//
+	// Same rules as modelx.MeasurementRoot.MaxBodySnapSize.
+	MaxResponseBodySnapSize int64
 }
 
 // HTTPDoResults contains the results of a HTTPDo
@@ -211,7 +225,7 @@ type HTTPDoResults struct {
 	TestKeys            Results
 	StatusCode          int64
 	Headers             http.Header
-	Body                []byte
+	BodySnap            []byte
 	Error               error
 	SNIBlockingFollowup *modelx.XSNIBlockingFollowup
 }
@@ -227,6 +241,7 @@ func HTTPDo(
 		Handler: &channelHandler{
 			ch: channel,
 		},
+		MaxBodySnapSize: config.MaxEventsBodySnapSize,
 	}
 	ctx := modelx.WithMeasurementRoot(origCtx, root)
 	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
@@ -264,9 +279,14 @@ func HTTPDo(
 		results.Headers = resp.Header
 		mu.Unlock()
 		defer resp.Body.Close()
-		data, err := ioutil.ReadAll(resp.Body)
+		reader := io.LimitReader(
+			resp.Body, tracetripper.ComputeBodySnapSize(
+				config.MaxResponseBodySnapSize,
+			),
+		)
+		data, err := ioutil.ReadAll(reader)
 		mu.Lock()
-		results.Body, results.Error = data, err
+		results.BodySnap, results.Error = data, err
 		mu.Unlock()
 	})
 	// For safety wrap the error as "http_round_trip" but this
