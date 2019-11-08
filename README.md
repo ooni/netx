@@ -30,14 +30,14 @@ TLS handshake for DoT and DoH).
 https://godoc.org/github.com/ooni/netx/modelx)
 
 The base package, that defines everything that other packages
-will use. Among others, it defines the measurement model.
+will use, and chiefly the measurement model.
 
 ### github.com/ooni/netx/httpx
 
 [![GoDoc](https://godoc.org/github.com/ooni/netx/httpx?status.svg)](
 https://godoc.org/github.com/ooni/netx/httpx)
 
-Implements a replacement for `http.Client` that saves the timing and
+Implements a `http.Client` replacement that saves the timing and
 results of HTTP and network events.
 
 ### github.com/ooni/netx
@@ -45,8 +45,8 @@ results of HTTP and network events.
 [![GoDoc](https://godoc.org/github.com/ooni/netx?status.svg)](
 https://godoc.org/github.com/ooni/netx)
 
-Implements a replacement for `net.Dialer` that saves the timing and
-results of network events and a replacement for `net.Resolver`.
+Implements `net.Dialer` and `net.Resolver` replacements that saves the
+timing and results of network events.
 
 ### Other packages
 
