@@ -46,7 +46,7 @@ results of HTTP and network events.
 https://godoc.org/github.com/ooni/netx)
 
 Implements `net.Dialer` and `net.Resolver` replacements that saves the
-timing and results of network events.
+timing and the details of network events.
 
 ### Other packages
 
