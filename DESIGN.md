@@ -392,7 +392,7 @@ To simplify joining events together the following holds:
 `DialID` shared by `Connect` and `ResolveDone`
 
 2. a new connection has a nonzero `ConnID` that is emitted
-as part of a successful `ConnectDone` event
+as part of a successful `Connect` event
 
 3. during an HTTP transaction there is a nonzero `TransactionID`
 shared by `HTTPConnectionReady` and `HTTPRoundTripDone`
