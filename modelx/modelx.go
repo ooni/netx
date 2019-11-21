@@ -573,6 +573,9 @@ type TLSHandshakeStartEvent struct {
 	// the time configured as the "zero" time.
 	DurationSinceBeginning time.Duration
 
+	// SNI is the SNI used when we force a specific SNI.
+	SNI string
+
 	// TransactionID is the ID of the transaction that started
 	// this TLS handshake, or zero if we don't know it. Typically,
 	// it is zero for explicit dials, and it's nonzero instead

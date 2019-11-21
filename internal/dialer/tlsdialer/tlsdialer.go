@@ -77,6 +77,7 @@ func (d *TLSDialer) DialTLSContext(
 		TLSHandshakeStart: &modelx.TLSHandshakeStartEvent{
 			ConnID:                 connID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
+			SNI:                    config.ServerName,
 		},
 	})
 	err = tlsconn.Handshake()
