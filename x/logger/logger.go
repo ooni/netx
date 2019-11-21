@@ -116,6 +116,7 @@ func (h *Handler) OnMeasurement(m modelx.Measurement) {
 		h.logger.WithFields(log.Fields{
 			"connID":        m.TLSHandshakeStart.ConnID,
 			"elapsed":       m.TLSHandshakeStart.DurationSinceBeginning,
+			"sni":           m.TLSHandshakeStart.SNI,
 			"transactionID": m.TLSHandshakeStart.TransactionID,
 		}).Debug("tls: start handshake")
 	}
