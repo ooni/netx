@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -204,6 +205,7 @@ type HTTPDoConfig struct {
 	DNSServerNetwork string
 	Handler          modelx.Handler
 	Method           string
+	ProxyFunc        func(*http.Request) (*url.URL, error)
 	URL              string
 	UserAgent        string
 
@@ -244,7 +246,7 @@ func HTTPDo(
 		MaxBodySnapSize: config.MaxEventsBodySnapSize,
 	}
 	ctx := modelx.WithMeasurementRoot(origCtx, root)
-	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
+	client := httpx.NewClientWithProxyFunc(handlers.NoHandler, config.ProxyFunc)
 	resolver, err := configureDNS(
 		time.Now().UnixNano(),
 		config.DNSServerNetwork,
