@@ -94,7 +94,9 @@ type Client struct {
 	Transport *Transport
 }
 
-func newClient(
+// NewClientWithProxyFunc creates a new client using the
+// specified proxyFunc for handling proxying.
+func NewClientWithProxyFunc(
 	handler modelx.Handler,
 	proxyFunc func(*http.Request) (*url.URL, error),
 ) *Client {
@@ -109,7 +111,7 @@ func newClient(
 
 // NewClient creates a new client instance.
 func NewClient(handler modelx.Handler) *Client {
-	return newClient(handler, http.ProxyFromEnvironment)
+	return NewClientWithProxyFunc(handler, http.ProxyFromEnvironment)
 }
 
 // NewClientWithoutProxy creates a client without any
@@ -117,7 +119,7 @@ func NewClient(handler modelx.Handler) *Client {
 // for measurements where you don't want a proxy to be
 // in the middle and alter the measurements.
 func NewClientWithoutProxy(handler modelx.Handler) *Client {
-	return newClient(handler, nil)
+	return NewClientWithProxyFunc(handler, nil)
 }
 
 // ConfigureDNS internally calls netx.Dialer.ConfigureDNS and
