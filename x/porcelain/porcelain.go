@@ -45,13 +45,25 @@ func (h *channelHandler) OnMeasurement(m modelx.Measurement) {
 	}
 }
 
-// Results contains the results of any operation.
+// Results contains the results of every operation that we care
+// about, as well as the experimental scoreboard, and information
+// on the number of bytes received and sent.
+//
+// When counting the number of bytes sent and received, we do not
+// take into account domain name resolutions performed using the
+// system resolver. We estimated that using heuristics with MK but
+// we currently don't have a good solution. TODO(bassosimone): this
+// can be improved by emitting estimates when we know that we are
+// using the system resolver, so we can pick up estimates here.
 type Results struct {
 	Connects      []*modelx.ConnectEvent
 	HTTPRequests  []*modelx.HTTPRoundTripDoneEvent
 	Resolves      []*modelx.ResolveDoneEvent
-	Scoreboard    *scoreboard.Board
 	TLSHandshakes []*modelx.TLSHandshakeDoneEvent
+
+	Scoreboard    *scoreboard.Board
+	SentBytes     int64
+	ReceivedBytes int64
 }
 
 func (r *Results) onMeasurement(m modelx.Measurement) {
@@ -66,6 +78,12 @@ func (r *Results) onMeasurement(m modelx.Measurement) {
 	}
 	if m.TLSHandshakeDone != nil {
 		r.TLSHandshakes = append(r.TLSHandshakes, m.TLSHandshakeDone)
+	}
+	if m.Read != nil {
+		r.ReceivedBytes += m.Read.NumBytes // overflow unlikely
+	}
+	if m.Write != nil {
+		r.SentBytes += m.Write.NumBytes // overflow unlikely
 	}
 }
 
