@@ -2,9 +2,8 @@
 package logger
 
 import (
-	"bytes"
 	"crypto/tls"
-	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/apex/log"
@@ -35,193 +34,147 @@ func NewHandler(logger log.Interface) *Handler {
 func (h *Handler) OnMeasurement(m modelx.Measurement) {
 	// DNS
 	if m.ResolveStart != nil {
-		h.logger.WithFields(log.Fields{
-			"dialID":           m.ResolveStart.DialID,
-			"elapsed":          m.ResolveStart.DurationSinceBeginning,
-			"hostname":         m.ResolveStart.Hostname,
-			"transactionID":    m.ResolveStart.TransactionID,
-			"transportAddress": m.ResolveStart.TransportAddress,
-			"transportNetwork": m.ResolveStart.TransportNetwork,
-		}).Debug("dns: resolve domain name")
-	}
-	if m.DNSQuery != nil {
-		h.logger.WithFields(log.Fields{
-			"dialID":   m.DNSQuery.DialID,
-			"elapsed":  m.DNSQuery.DurationSinceBeginning,
-			"numBytes": len(m.DNSQuery.Data),
-			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSQuery.Msg.String())),
-		}).Debug("dns: query out")
-	}
-	if m.DNSReply != nil {
-		h.logger.WithFields(log.Fields{
-			"dialID":   m.DNSReply.DialID,
-			"elapsed":  m.DNSReply.DurationSinceBeginning,
-			"numBytes": len(m.DNSReply.Data),
-			"value":    fmt.Sprintf("\n\n\t%s", reformat(m.DNSReply.Msg.String())),
-		}).Debug("dns: reply in")
+		h.logger.Debugf(
+			"[httpTxID: %d] resolving: %s",
+			m.ResolveStart.TransactionID,
+			m.ResolveStart.Hostname,
+		)
 	}
 	if m.ResolveDone != nil {
-		h.logger.WithFields(log.Fields{
-			"addresses":        m.ResolveDone.Addresses,
-			"dialID":           m.ResolveDone.DialID,
-			"elapsed":          m.ResolveDone.DurationSinceBeginning,
-			"error":            m.ResolveDone.Error,
-			"transactionID":    m.ResolveDone.TransactionID,
-			"transportAddress": m.ResolveDone.TransportAddress,
-			"transportNetwork": m.ResolveDone.TransportNetwork,
-		}).Debug("dns: resolution done")
+		h.logger.Debugf(
+			"[httpTxID: %d] resolve done: %s, %s",
+			m.ResolveDone.TransactionID,
+			fmtError(m.ResolveDone.Error),
+			m.ResolveDone.Addresses,
+		)
 	}
 
 	// Syscalls
 	if m.Connect != nil {
-		h.logger.WithFields(log.Fields{
-			"blockedFor":    m.Connect.SyscallDuration,
-			"connID":        m.Connect.ConnID,
-			"dialID":        m.Connect.DialID,
-			"elapsed":       m.Connect.DurationSinceBeginning,
-			"error":         m.Connect.Error,
-			"network":       m.Connect.Network,
-			"remoteAddress": m.Connect.RemoteAddress,
-			"transactionID": m.Connect.TransactionID,
-		}).Debug("net: connect done")
-	}
-	if m.Read != nil {
-		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Read.SyscallDuration,
-			"connID":     m.Read.ConnID,
-			"elapsed":    m.Read.DurationSinceBeginning,
-			"error":      m.Read.Error,
-			"numBytes":   m.Read.NumBytes,
-		}).Debug("net: read done")
-	}
-	if m.Write != nil {
-		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Write.SyscallDuration,
-			"connID":     m.Write.ConnID,
-			"elapsed":    m.Write.DurationSinceBeginning,
-			"error":      m.Write.Error,
-			"numBytes":   m.Write.NumBytes,
-		}).Debug("net: write done")
-	}
-	if m.Close != nil {
-		h.logger.WithFields(log.Fields{
-			"blockedFor": m.Close.SyscallDuration,
-			"connID":     m.Close.ConnID,
-			"elapsed":    m.Close.DurationSinceBeginning,
-		}).Debug("net: close done")
+		h.logger.Debugf(
+			"[httpTxID: %d] connect done: %s, %s (rtt=%s)",
+			m.Connect.TransactionID,
+			fmtError(m.Connect.Error),
+			m.Connect.RemoteAddress,
+			m.Connect.SyscallDuration,
+		)
 	}
 
 	// TLS
 	if m.TLSHandshakeStart != nil {
-		h.logger.WithFields(log.Fields{
-			"connID":        m.TLSHandshakeStart.ConnID,
-			"elapsed":       m.TLSHandshakeStart.DurationSinceBeginning,
-			"sni":           m.TLSHandshakeStart.SNI,
-			"transactionID": m.TLSHandshakeStart.TransactionID,
-		}).Debug("tls: start handshake")
+		h.logger.Debugf(
+			"[httpTxID: %d] TLS handshake: (forceSNI='%s')",
+			m.TLSHandshakeStart.TransactionID,
+			m.TLSHandshakeStart.SNI,
+		)
 	}
 	if m.TLSHandshakeDone != nil {
-		h.logger.WithFields(log.Fields{
-			"alpn":          m.TLSHandshakeDone.ConnectionState.NegotiatedProtocol,
-			"connID":        m.TLSHandshakeDone.ConnID,
-			"elapsed":       m.TLSHandshakeDone.DurationSinceBeginning,
-			"error":         m.TLSHandshakeDone.Error,
-			"transactionID": m.TLSHandshakeDone.TransactionID,
-			"version":       tlsVersion[m.TLSHandshakeDone.ConnectionState.Version],
-		}).Debug("tls: handshake done")
+		h.logger.Debugf(
+			"[httpTxID: %d] TLS done: %s, %s (alpn='%s')",
+			m.TLSHandshakeDone.TransactionID,
+			fmtError(m.TLSHandshakeDone.Error),
+			tlsVersionString(m.TLSHandshakeDone.ConnectionState.Version),
+			m.TLSHandshakeDone.ConnectionState.NegotiatedProtocol,
+		)
 	}
 
 	// HTTP round trip
-	if m.HTTPRoundTripStart != nil {
-		h.logger.WithFields(log.Fields{
-			"dialID":        m.HTTPRoundTripStart.DialID,
-			"elapsed":       m.HTTPRoundTripStart.DurationSinceBeginning,
-			"method":        m.HTTPRoundTripStart.Method,
-			"transactionID": m.HTTPRoundTripStart.TransactionID,
-			"url":           m.HTTPRoundTripStart.URL,
-		}).Debug("http: start round trip")
-	}
-	if m.HTTPConnectionReady != nil {
-		h.logger.WithFields(log.Fields{
-			"connID":        m.HTTPConnectionReady.ConnID,
-			"elapsed":       m.HTTPConnectionReady.DurationSinceBeginning,
-			"transactionID": m.HTTPConnectionReady.TransactionID,
-		}).Debug("http: connection ready")
-	}
-	if m.HTTPRequestHeader != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestHeader.DurationSinceBeginning,
-			"key":           m.HTTPRequestHeader.Key,
-			"transactionID": m.HTTPRequestHeader.TransactionID,
-			"value":         m.HTTPRequestHeader.Value,
-		}).Debug("http: header out")
-	}
 	if m.HTTPRequestHeadersDone != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestHeadersDone.DurationSinceBeginning,
-			"transactionID": m.HTTPRequestHeadersDone.TransactionID,
-		}).Debug("http: all headers out")
+		proto := "HTTP/1.1"
+		for key := range m.HTTPRequestHeadersDone.Headers {
+			if strings.HasPrefix(key, ":") {
+				proto = "HTTP/2.0"
+				break
+			}
+		}
+		h.logger.Debugf(
+			"[httpTxID: %d] > %s %s %s",
+			m.HTTPRequestHeadersDone.TransactionID,
+			m.HTTPRequestHeadersDone.Method,
+			m.HTTPRequestHeadersDone.URL.RequestURI(),
+			proto,
+		)
+		if proto == "HTTP/2.0" {
+			h.logger.Debugf(
+				"[httpTxID: %d] > Host: %s",
+				m.HTTPRequestHeadersDone.TransactionID,
+				m.HTTPRequestHeadersDone.URL.Host,
+			)
+		}
+		for key, values := range m.HTTPRequestHeadersDone.Headers {
+			if strings.HasPrefix(key, ":") {
+				continue
+			}
+			for _, value := range values {
+				h.logger.Debugf(
+					"[httpTxID: %d] > %s: %s",
+					m.HTTPRequestHeadersDone.TransactionID,
+					key, value,
+				)
+			}
+		}
+		h.logger.Debugf(
+			"[httpTxID: %d] >", m.HTTPRequestHeadersDone.TransactionID)
 	}
 	if m.HTTPRequestDone != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPRequestDone.DurationSinceBeginning,
-			"transactionID": m.HTTPRequestDone.TransactionID,
-		}).Debug("http: whole request out")
+		h.logger.Debugf(
+			"[httpTxID: %d] request sent; waiting for response",
+			m.HTTPRequestDone.TransactionID,
+		)
 	}
 	if m.HTTPResponseStart != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseStart.DurationSinceBeginning,
-			"transactionID": m.HTTPResponseStart.TransactionID,
-		}).Debug("http: first response byte")
+		h.logger.Debugf(
+			"[httpTxID: %d] start receiving response",
+			m.HTTPResponseStart.TransactionID,
+		)
 	}
 	if m.HTTPRoundTripDone != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":            m.HTTPRoundTripDone.DurationSinceBeginning,
-			"error":              m.HTTPRoundTripDone.Error,
-			"maxBodySnapSize":    m.HTTPRoundTripDone.MaxBodySnapSize,
-			"requestBody":        stringifyBody(m.HTTPRoundTripDone.RequestBodySnap),
-			"requestMethod":      m.HTTPRoundTripDone.RequestMethod,
-			"requestHeaders":     m.HTTPRoundTripDone.RequestHeaders,
-			"requestURL":         m.HTTPRoundTripDone.RequestURL,
-			"responseBody":       stringifyBody(m.HTTPRoundTripDone.ResponseBodySnap),
-			"responseHeaders":    m.HTTPRoundTripDone.ResponseHeaders,
-			"responseStatusCode": m.HTTPRoundTripDone.ResponseStatusCode,
-			"transactionID":      m.HTTPRoundTripDone.TransactionID,
-		}).Debug("http: round trip done")
+		h.logger.Debugf(
+			"[httpTxID: %d] < %s %d %s",
+			m.HTTPRoundTripDone.TransactionID,
+			m.HTTPRoundTripDone.ResponseProto,
+			m.HTTPRoundTripDone.ResponseStatusCode,
+			http.StatusText(int(m.HTTPRoundTripDone.ResponseStatusCode)),
+		)
+		for key, values := range m.HTTPRoundTripDone.ResponseHeaders {
+			for _, value := range values {
+				h.logger.Debugf(
+					"[httpTxID: %d] < %s: %s",
+					m.HTTPRoundTripDone.TransactionID,
+					key, value,
+				)
+			}
+		}
+		h.logger.Debugf(
+			"[httpTxID: %d] <", m.HTTPRoundTripDone.TransactionID)
 	}
 
 	// HTTP response body
 	if m.HTTPResponseBodyPart != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseBodyPart.DurationSinceBeginning,
-			"error":         m.HTTPResponseBodyPart.Error,
-			"numBytes":      len(m.HTTPResponseBodyPart.Data),
-			"transactionID": m.HTTPResponseBodyPart.TransactionID,
-		}).Debug("http: got body part")
+		h.logger.Debugf(
+			"[httpTxID: %d] body part: %s, %d",
+			m.HTTPResponseBodyPart.TransactionID,
+			fmtError(m.HTTPResponseBodyPart.Error),
+			len(m.HTTPResponseBodyPart.Data),
+		)
 	}
 	if m.HTTPResponseDone != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.HTTPResponseDone.DurationSinceBeginning,
-			"transactionID": m.HTTPResponseDone.TransactionID,
-		}).Debug("http: got whole body")
-	}
-
-	// Extensions
-	if m.Extension != nil {
-		h.logger.WithFields(log.Fields{
-			"elapsed":       m.Extension.DurationSinceBeginning,
-			"key":           m.Extension.Key,
-			"severity":      m.Extension.Severity,
-			"transactionID": m.Extension.TransactionID,
-			"value":         fmt.Sprintf("%+v", m.Extension.Value),
-		}).Debug("extension:")
+		h.logger.Debugf(
+			"[httpTxID: %d] end of response",
+			m.HTTPResponseDone.TransactionID,
+		)
 	}
 }
 
-func reformat(s string) string {
-	return strings.ReplaceAll(s, "\n", "\n\t")
+func tlsVersionString(d uint16) string {
+	s, _ := tlsVersion[d]
+	return s
 }
 
-func stringifyBody(d []byte) string {
-	return string(bytes.ReplaceAll(d, []byte("\n"), []byte(`\n`)))
+func fmtError(err error) (s string) {
+	s = "success"
+	if err != nil {
+		s = err.Error()
+	}
+	return
 }

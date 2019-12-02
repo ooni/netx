@@ -5,8 +5,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/miekg/dns"
@@ -322,8 +324,23 @@ type HTTPRequestHeadersDoneEvent struct {
 	// the time configured as the "zero" time.
 	DurationSinceBeginning time.Duration
 
+	// Headers contain the original request headers. This is included
+	// here to make this event actionable without needing to join it with
+	// other events, i.e., to simplify logging.
+	Headers http.Header
+
+	// Method is the original request method. This is here
+	// for the same reason of Headers.
+	Method string
+
 	// TransactionID is the identifier of this transaction
 	TransactionID int64
+
+	// URL is the original request URL. This is here
+	// for the same reason of Headers. We use an object
+	// rather than a string, because here you want to
+	// use specific subfields directly for logging.
+	URL *url.URL
 }
 
 // HTTPRequestDoneEvent is emitted when we have sent the request
@@ -397,6 +414,9 @@ type HTTPRoundTripDoneEvent struct {
 
 	// ResponseHeaders contains the response headers if error is nil.
 	ResponseHeaders http.Header
+
+	// ResponseProto contains the response protocol
+	ResponseProto string
 
 	// ResponseStatusCode contains the HTTP status code if error is nil.
 	ResponseStatusCode int64
@@ -682,6 +702,11 @@ type TLSDialer interface {
 	DialTLSContext(ctx context.Context, network, address string) (net.Conn, error)
 }
 
+// ErrDNSBogon indicates that we found a bogon address. This is the
+// correct value with which to initialize MeasurementRoot.ErrDNSBogon
+// to tell this library to return an error when a bogon is found.
+var ErrDNSBogon = errors.New("dns: detected bogon address")
+
 // MeasurementRoot is the measurement root.
 //
 // If you attach this to a context, we'll use it rather than using
@@ -691,6 +716,16 @@ type TLSDialer interface {
 type MeasurementRoot struct {
 	// Beginning is the "zero" used to compute the elapsed time.
 	Beginning time.Time
+
+	// ErrDNSBogon is the kind of error that you would like this
+	// library to return when a bogon IP address is found. The
+	// default value, nil, causes this library to only record the
+	// occurrence of such bogon in the scoreboard, but does not
+	// otherwise cause any failure. Setting this field to non-nil
+	// error causes the library instead fail when a bogon has
+	// been detected. The best value with which to initialize this
+	// field is the ErrDNSBogon variable in this package.
+	ErrDNSBogon error
 
 	// Handler is the handler that will handle events.
 	Handler Handler

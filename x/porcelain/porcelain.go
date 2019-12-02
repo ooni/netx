@@ -218,6 +218,8 @@ func DNSLookup(
 
 // HTTPDoConfig contains HTTPDo settings.
 type HTTPDoConfig struct {
+	Accept           string
+	AcceptLanguage   string
 	Body             []byte
 	DNSServerAddress string
 	DNSServerNetwork string
@@ -278,6 +280,12 @@ func HTTPDo(
 	req, err := http.NewRequest(config.Method, config.URL, nil)
 	if err != nil {
 		return nil, err
+	}
+	if config.Accept != "" {
+		req.Header.Set("Accept", config.Accept)
+	}
+	if config.AcceptLanguage != "" {
+		req.Header.Set("Accept-Language", config.AcceptLanguage)
 	}
 	req.Header.Set("User-Agent", config.UserAgent)
 	req = req.WithContext(ctx)

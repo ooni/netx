@@ -10,9 +10,6 @@ import (
 	"github.com/ooni/netx/modelx"
 )
 
-// ErrDNSBogon indicates that we found a bogon address
-var ErrDNSBogon = errors.New("dns: detected bogon address")
-
 // SafeErrWrapperBuilder contains a builder for modelx.ErrWrapper that
 // is safe, i.e., behaves correctly when the error is nil.
 type SafeErrWrapperBuilder struct {
@@ -57,7 +54,7 @@ func toFailureString(err error) string {
 		return errwrapper.Error() // we've already wrapped it
 	}
 
-	if errors.Is(err, ErrDNSBogon) {
+	if errors.Is(err, modelx.ErrDNSBogon) {
 		return "dns_bogon_error" // not in MK
 	}
 

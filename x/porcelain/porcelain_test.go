@@ -86,7 +86,9 @@ func TestIntegrationDNSLookupUnknownDNS(t *testing.T) {
 func TestIntegrationHTTPDoGood(t *testing.T) {
 	ctx := context.Background()
 	results, err := HTTPDo(ctx, HTTPDoConfig{
-		URL: "http://ooni.io",
+		Accept:         "*/*",
+		AcceptLanguage: "en",
+		URL:            "http://ooni.io",
 	})
 	if err != nil {
 		t.Fatal(err)

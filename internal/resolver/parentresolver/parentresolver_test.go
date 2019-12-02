@@ -80,8 +80,9 @@ func TestLookupHostBogon(t *testing.T) {
 	handler := new(emitterchecker)
 	ctx := modelx.WithMeasurementRoot(
 		context.Background(), &modelx.MeasurementRoot{
-			Beginning: time.Now(),
-			Handler:   handler,
+			Beginning:   time.Now(),
+			ErrDNSBogon: modelx.ErrDNSBogon,
+			Handler:     handler,
 		})
 	addrs, err := client.LookupHost(ctx, "localhost")
 	if err == nil {
