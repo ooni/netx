@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/modelx"
 )
 
@@ -31,7 +33,13 @@ func testresolverquick(t *testing.T, resolver modelx.DNSResolver) {
 
 func TestIntegrationDetectBogon(t *testing.T) {
 	resolver := NewResolverSystem()
-	addrs, err := resolver.LookupHost(context.Background(), "localhost")
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
+			Beginning:   time.Now(),
+			ErrDNSBogon: modelx.ErrDNSBogon,
+			Handler:     handlers.NoHandler,
+		})
+	addrs, err := resolver.LookupHost(ctx, "localhost")
 	if err == nil {
 		t.Fatal("expected an error here")
 	}

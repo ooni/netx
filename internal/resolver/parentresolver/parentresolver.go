@@ -92,7 +92,7 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	})
 	// Respect general Go expectation that one doesn't return
 	// both a value and a non-nil error
-	if errors.Is(err, errwrapper.ErrDNSBogon) {
+	if errors.Is(err, modelx.ErrDNSBogon) {
 		addrs = nil
 	}
 	return addrs, err
@@ -120,9 +120,13 @@ func (r *Resolver) detectedBogon(
 		Domain:                 hostname,
 		FallbackPlan:           "let_caller_decide",
 	})
-	// We're returning non nil addrs so the caller logs it
-	// but the caller is assumed to not return addrs
-	return addrs, errwrapper.ErrDNSBogon
+	// Note that here we return root.ErrDNSBogon, which by default
+	// is nil, meaning that we'll not treat the bogon as hard error
+	// but we'll register it in the scoreboard. The caller should
+	// ensure that we won't return a value and an error at the same
+	// time. See issue <https://github.com/ooni/netx/issues/126> for
+	// more on why by default a bogon does not cause an error.
+	return addrs, root.ErrDNSBogon
 }
 
 // LookupMX returns the MX records of a specific name

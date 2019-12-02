@@ -47,8 +47,8 @@ func TestToFailureString(t *testing.T) {
 			t.Fatal("unexpected result")
 		}
 	})
-	t.Run("for errwrapper.ErrDNSBogon", func(t *testing.T) {
-		if toFailureString(ErrDNSBogon) != "dns_bogon_error" {
+	t.Run("for modelx.ErrDNSBogon", func(t *testing.T) {
+		if toFailureString(modelx.ErrDNSBogon) != "dns_bogon_error" {
 			t.Fatal("unexpected result")
 		}
 	})
