@@ -192,7 +192,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			root.Handler.OnMeasurement(modelx.Measurement{
 				HTTPRequestHeadersDone: &modelx.HTTPRequestHeadersDoneEvent{
 					DurationSinceBeginning: time.Now().Sub(root.Beginning),
+					Headers:                requestHeaders, // [*]
+					Method:                 req.Method,     // [*]
 					TransactionID:          tid,
+					URL:                    req.URL, // [*]
 				},
 			})
 		},
@@ -258,6 +261,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if resp != nil {
 		event.ResponseHeaders = resp.Header
 		event.ResponseStatusCode = int64(resp.StatusCode)
+		event.ResponseProto = resp.Proto
 		// Save a snapshot of the response body
 		var data []byte
 		data, err = readSnap(&resp.Body, snapSize, t.readAll)
