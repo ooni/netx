@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/apex/log"
 	"github.com/ooni/netx/modelx"
 )
 
@@ -20,13 +19,19 @@ var (
 	}
 )
 
+// Logger is the interface we expect from a logger
+type Logger interface {
+	Debug(msg string)
+	Debugf(format string, v ...interface{})
+}
+
 // Handler is a handler that logs events.
 type Handler struct {
-	logger log.Interface
+	logger Logger
 }
 
 // NewHandler returns a new logging handler.
-func NewHandler(logger log.Interface) *Handler {
+func NewHandler(logger Logger) *Handler {
 	return &Handler{logger: logger}
 }
 
