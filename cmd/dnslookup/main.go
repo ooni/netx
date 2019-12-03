@@ -29,13 +29,12 @@ func main() {
 		context.Background(), *flagTimeout,
 	)
 	defer cancel()
-	results, err := porcelain.DNSLookup(ctx, porcelain.DNSLookupConfig{
+	results := porcelain.DNSLookup(ctx, porcelain.DNSLookupConfig{
 		Handler:       logger.NewHandler(log.Log),
 		Hostname:      *flagName,
 		ServerAddress: *flagAddress,
 		ServerNetwork: *flagTransport,
 	})
-	rtx.Must(err, "porcelain.DNSLookup failed")
 	data, err := json.MarshalIndent(results, "", "  ")
 	rtx.Must(err, "json.Marshal failed")
 	fmt.Printf("%s\n", string(data))
