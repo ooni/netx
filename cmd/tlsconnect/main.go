@@ -30,14 +30,13 @@ func main() {
 		context.Background(), *flagTimeout,
 	)
 	defer cancel()
-	results, err := porcelain.TLSConnect(ctx, porcelain.TLSConnectConfig{
+	results := porcelain.TLSConnect(ctx, porcelain.TLSConnectConfig{
 		Address:          *flagAddress,
 		DNSServerAddress: *flagDNSAddress,
 		DNSServerNetwork: *flagDNSTransport,
 		Handler:          logger.NewHandler(log.Log),
 		SNI:              *flagSNI,
 	})
-	rtx.Must(err, "porcelain.TLSConnect failed")
 	data, err := json.MarshalIndent(results, "", "  ")
 	rtx.Must(err, "json.Marshal failed")
 	fmt.Printf("%s\n", string(data))

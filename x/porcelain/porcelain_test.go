@@ -2,6 +2,7 @@ package porcelain
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -30,12 +31,9 @@ func TestUnitChannelHandlerWriteLateOnChannel(t *testing.T) {
 
 func TestIntegrationDNSLookupGood(t *testing.T) {
 	ctx := context.Background()
-	results, err := DNSLookup(ctx, DNSLookupConfig{
+	results := DNSLookup(ctx, DNSLookupConfig{
 		Hostname: "ooni.io",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
 	}
@@ -52,12 +50,9 @@ func TestIntegrationDNSLookupCancellation(t *testing.T) {
 		context.Background(), time.Microsecond,
 	)
 	defer cancel()
-	results, err := DNSLookup(ctx, DNSLookupConfig{
+	results := DNSLookup(ctx, DNSLookupConfig{
 		Hostname: "ooni.io",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error == nil {
 		t.Fatal("expected an error here")
 	}
@@ -71,28 +66,22 @@ func TestIntegrationDNSLookupCancellation(t *testing.T) {
 
 func TestIntegrationDNSLookupUnknownDNS(t *testing.T) {
 	ctx := context.Background()
-	results, err := DNSLookup(ctx, DNSLookupConfig{
+	results := DNSLookup(ctx, DNSLookupConfig{
 		Hostname:      "ooni.io",
 		ServerNetwork: "antani",
 	})
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if results != nil {
-		t.Fatal("expected nil results here")
+	if !strings.HasSuffix(results.Error.Error(), "unsupported network value") {
+		t.Fatal("expected a different error here")
 	}
 }
 
 func TestIntegrationHTTPDoGood(t *testing.T) {
 	ctx := context.Background()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		Accept:         "*/*",
 		AcceptLanguage: "en",
 		URL:            "http://ooni.io",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
 	}
@@ -115,12 +104,9 @@ func TestIntegrationHTTPDoCancellation(t *testing.T) {
 		context.Background(), time.Microsecond,
 	)
 	defer cancel()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		URL: "http://ooni.io",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error == nil {
 		t.Fatal("expected an error here")
 	}
@@ -131,26 +117,20 @@ func TestIntegrationHTTPDoCancellation(t *testing.T) {
 
 func TestIntegrationHTTPDoUnknownDNS(t *testing.T) {
 	ctx := context.Background()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		URL:              "http://ooni.io",
 		DNSServerNetwork: "antani",
 	})
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if results != nil {
-		t.Fatal("expected nil results here")
+	if !strings.HasSuffix(results.Error.Error(), "unsupported network value") {
+		t.Fatal("not the error that we expected")
 	}
 }
 
 func TestIntegrationHTTPDoRoundTripError(t *testing.T) {
 	ctx := context.Background()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		URL: "http://ooni.io:443", // 443 with http
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error == nil {
 		t.Fatal("expected an error here")
 	}
@@ -158,25 +138,19 @@ func TestIntegrationHTTPDoRoundTripError(t *testing.T) {
 
 func TestIntegrationHTTPDoBadURL(t *testing.T) {
 	ctx := context.Background()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		URL: "\t",
 	})
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if results != nil {
-		t.Fatal("expected nil results here")
+	if !strings.HasSuffix(results.Error.Error(), "invalid control character in URL") {
+		t.Fatal("not the error we expected")
 	}
 }
 
 func TestIntegrationTLSConnectGood(t *testing.T) {
 	ctx := context.Background()
-	results, err := TLSConnect(ctx, TLSConnectConfig{
+	results := TLSConnect(ctx, TLSConnectConfig{
 		Address: "ooni.io:443",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
 	}
@@ -187,14 +161,11 @@ func TestIntegrationTLSConnectGood(t *testing.T) {
 
 func TestIntegrationTLSConnectGoodWithDoT(t *testing.T) {
 	ctx := context.Background()
-	results, err := TLSConnect(ctx, TLSConnectConfig{
+	results := TLSConnect(ctx, TLSConnectConfig{
 		Address:          "ooni.io:443",
 		DNSServerNetwork: "dot",
 		DNSServerAddress: "9.9.9.9:853",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
 	}
@@ -208,12 +179,9 @@ func TestIntegrationTLSConnectCancellation(t *testing.T) {
 		context.Background(), time.Microsecond,
 	)
 	defer cancel()
-	results, err := TLSConnect(ctx, TLSConnectConfig{
+	results := TLSConnect(ctx, TLSConnectConfig{
 		Address: "ooni.io:443",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error == nil {
 		t.Fatal("expected an error here")
 	}
@@ -224,15 +192,12 @@ func TestIntegrationTLSConnectCancellation(t *testing.T) {
 
 func TestIntegrationTLSConnectUnknownDNS(t *testing.T) {
 	ctx := context.Background()
-	results, err := TLSConnect(ctx, TLSConnectConfig{
+	results := TLSConnect(ctx, TLSConnectConfig{
 		Address:          "ooni.io:443",
 		DNSServerNetwork: "antani",
 	})
-	if err == nil {
-		t.Fatal("expected an error here")
-	}
-	if results != nil {
-		t.Fatal("expected nil results here")
+	if !strings.HasSuffix(results.Error.Error(), "unsupported network value") {
+		t.Fatal("not the error that we expected")
 	}
 }
 
@@ -275,14 +240,11 @@ func TestIntegrationBodySnapSizes(t *testing.T) {
 		maxResponseBodySnapSize = 1 << 8
 	)
 	ctx := context.Background()
-	results, err := HTTPDo(ctx, HTTPDoConfig{
+	results := HTTPDo(ctx, HTTPDoConfig{
 		URL:                     "https://ooni.io",
 		MaxEventsBodySnapSize:   maxEventsBodySnapSize,
 		MaxResponseBodySnapSize: maxResponseBodySnapSize,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if results.Error != nil {
 		t.Fatal(results.Error)
 	}

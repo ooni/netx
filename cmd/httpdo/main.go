@@ -30,14 +30,13 @@ func main() {
 		context.Background(), *flagTimeout,
 	)
 	defer cancel()
-	results, err := porcelain.HTTPDo(ctx, porcelain.HTTPDoConfig{
+	results := porcelain.HTTPDo(ctx, porcelain.HTTPDoConfig{
 		DNSServerAddress: *flagDNSAddress,
 		DNSServerNetwork: *flagDNSTransport,
 		Method:           *flagMethod,
 		Handler:          logger.NewHandler(log.Log),
 		URL:              *flagURL,
 	})
-	rtx.Must(err, "porcelain.HTTPDo failed")
 	data, err := json.MarshalIndent(results, "", "  ")
 	rtx.Must(err, "json.Marshal failed")
 	fmt.Printf("%s\n", string(data))

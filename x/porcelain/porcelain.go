@@ -185,7 +185,11 @@ type DNSLookupResults struct {
 // DNSLookup performs a DNS lookup.
 func DNSLookup(
 	ctx context.Context, config DNSLookupConfig,
-) (*DNSLookupResults, error) {
+) *DNSLookupResults {
+	var (
+		mu      sync.Mutex
+		results = new(DNSLookupResults)
+	)
 	channel := make(chan modelx.Measurement)
 	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
@@ -200,12 +204,9 @@ func DNSLookup(
 		config.ServerAddress,
 	)
 	if err != nil {
-		return nil, err
+		results.Error = err
+		return results
 	}
-	var (
-		mu      sync.Mutex
-		results = new(DNSLookupResults)
-	)
 	results.TestKeys.collect(channel, config.Handler, func() {
 		addrs, err := resolver.LookupHost(ctx, config.Hostname)
 		mu.Lock()
@@ -213,7 +214,7 @@ func DNSLookup(
 		results.Addresses, results.Error = addrs, err
 	})
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
-	return results, nil
+	return results
 }
 
 // HTTPDoConfig contains HTTPDo settings.
@@ -255,7 +256,11 @@ type HTTPDoResults struct {
 // HTTPDo performs a HTTP request
 func HTTPDo(
 	origCtx context.Context, config HTTPDoConfig,
-) (*HTTPDoResults, error) {
+) *HTTPDoResults {
+	var (
+		mu      sync.Mutex
+		results = new(HTTPDoResults)
+	)
 	channel := make(chan modelx.Measurement)
 	// TODO(bassosimone): tell client to use specific CA bundle?
 	root := &modelx.MeasurementRoot{
@@ -273,13 +278,15 @@ func HTTPDo(
 		config.DNSServerAddress,
 	)
 	if err != nil {
-		return nil, err
+		results.Error = err
+		return results
 	}
 	client.SetResolver(resolver)
 	// TODO(bassosimone): implement sending body
 	req, err := http.NewRequest(config.Method, config.URL, nil)
 	if err != nil {
-		return nil, err
+		results.Error = err
+		return results
 	}
 	if config.Accept != "" {
 		req.Header.Set("Accept", config.Accept)
@@ -289,10 +296,6 @@ func HTTPDo(
 	}
 	req.Header.Set("User-Agent", config.UserAgent)
 	req = req.WithContext(ctx)
-	var (
-		mu      sync.Mutex
-		results = new(HTTPDoResults)
-	)
 	results.TestKeys.collect(channel, config.Handler, func() {
 		defer client.HTTPClient.CloseIdleConnections()
 		resp, err := client.HTTPClient.Do(req)
@@ -328,7 +331,7 @@ func HTTPDo(
 	results.SNIBlockingFollowup = maybeRunTLSChecks(
 		origCtx, config.Handler, &root.X,
 	)
-	return results, nil
+	return results
 }
 
 // TLSConnectConfig contains TLSConnect settings.
@@ -349,7 +352,11 @@ type TLSConnectResults struct {
 // TLSConnect performs a TLS connect.
 func TLSConnect(
 	ctx context.Context, config TLSConnectConfig,
-) (*TLSConnectResults, error) {
+) *TLSConnectResults {
+	var (
+		mu      sync.Mutex
+		results = new(TLSConnectResults)
+	)
 	channel := make(chan modelx.Measurement)
 	root := &modelx.MeasurementRoot{
 		Beginning: time.Now(),
@@ -366,15 +373,12 @@ func TLSConnect(
 		config.DNSServerAddress,
 	)
 	if err != nil {
-		return nil, err
+		results.Error = err
+		return results
 	}
 	dialer.SetResolver(resolver)
 	// TODO(bassosimone): can this call really fail?
 	dialer.ForceSpecificSNI(config.SNI)
-	var (
-		mu      sync.Mutex
-		results = new(TLSConnectResults)
-	)
 	results.TestKeys.collect(channel, config.Handler, func() {
 		conn, err := dialer.DialTLSContext(ctx, "tcp", config.Address)
 		if conn != nil {
@@ -385,7 +389,7 @@ func TLSConnect(
 		results.Error = err
 	})
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
-	return results, nil
+	return results
 }
 
 func maybeRunTLSChecks(
@@ -413,14 +417,12 @@ func sniBlockingFollowup(
 		Handler: handler,
 		SNI:     domain,
 	}
-	measurements, err := TLSConnect(ctx, config)
-	if err == nil {
-		out = &modelx.XSNIBlockingFollowup{
-			Connects:      measurements.TestKeys.Connects,
-			HTTPRequests:  measurements.TestKeys.HTTPRequests,
-			Resolves:      measurements.TestKeys.Resolves,
-			TLSHandshakes: measurements.TestKeys.TLSHandshakes,
-		}
+	measurements := TLSConnect(ctx, config)
+	out = &modelx.XSNIBlockingFollowup{
+		Connects:      measurements.TestKeys.Connects,
+		HTTPRequests:  measurements.TestKeys.HTTPRequests,
+		Resolves:      measurements.TestKeys.Resolves,
+		TLSHandshakes: measurements.TestKeys.TLSHandshakes,
 	}
 	return
 }
