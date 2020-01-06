@@ -18,8 +18,9 @@ import (
 // As a known bug, this implementation always creates a new connection
 // for each incoming query, thus increasing the response delay.
 type Transport struct {
-	dialer  dialerAdapter
-	address string
+	dialer          dialerAdapter
+	address         string
+	requiresPadding bool
 }
 
 type dialerAdapter interface {
@@ -30,16 +31,18 @@ type dialerAdapter interface {
 // NewTransportTCP creates a new TCP Transport
 func NewTransportTCP(dialer modelx.Dialer, address string) *Transport {
 	return &Transport{
-		dialer:  newTCPDialerAdapter(dialer),
-		address: address,
+		dialer:          newTCPDialerAdapter(dialer),
+		address:         address,
+		requiresPadding: false,
 	}
 }
 
 // NewTransportTLS creates a new TLS Transport
 func NewTransportTLS(dialer modelx.TLSDialer, address string) *Transport {
 	return &Transport{
-		dialer:  newTLSDialerAdapter(dialer),
-		address: address,
+		dialer:          newTLSDialerAdapter(dialer),
+		address:         address,
+		requiresPadding: true,
 	}
 }
 
@@ -51,6 +54,11 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) ([]byte, error)
 	}
 	defer conn.Close()
 	return t.doWithConn(conn, query)
+}
+
+// RequiresPadding return true for DoT according to RFC8467
+func (t *Transport) RequiresPadding() bool {
+	return t.requiresPadding
 }
 
 func (t *Transport) doWithConn(conn net.Conn, query []byte) (reply []byte, err error) {

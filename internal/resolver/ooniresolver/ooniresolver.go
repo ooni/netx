@@ -101,6 +101,17 @@ func (c *Resolver) newQueryWithQuestion(q dns.Question) (query *dns.Msg) {
 	query.RecursionDesired = true
 	query.Question = make([]dns.Question, 1)
 	query.Question[0] = q
+	// Add padding for DoH and DoT according to RFC8467
+	if c.Transport().RequiresPadding() {
+		query.SetEdns0(4096, true)
+		// Clients SHOULD pad queries to the closest multiple of 128 octets
+		// rfc8467#section-4.1
+		paddReminder := (128 - query.Len()) % 128
+		qPadding := new([128]byte)
+		qPaddingOpt := new(dns.EDNS0_PADDING)
+		qPaddingOpt.Padding = qPadding[0:paddReminder]
+		query.IsEdns0().Option = append(query.IsEdns0().Option, qPaddingOpt)
+	}
 	return
 }
 

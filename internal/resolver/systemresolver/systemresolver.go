@@ -37,6 +37,10 @@ func (*fakeTransport) RoundTrip(
 	return nil, errors.New("not implemented")
 }
 
+func (*fakeTransport) RequiresPadding() bool {
+	return false
+}
+
 func (*fakeTransport) Network() string {
 	return "system"
 }
