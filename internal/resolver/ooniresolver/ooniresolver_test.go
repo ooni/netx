@@ -78,6 +78,10 @@ func (t *faketransport) RoundTrip(
 	return nil, errors.New("mocked error")
 }
 
+func (t *faketransport) RequiresPadding() bool {
+	return true
+}
+
 func TestLookupHostWithNonTimeoutError(t *testing.T) {
 	client := New(&faketransport{})
 	addrs, err := client.LookupHost(context.Background(), "www.google.com")
