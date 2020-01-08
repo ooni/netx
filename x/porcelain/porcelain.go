@@ -1,9 +1,7 @@
 // Package porcelain contains useful high level functionality.
 //
-// This is the main package used by ooni/probe-engine. The objective
-// of this package is to make things simple in probe-engine.
-//
-// Also, this is currently experimental. So, no API promises here.
+// This is an experimental package and may change/disappear
+// at any time without any documentation.
 package porcelain
 
 import (
