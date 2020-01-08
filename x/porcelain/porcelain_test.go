@@ -99,22 +99,6 @@ func TestIntegrationHTTPDoGood(t *testing.T) {
 	}
 }
 
-func TestIntegrationHTTPDoCancellation(t *testing.T) {
-	ctx, cancel := context.WithTimeout(
-		context.Background(), time.Microsecond,
-	)
-	defer cancel()
-	results := HTTPDo(ctx, HTTPDoConfig{
-		URL: "http://ooni.io",
-	})
-	if results.Error == nil {
-		t.Fatal("expected an error here")
-	}
-	if results.Error.Error() != "generic_timeout_error" {
-		t.Fatal("not the error we expected")
-	}
-}
-
 func TestIntegrationHTTPDoUnknownDNS(t *testing.T) {
 	ctx := context.Background()
 	results := HTTPDo(ctx, HTTPDoConfig{

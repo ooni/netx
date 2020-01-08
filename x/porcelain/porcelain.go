@@ -21,7 +21,6 @@ import (
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
-	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
@@ -319,13 +318,6 @@ func HTTPDo(
 		results.BodySnap, results.Error = data, err
 		mu.Unlock()
 	})
-	// For safety wrap the error as "http_round_trip" but this
-	// will only be used if the error chain does not contain any
-	// other major operation failure. See modelx.ErrWrapper.
-	results.Error = errwrapper.SafeErrWrapperBuilder{
-		Error:     results.Error,
-		Operation: "http_round_trip",
-	}.MaybeBuild()
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	results.SNIBlockingFollowup = maybeRunTLSChecks(
 		origCtx, config.Handler, &root.X,
