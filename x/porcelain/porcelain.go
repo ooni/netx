@@ -1,9 +1,7 @@
 // Package porcelain contains useful high level functionality.
 //
-// This is the main package used by ooni/probe-engine. The objective
-// of this package is to make things simple in probe-engine.
-//
-// Also, this is currently experimental. So, no API promises here.
+// This is an experimental package and may change/disappear
+// at any time without any documentation.
 package porcelain
 
 import (
@@ -21,8 +19,6 @@ import (
 	"github.com/ooni/netx"
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
-	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
@@ -311,7 +307,7 @@ func HTTPDo(
 		mu.Unlock()
 		defer resp.Body.Close()
 		reader := io.LimitReader(
-			resp.Body, tracetripper.ComputeBodySnapSize(
+			resp.Body, modelx.ComputeBodySnapSize(
 				config.MaxResponseBodySnapSize,
 			),
 		)
@@ -320,13 +316,6 @@ func HTTPDo(
 		results.BodySnap, results.Error = data, err
 		mu.Unlock()
 	})
-	// For safety wrap the error as "http_round_trip" but this
-	// will only be used if the error chain does not contain any
-	// other major operation failure. See modelx.ErrWrapper.
-	results.Error = errwrapper.SafeErrWrapperBuilder{
-		Error:     results.Error,
-		Operation: "http_round_trip",
-	}.MaybeBuild()
 	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	results.SNIBlockingFollowup = maybeRunTLSChecks(
 		origCtx, config.Handler, &root.X,

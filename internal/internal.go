@@ -16,6 +16,7 @@ import (
 
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/internal/dialer"
+	"github.com/ooni/netx/internal/errwrapper"
 	"github.com/ooni/netx/internal/httptransport"
 	"github.com/ooni/netx/internal/resolver"
 	"github.com/ooni/netx/internal/resolver/chainresolver"
@@ -319,7 +320,15 @@ func (t *HTTPTransport) RoundTrip(
 ) (resp *http.Response, err error) {
 	ctx := maybeWithMeasurementRoot(req.Context(), t.Beginning, t.Handler)
 	req = req.WithContext(ctx)
-	return t.roundTripper.RoundTrip(req)
+	resp, err = t.roundTripper.RoundTrip(req)
+	// For safety wrap the error as "http_round_trip" but this
+	// will only be used if the error chain does not contain any
+	// other major operation failure. See modelx.ErrWrapper.
+	err = errwrapper.SafeErrWrapperBuilder{
+		Error:     err,
+		Operation: "http_round_trip",
+	}.MaybeBuild()
+	return resp, err
 }
 
 // CloseIdleConnections closes the idle connections.

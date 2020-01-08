@@ -1,4 +1,7 @@
-// Package logger is a handler that emits logs
+// Package logger is a handler that emits logs.
+//
+// This is an experimental package and may change/disappear
+// at any time without any documentation.
 package logger
 
 import (

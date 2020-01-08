@@ -426,8 +426,3 @@ We will be likely be adding more automation. The mechanism
 to communicate these information is called `scoreboard`
 and is currenly in the `github.com/ooni/netx/x` package in
 which we keep experimental extensions.
-
-## Running OONI measurements
-
-We have syntactic sugar for running OONI measurements as
-part of the `github.com/ooni/netx/x` package.

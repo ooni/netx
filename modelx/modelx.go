@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -370,6 +371,20 @@ type HTTPResponseStartEvent struct {
 
 	// TransactionID is the identifier of this transaction
 	TransactionID int64
+}
+
+const defaultBodySnapSize int64 = 1 << 20
+
+// ComputeBodySnapSize computes the body snap size. If snapSize is negative
+// we return MaxInt64. If it's zero we return the default snap size. Otherwise
+// the value of snapSize is returned.
+func ComputeBodySnapSize(snapSize int64) int64 {
+	if snapSize < 0 {
+		snapSize = math.MaxInt64
+	} else if snapSize == 0 {
+		snapSize = defaultBodySnapSize
+	}
+	return snapSize
 }
 
 // HTTPRoundTripDoneEvent is emitted at the end of the round trip. Either

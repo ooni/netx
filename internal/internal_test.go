@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -246,7 +247,7 @@ func TestIntegrationConfigureSystemDNS(t *testing.T) {
 	testconfigurednsquick(t, "system", "")
 }
 
-func TestIntegration(t *testing.T) {
+func TestIntegrationHTTPTransport(t *testing.T) {
 	client := &http.Client{
 		Transport: NewHTTPTransport(
 			time.Now(), handlers.NoHandler,
@@ -267,6 +268,33 @@ func TestIntegration(t *testing.T) {
 	client.CloseIdleConnections()
 }
 
+func TestIntegrationHTTPTransportTimeout(t *testing.T) {
+	client := &http.Client{
+		Transport: NewHTTPTransport(
+			time.Now(), handlers.NoHandler,
+			NewDialer(time.Now(), handlers.NoHandler),
+			false,
+			http.ProxyFromEnvironment,
+		),
+	}
+	req, err := http.NewRequest("GET", "https://www.google.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	if err == nil {
+		t.Fatal("expected an error here")
+	}
+	if !strings.HasSuffix(err.Error(), "generic_timeout_error") {
+		t.Fatal("not the error we expected")
+	}
+	if resp != nil {
+		t.Fatal("expected nil resp here")
+	}
+}
 func TestIntegrationChainResolvers(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	resolver := ChainResolvers(

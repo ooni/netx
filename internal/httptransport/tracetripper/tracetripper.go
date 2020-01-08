@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"net/http/httptrace"
 	"sync"
@@ -19,18 +18,6 @@ import (
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/modelx"
 )
-
-const defaultBodySnapSize int64 = 1 << 20
-
-// ComputeBodySnapSize computes the body snap size
-func ComputeBodySnapSize(snapSize int64) int64 {
-	if snapSize < 0 {
-		snapSize = math.MaxInt64
-	} else if snapSize == 0 {
-		snapSize = defaultBodySnapSize
-	}
-	return snapSize
-}
 
 // Transport performs single HTTP transactions.
 type Transport struct {
@@ -106,7 +93,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		requestBody      []byte
 		requestHeaders   = http.Header{}
 		requestHeadersMu sync.Mutex
-		snapSize         = ComputeBodySnapSize(root.MaxBodySnapSize)
+		snapSize         = modelx.ComputeBodySnapSize(root.MaxBodySnapSize)
 	)
 
 	// Save a snapshot of the request body

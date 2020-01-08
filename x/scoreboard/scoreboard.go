@@ -1,6 +1,7 @@
 // Package scoreboard contains the measurements scoreboard.
 //
-// This is currently experimental code.
+// This is an experimental package and may change/disappear
+// at any time without any documentation.
 package scoreboard
 
 import (

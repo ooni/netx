@@ -1,6 +1,6 @@
 module github.com/ooni/netx
 
-go 1.11
+go 1.13
 
 require (
 	github.com/apex/log v1.1.1
