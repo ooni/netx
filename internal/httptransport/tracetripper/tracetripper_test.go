@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"net/http/httptrace"
 	"sync"
@@ -269,17 +268,5 @@ func TestIntegrationWithReadAllFailingForBody(t *testing.T) {
 	// Finally, make sure we got something that makes sense
 	if len(handler.roundTrips) != 0 {
 		t.Fatal("more round trips than expected")
-	}
-}
-
-func TestUnitComputeBodySnapSize(t *testing.T) {
-	if ComputeBodySnapSize(-1) != math.MaxInt64 {
-		t.Fatal("unexpected result")
-	}
-	if ComputeBodySnapSize(0) != defaultBodySnapSize {
-		t.Fatal("unexpected result")
-	}
-	if ComputeBodySnapSize(127) != 127 {
-		t.Fatal("unexpected result")
 	}
 }

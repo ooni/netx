@@ -22,7 +22,6 @@ import (
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/internal/errwrapper"
-	"github.com/ooni/netx/internal/httptransport/tracetripper"
 	"github.com/ooni/netx/modelx"
 	"github.com/ooni/netx/x/scoreboard"
 )
@@ -311,7 +310,7 @@ func HTTPDo(
 		mu.Unlock()
 		defer resp.Body.Close()
 		reader := io.LimitReader(
-			resp.Body, tracetripper.ComputeBodySnapSize(
+			resp.Body, modelx.ComputeBodySnapSize(
 				config.MaxResponseBodySnapSize,
 			),
 		)

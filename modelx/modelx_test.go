@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"math"
 	"testing"
 	"time"
 )
@@ -67,5 +68,17 @@ func TestErrWrapperPublicAPI(t *testing.T) {
 	}
 	if wrapper.Unwrap() != child {
 		t.Fatal("The Unwrap() method is misbehaving")
+	}
+}
+
+func TestUnitComputeBodySnapSize(t *testing.T) {
+	if ComputeBodySnapSize(-1) != math.MaxInt64 {
+		t.Fatal("unexpected result")
+	}
+	if ComputeBodySnapSize(0) != defaultBodySnapSize {
+		t.Fatal("unexpected result")
+	}
+	if ComputeBodySnapSize(127) != 127 {
+		t.Fatal("unexpected result")
 	}
 }
