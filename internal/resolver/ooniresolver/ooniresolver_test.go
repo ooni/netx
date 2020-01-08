@@ -49,7 +49,9 @@ func TestLookupCNAME(t *testing.T) {
 
 func TestLookupHostWithRetry(t *testing.T) {
 	// Because there is no server there, if there is no DNS injection
-	// then we are going to see several timeouts.
+	// then we are going to see several timeouts. However, this test is
+	// going to fail if you're under permanent DNS hijacking, which is
+	// what happens with Vodafone "Rete Sicura" (on by default) in Italy.
 	client := New(dnsoverudp.NewTransport(
 		&net.Dialer{}, "www.example.com:53",
 	))
