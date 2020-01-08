@@ -241,7 +241,7 @@ func TestIntegrationBodySnapSizes(t *testing.T) {
 	)
 	ctx := context.Background()
 	results := HTTPDo(ctx, HTTPDoConfig{
-		URL:                     "https://ooni.io",
+		URL:                     "https://ooni.org",
 		MaxEventsBodySnapSize:   maxEventsBodySnapSize,
 		MaxResponseBodySnapSize: maxResponseBodySnapSize,
 	})
