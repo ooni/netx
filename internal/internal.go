@@ -108,6 +108,12 @@ func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return nil
 }
 
+// ForceSkipVerify forces to skip certificate verification
+func (d *Dialer) ForceSkipVerify() error {
+	d.TLSConfig.InsecureSkipVerify = true
+	return nil
+}
+
 // ConfigureDNS implements netx.Dialer.ConfigureDNS.
 func (d *Dialer) ConfigureDNS(network, address string) error {
 	r, err := NewResolver(d.Beginning, d.Handler, network, address)

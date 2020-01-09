@@ -130,6 +130,17 @@ func TestIntegrationHTTPDoBadURL(t *testing.T) {
 	}
 }
 
+func TestIntegrationHTTPDoForceSkipVerify(t *testing.T) {
+	ctx := context.Background()
+	results := HTTPDo(ctx, HTTPDoConfig{
+		URL:                "https://self-signed.badssl.com/",
+		InsecureSkipVerify: true,
+	})
+	if results.Error != nil {
+		t.Fatal(results.Error)
+	}
+}
+
 func TestIntegrationTLSConnectGood(t *testing.T) {
 	ctx := context.Background()
 	results := TLSConnect(ctx, TLSConnectConfig{

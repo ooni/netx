@@ -129,6 +129,16 @@ func TestForceSpecificSNI(t *testing.T) {
 	}
 }
 
+func TestIntegrationDialTLSForceSkipVerify(t *testing.T) {
+	dialer := netx.NewDialer(handlers.NoHandler)
+	dialer.ForceSkipVerify()
+	conn, err := dialer.DialTLS("tcp", "self-signed.badssl.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+}
+
 func TestChainResolvers(t *testing.T) {
 	fallback, err := netx.NewResolver(handlers.NoHandler, "udp", "1.1.1.1:53")
 	if err != nil {
