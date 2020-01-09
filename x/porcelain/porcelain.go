@@ -215,16 +215,17 @@ func DNSLookup(
 
 // HTTPDoConfig contains HTTPDo settings.
 type HTTPDoConfig struct {
-	Accept           string
-	AcceptLanguage   string
-	Body             []byte
-	DNSServerAddress string
-	DNSServerNetwork string
-	Handler          modelx.Handler
-	Method           string
-	ProxyFunc        func(*http.Request) (*url.URL, error)
-	URL              string
-	UserAgent        string
+	Accept             string
+	AcceptLanguage     string
+	Body               []byte
+	DNSServerAddress   string
+	DNSServerNetwork   string
+	Handler            modelx.Handler
+	InsecureSkipVerify bool
+	Method             string
+	ProxyFunc          func(*http.Request) (*url.URL, error)
+	URL                string
+	UserAgent          string
 
 	// MaxEventsBodySnapSize controls the snap size that
 	// we're using for bodies returned as modelx.Measurement.
@@ -278,6 +279,9 @@ func HTTPDo(
 		return results
 	}
 	client.SetResolver(resolver)
+	if config.InsecureSkipVerify {
+		client.ForceSkipVerify()
+	}
 	// TODO(bassosimone): implement sending body
 	req, err := http.NewRequest(config.Method, config.URL, nil)
 	if err != nil {

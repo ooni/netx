@@ -45,6 +45,16 @@ func TestIntegrationDialTLS(t *testing.T) {
 	conn.Close()
 }
 
+func TestIntegrationDialTLSForceSkipVerify(t *testing.T) {
+	dialer := NewDialer(time.Now(), handlers.NoHandler)
+	dialer.ForceSkipVerify()
+	conn, err := dialer.DialTLS("tcp", "self-signed.badssl.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Close()
+}
+
 func TestIntegrationDialInvalidAddress(t *testing.T) {
 	dialer := NewDialer(time.Now(), handlers.NoHandler)
 	conn, err := dialer.Dial("tcp", "www.google.com")

@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2019-11-02   |
+| Last-Updated | 2020-01-09   |
 | Status       | approved     |
 
 ## Introduction
@@ -316,15 +316,17 @@ d := netx.NewDialerWithoutHandler()
 d.SetResolver(resolver)
 d.ForceSpecificSNI("www.kernel.org")
 d.SetCABundle("/etc/ssl/cert.pem")
+d.ForceSkipVerify()
 var dialer modelx.Dialer = d
 // now use dialer
 ```
 
 where `SetResolver` allows you to change the resolver,
 `ForceSpecificSNI` forces the TLS dials to use such SNI
-instead of using the provided domain, and `SetCABundle`
-allows to set a specific CA bundle. All these funcs
-MUST be invoked before using the dialer.
+instead of using the provided domain, `SetCABundle`
+allows to set a specific CA bundle, and `ForceSkipVerify`
+allows to disable certificate verification. All these funcs
+MUST NOT be invoked once you're using the dialer.
 
 The `github.com/ooni/netx/httpx` package MUST contain
 code so that we can do:
@@ -336,6 +338,7 @@ t := httpx.NewHTTPTransportWithProxyFunc(
 t.SetResolver(resolver)
 t.ForceSpecificSNI("www.kernel.org")
 t.SetCABundle("/etc/ssl/cert.pem")
+t.ForceSkipVerify()
 var transport http.RoundTripper = t
 // now use transport
 ```

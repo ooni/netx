@@ -47,7 +47,7 @@ func TestIntegrationSetResolver(t *testing.T) {
 	}
 }
 func TestSetCABundle(t *testing.T) {
-	client := httpx.NewClient(handlers.NoHandler)
+	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
 	err := client.SetCABundle("../testdata/cacert.pem")
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +55,7 @@ func TestSetCABundle(t *testing.T) {
 }
 
 func TestForceSpecificSNI(t *testing.T) {
-	client := httpx.NewClient(handlers.NoHandler)
+	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
 	err := client.ForceSpecificSNI("www.facebook.com")
 	if err != nil {
 		t.Fatal(err)
@@ -69,6 +69,18 @@ func TestForceSpecificSNI(t *testing.T) {
 	t.Log(err)
 	if resp != nil {
 		t.Fatal("expected a nil response here")
+	}
+}
+
+func TestForceSkipVerify(t *testing.T) {
+	client := httpx.NewClientWithoutProxy(handlers.NoHandler)
+	client.ForceSkipVerify()
+	resp, err := client.HTTPClient.Get("https://self-signed.badssl.com/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected non nil response here")
 	}
 }
 
