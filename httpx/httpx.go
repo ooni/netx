@@ -83,6 +83,11 @@ func (t *Transport) ForceSpecificSNI(sni string) error {
 	return t.dialer.ForceSpecificSNI(sni)
 }
 
+// ForceSkipVerify forces to skip certificate verification
+func (t *Transport) ForceSkipVerify() error {
+	return t.dialer.ForceSkipVerify()
+}
+
 // Client is a replacement for http.Client.
 type Client struct {
 	// HTTPClient is the underlying client. Pass this client to existing code
@@ -142,4 +147,9 @@ func (c *Client) SetCABundle(path string) error {
 // ForceSpecificSNI forces using a specific SNI.
 func (c *Client) ForceSpecificSNI(sni string) error {
 	return c.Transport.ForceSpecificSNI(sni)
+}
+
+// ForceSkipVerify forces to skip certificate verification
+func (c *Client) ForceSkipVerify() error {
+	return c.Transport.ForceSkipVerify()
 }

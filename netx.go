@@ -135,6 +135,11 @@ func (d *Dialer) ForceSpecificSNI(sni string) error {
 	return d.dialer.ForceSpecificSNI(sni)
 }
 
+// ForceSkipVerify forces to skip certificate verification
+func (d *Dialer) ForceSkipVerify() error {
+	return d.dialer.ForceSkipVerify()
+}
+
 // ChainResolvers chains a primary and a secondary resolver such that
 // we can fallback to the secondary if primary is broken.
 func ChainResolvers(primary, secondary modelx.DNSResolver) modelx.DNSResolver {
