@@ -75,6 +75,9 @@ func TestLookupHost(t *testing.T) {
 	if handler.gotResolveDone == false {
 		t.Fatal("did not see resolve done event")
 	}
+	if handler.containsBogons == true {
+		t.Fatal("did not expect to see bogons here")
+	}
 }
 
 func TestLookupHostBogonHardError(t *testing.T) {
