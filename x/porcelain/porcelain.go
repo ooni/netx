@@ -20,7 +20,6 @@ import (
 	"github.com/ooni/netx/handlers"
 	"github.com/ooni/netx/httpx"
 	"github.com/ooni/netx/modelx"
-	"github.com/ooni/netx/x/scoreboard"
 )
 
 type channelHandler struct {
@@ -42,10 +41,8 @@ func (h *channelHandler) OnMeasurement(m modelx.Measurement) {
 }
 
 // Results contains the results of every operation that we care
-// about, as well as the experimental scoreboard, and information
-// on the number of bytes received and sent.
-//
-// When counting the number of bytes sent and received, we do not
+// about, as well as information on the number of bytes received
+// and sent. When counting the number of bytes, we do not
 // take into account domain name resolutions performed using the
 // system resolver. We estimated that using heuristics with MK but
 // we currently don't have a good solution. TODO(bassosimone): this
@@ -57,7 +54,6 @@ type Results struct {
 	Resolves      []*modelx.ResolveDoneEvent
 	TLSHandshakes []*modelx.TLSHandshakeDoneEvent
 
-	Scoreboard    *scoreboard.Board
 	SentBytes     int64
 	ReceivedBytes int64
 }
@@ -209,7 +205,6 @@ func DNSLookup(
 		defer mu.Unlock()
 		results.Addresses, results.Error = addrs, err
 	})
-	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	return results
 }
 
@@ -247,7 +242,6 @@ type HTTPDoResults struct {
 	Headers             http.Header
 	BodySnap            []byte
 	Error               error
-	SNIBlockingFollowup *modelx.XSNIBlockingFollowup
 }
 
 // HTTPDo performs a HTTP request
@@ -320,10 +314,6 @@ func HTTPDo(
 		results.BodySnap, results.Error = data, err
 		mu.Unlock()
 	})
-	results.TestKeys.Scoreboard = &root.X.Scoreboard
-	results.SNIBlockingFollowup = maybeRunTLSChecks(
-		origCtx, config.Handler, &root.X,
-	)
 	return results
 }
 
@@ -381,41 +371,5 @@ func TLSConnect(
 		defer mu.Unlock()
 		results.Error = err
 	})
-	results.TestKeys.Scoreboard = &root.X.Scoreboard
 	return results
-}
-
-func maybeRunTLSChecks(
-	ctx context.Context, handler modelx.Handler, x *modelx.XResults,
-) (out *modelx.XSNIBlockingFollowup) {
-	for _, ev := range x.Scoreboard.TLSHandshakeReset {
-		for _, followup := range ev.RecommendedFollowups {
-			if followup == "sni_blocking" {
-				out = sniBlockingFollowup(ctx, handler, ev.Domain)
-				break
-			}
-		}
-	}
-	return
-}
-
-// TODO(bassosimone): we should make this configurable
-const sniBlockingHelper = "example.com:443"
-
-func sniBlockingFollowup(
-	ctx context.Context, handler modelx.Handler, domain string,
-) (out *modelx.XSNIBlockingFollowup) {
-	config := TLSConnectConfig{
-		Address: sniBlockingHelper,
-		Handler: handler,
-		SNI:     domain,
-	}
-	measurements := TLSConnect(ctx, config)
-	out = &modelx.XSNIBlockingFollowup{
-		Connects:      measurements.TestKeys.Connects,
-		HTTPRequests:  measurements.TestKeys.HTTPRequests,
-		Resolves:      measurements.TestKeys.Resolves,
-		TLSHandshakes: measurements.TestKeys.TLSHandshakes,
-	}
-	return
 }

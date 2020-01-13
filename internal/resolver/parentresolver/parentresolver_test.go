@@ -34,6 +34,7 @@ func TestLookupCNAME(t *testing.T) {
 }
 
 type emitterchecker struct {
+	containsBogons  bool
 	gotResolveStart bool
 	gotResolveDone  bool
 	mu              sync.Mutex
@@ -47,6 +48,7 @@ func (h *emitterchecker) OnMeasurement(m modelx.Measurement) {
 	}
 	if m.ResolveDone != nil {
 		h.gotResolveDone = true
+		h.containsBogons = m.ResolveDone.ContainsBogons
 	}
 }
 
@@ -75,7 +77,7 @@ func TestLookupHost(t *testing.T) {
 	}
 }
 
-func TestLookupHostBogon(t *testing.T) {
+func TestLookupHostBogonHardError(t *testing.T) {
 	client := New(systemresolver.New(new(net.Resolver)))
 	handler := new(emitterchecker)
 	ctx := modelx.WithMeasurementRoot(
@@ -94,9 +96,34 @@ func TestLookupHostBogon(t *testing.T) {
 	if addrs != nil {
 		t.Fatal("expected nil addr here")
 	}
-	root := modelx.ContextMeasurementRoot(ctx)
-	if root.X.Scoreboard.DNSBogonInfo == nil {
-		t.Fatal("no bogon info added to scoreboard")
+	if handler.gotResolveDone == false {
+		t.Fatal("did not get the ResolveDone event")
+	}
+	if handler.containsBogons == false {
+		t.Fatal("expected acknowledgement of bogons")
+	}
+}
+
+func TestLookupHostBogonAsWarning(t *testing.T) {
+	client := New(systemresolver.New(new(net.Resolver)))
+	handler := new(emitterchecker)
+	ctx := modelx.WithMeasurementRoot(
+		context.Background(), &modelx.MeasurementRoot{
+			Beginning: time.Now(),
+			Handler:   handler,
+		})
+	addrs, err := client.LookupHost(ctx, "localhost")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addrs == nil {
+		t.Fatal("expected non-nil addr here")
+	}
+	if handler.gotResolveDone == false {
+		t.Fatal("did not get the ResolveDone event")
+	}
+	if handler.containsBogons == false {
+		t.Fatal("expected acknowledgement of bogons")
 	}
 }
 
