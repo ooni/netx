@@ -128,9 +128,6 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 				TransactionID: tid,
 			}.MaybeBuild()
 			durationSinceBeginning := time.Now().Sub(root.Beginning)
-			root.X.Scoreboard.MaybeTLSHandshakeReset(
-				durationSinceBeginning, req.URL, err,
-			)
 			// Event emitted by net/http when DialTLS is not
 			// configured in the http.Transport
 			root.Handler.OnMeasurement(modelx.Measurement{
