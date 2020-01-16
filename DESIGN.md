@@ -2,7 +2,7 @@
 
 | Author       | Simone Basso |
 |--------------|--------------|
-| Last-Updated | 2020-01-09   |
+| Last-Updated | 2020-01-13   |
 | Status       | approved     |
 
 ## Introduction
@@ -25,7 +25,9 @@ measurements where we change some configuration properties
 and repeat the measurement_. For example, we may want to
 configure DNS over HTTPS (DoH) and then attempt to
 fetch again an URL. Or we may want to detect whether
-there is SNI bases blocking.
+there is SNI bases blocking. This library enables this
+functionality but does not implement this functionality
+and instead leaves this policy decisions to the user.
 
 ## Rationale
 
@@ -52,7 +54,7 @@ a domain name). So, for example, Web Connectivity's
 measurement gathering is obtained by combining the DNS
 template, the TCP template, and the HTTP template.
 
-This approach based on combining low-level test helpers
+This approach based on combining low-level test templates
 has two problems. First, the implementation of an
 experiment is rather low level, because you need to
 invoke the test helpers in sequence, to populate the
@@ -66,6 +68,13 @@ OONI-measurements-aware replacements for Go standard
 library interfaces, e.g., `http.RoundTripper`. On top
 of that, we'll create all the required interfaces to
 achive the measurement goals mentioned above.
+
+We are of course writing test templates in `ooni/probe-engine`
+anyway, because we need additional abstraction, but we can
+take advantage of the fact that the API exposed by this library
+is stable by definition, because it mimics the stdlib. Also,
+for many experiments we can collect information pertaining
+to TCP, DNS, TLS, and HTTP with a single call to `netx`.
 
 This repository is separate from `ooni/probe-engine`
 because they solve different problems. Here we provide
@@ -419,13 +428,6 @@ the event allowing to bind `ConnID` and `TransactionID`.
 
 ## Automatically reacting to events
 
-We automatically configure fallbacks to well know DoT and DoH
-servers, and reissue queries when we detect bogons.
-
-We automatically run a SNI injection mini experiment when we
-see that a TLS handshake failes with `connection_reset`.
-
-We will be likely be adding more automation. The mechanism
-to communicate these information is called `scoreboard`
-and is currenly in the `github.com/ooni/netx/x` package in
-which we keep experimental extensions.
+We initially implemented this functionality in netx as a set
+of experimental packages, but we later realised that this
+is better implemented directly inside of `ooni/probe-engine`.

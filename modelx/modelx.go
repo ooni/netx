@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
-	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Measurement contains zero or more events. Do not assume that at any
@@ -535,6 +534,10 @@ type ResolveDoneEvent struct {
 	// Addresses is the list of returned addresses (empty on error).
 	Addresses []string
 
+	// ContainsBogons indicates whether Addresses contains one
+	// or more IP addresses that classify as bogons.
+	ContainsBogons bool
+
 	// DialID is the identifier of the dial operation as
 	// part of which we're resolving this domain.
 	DialID int64
@@ -737,9 +740,8 @@ type MeasurementRoot struct {
 
 	// ErrDNSBogon is the kind of error that you would like this
 	// library to return when a bogon IP address is found. The
-	// default value, nil, causes this library to only record the
-	// occurrence of such bogon in the scoreboard, but does not
-	// otherwise cause any failure. Setting this field to non-nil
+	// default value, nil, causes this library to consider bogons
+	// as valid IP addresses. Setting this field to non-nil
 	// error causes the library instead fail when a bogon has
 	// been detected. The best value with which to initialize this
 	// field is the ErrDNSBogon variable in this package.
@@ -759,26 +761,6 @@ type MeasurementRoot struct {
 	// LookupHost allows to override the host lookup for all the request
 	// and dials that use this measurement root.
 	LookupHost func(ctx context.Context, hostname string) ([]string, error)
-
-	// X contains experimental extensions. You are welcome to use
-	// the code in here. Just know we may change APIs often.
-	X XResults
-}
-
-// XResults contains experimental results fields.
-type XResults struct {
-	Scoreboard scoreboard.Board
-}
-
-// XSNIBlockingFollowup contains the follow-up measurement
-// performed when we detect a TLS handshake RST.
-//
-// This is currently poised-to-change experimental code.
-type XSNIBlockingFollowup struct {
-	Connects      []*ConnectEvent
-	HTTPRequests  []*HTTPRoundTripDoneEvent
-	Resolves      []*ResolveDoneEvent
-	TLSHandshakes []*TLSHandshakeDoneEvent
 }
 
 type measurementRootContextKey struct{}

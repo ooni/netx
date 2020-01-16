@@ -13,7 +13,6 @@ import (
 	"github.com/ooni/netx/internal/resolver/bogondetector"
 	"github.com/ooni/netx/internal/transactionid"
 	"github.com/ooni/netx/modelx"
-	"github.com/ooni/netx/x/scoreboard"
 )
 
 // Resolver is the emitter resolver
@@ -72,6 +71,18 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 		},
 	})
 	addrs, err := r.lookupHost(ctx, hostname)
+	containsBogons := errors.Is(err, modelx.ErrDNSBogon)
+	if containsBogons {
+		// By default root.ErrDNSBogon is nil. Treating bogons as
+		// errors could prevent us from measuring, e.g., legitimate
+		// internal-only servers in Iran. This is why we have not
+		// enabled this functionality by default. Of course, it is
+		// instead smart to treat bogons as errors when we're using
+		// a website that we _know_ cannot have bogons.
+		//
+		// See also <https://github.com/ooni/netx/issues/126>.
+		err = root.ErrDNSBogon
+	}
 	err = errwrapper.SafeErrWrapperBuilder{
 		DialID:        dialID,
 		Error:         err,
@@ -81,6 +92,7 @@ func (r *Resolver) LookupHost(ctx context.Context, hostname string) ([]string, e
 	root.Handler.OnMeasurement(modelx.Measurement{
 		ResolveDone: &modelx.ResolveDoneEvent{
 			Addresses:              addrs,
+			ContainsBogons:         containsBogons,
 			DialID:                 dialID,
 			DurationSinceBeginning: time.Now().Sub(root.Beginning),
 			Error:                  err,
@@ -112,21 +124,7 @@ func (r *Resolver) detectedBogon(
 	ctx context.Context, hostname string, addrs []string,
 ) ([]string, error) {
 	atomic.AddInt64(&r.bogonsCount, 1)
-	root := modelx.ContextMeasurementRootOrDefault(ctx)
-	durationSinceBeginning := time.Now().Sub(root.Beginning)
-	root.X.Scoreboard.AddDNSBogonInfo(scoreboard.DNSBogonInfo{
-		Addresses:              addrs,
-		DurationSinceBeginning: durationSinceBeginning,
-		Domain:                 hostname,
-		FallbackPlan:           "let_caller_decide",
-	})
-	// Note that here we return root.ErrDNSBogon, which by default
-	// is nil, meaning that we'll not treat the bogon as hard error
-	// but we'll register it in the scoreboard. The caller should
-	// ensure that we won't return a value and an error at the same
-	// time. See issue <https://github.com/ooni/netx/issues/126> for
-	// more on why by default a bogon does not cause an error.
-	return addrs, root.ErrDNSBogon
+	return addrs, modelx.ErrDNSBogon
 }
 
 // LookupMX returns the MX records of a specific name
