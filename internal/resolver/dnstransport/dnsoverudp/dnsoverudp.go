@@ -48,7 +48,7 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, 
 	return
 }
 
-// RequiresPadding return false for UDP according to RFC8467
+// RequiresPadding returns false for UDP according to RFC8467
 func (t *Transport) RequiresPadding() bool {
 	return false
 }

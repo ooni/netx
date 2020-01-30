@@ -56,7 +56,8 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) ([]byte, error)
 	return t.doWithConn(conn, query)
 }
 
-// RequiresPadding return true for DoT according to RFC8467
+// RequiresPadding returns true for DoT and false for TCP
+// according to RFC8467.
 func (t *Transport) RequiresPadding() bool {
 	return t.requiresPadding
 }

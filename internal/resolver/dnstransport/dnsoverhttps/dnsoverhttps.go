@@ -53,7 +53,7 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, 
 	return
 }
 
-// RequiresPadding return true for DoH according to RFC8467
+// RequiresPadding returns true for DoH according to RFC8467
 func (t *Transport) RequiresPadding() bool {
 	return true
 }

@@ -240,3 +240,39 @@ func TestUnitMapError(t *testing.T) {
 		t.Fatal("unexpected return value")
 	}
 }
+
+func TestUnitPadding(t *testing.T) {
+	// The purpose of this unit test is to make sure that for a wide
+	// array of values we obtain the right query size.
+	getquerylen := func(domainlen int, padding bool) int {
+		reso := new(Resolver)
+		query := reso.newQueryWithQuestion(dns.Question{
+			// This is not a valid name because it ends up being way
+			// longer than 255 octets. However, the library is allowing
+			// us to generate such name and we are not going to send
+			// it on the wire. Also, we check below that the query that
+			// we generate is long enough, so we should be good.
+			Name:   dns.Fqdn(strings.Repeat("x.", domainlen)),
+			Qtype:  dns.TypeA,
+			Qclass: dns.ClassINET,
+		}, padding)
+		data, err := query.Pack()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(data)
+	}
+	for domainlen := 1; domainlen <= 4000; domainlen++ {
+		vanillalen := getquerylen(domainlen, false)
+		paddedlen := getquerylen(domainlen, true)
+		if vanillalen < domainlen {
+			t.Fatal("vanillalen is smaller than domainlen")
+		}
+		if (paddedlen % desiredBlockSize) != 0 {
+			t.Fatal("paddedlen is not a multiple of desiredQuerySize")
+		}
+		if paddedlen < vanillalen {
+			t.Fatal("paddedlen is smaller than vanillalen")
+		}
+	}
+}
