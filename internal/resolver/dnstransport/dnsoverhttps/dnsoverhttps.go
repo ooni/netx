@@ -53,6 +53,11 @@ func (t *Transport) RoundTrip(ctx context.Context, query []byte) (reply []byte, 
 	return
 }
 
+// RequiresPadding returns true for DoH according to RFC8467
+func (t *Transport) RequiresPadding() bool {
+	return true
+}
+
 // Network returns the transport network (e.g., doh, dot)
 func (t *Transport) Network() string {
 	return "doh"

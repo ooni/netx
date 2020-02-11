@@ -11,6 +11,7 @@ import (
 type queryableTransport interface {
 	Network() string
 	Address() string
+	RequiresPadding() bool
 }
 
 type queryableResolver interface {
@@ -36,6 +37,9 @@ func TestCanQuery(t *testing.T) {
 	}
 	if queryableTransport.Network() != "system" {
 		t.Fatal("invalid network")
+	}
+	if queryableTransport.RequiresPadding() != false {
+		t.Fatal("we should require padding here")
 	}
 }
 
