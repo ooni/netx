@@ -9,13 +9,13 @@ jobs:
         os: [ubuntu-latest]
         go: ["1.13"]
     steps:
-      - uses: actions/setup-go@latest
+      - uses: actions/setup-go@master
         with:
           go-version: ${{ matrix.go }}
-      - uses: actions/checkout@latest
+      - uses: actions/checkout@master
       - run: go test -v -race -coverprofile=netx.cov -coverpkg=./... ./...
       - name: Send coverage
-        uses: shogo82148/actions-goveralls@latest
+        uses: shogo82148/actions-goveralls@master
         with:
           path-to-profile: netx.cov
           parallel: true
@@ -23,6 +23,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: shogo82148/actions-goveralls@latest
+      - uses: shogo82148/actions-goveralls@master
         with:
           parallel-finished: true
