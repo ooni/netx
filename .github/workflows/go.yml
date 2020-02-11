@@ -1,0 +1,28 @@
+name: Go
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: "${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        go: ["1.13"]
+    steps:
+      - uses: actions/setup-go@latest
+        with:
+          go-version: ${{ matrix.go }}
+      - uses: actions/checkout@latest
+      - run: go test -v -race -coverprofile=netx.cov -coverpkg=./... ./...
+      - name: Send coverage
+        uses: shogo82148/actions-goveralls@latest
+        with:
+          path-to-profile: netx.cov
+          parallel: true
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shogo82148/actions-goveralls@latest
+        with:
+          parallel-finished: true
