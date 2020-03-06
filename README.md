@@ -1,5 +1,10 @@
 # github.com/ooni/netx
 
+⚠️: As of 2020-03-06, netx has been merged into ooni/probe-engine. You should
+import github.com/ooni/probe-engine/netx rather than github.com/ooni/netx. We
+thought it was easier to keep netx and probe-engine separate, but it turned
+out this was increasingly slowing us down, so we decided to merge them.
+
 ![Build Status](https://github.com/ooni/netx/workflows/Build/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/ooni/netx/badge.svg?branch=master)](https://coveralls.io/github/ooni/netx?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/ooni/netx)](https://goreportcard.com/report/github.com/ooni/netx)
 
 OONI extensions to the `net` and `net/http` packages. This code is

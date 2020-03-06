@@ -3,6 +3,9 @@
 // This package provides a replacement for net.Dialer that can Dial,
 // DialContext, and DialTLS. During its lifecycle this modified Dialer
 // will emit network level events on a channel.
+//
+// ⚠️: This package is not maintained anymore. Use github.com/ooni/probe-engine/netx
+// as a drop-in replacement for github.com/ooni/netx.
 package netx
 
 import (
