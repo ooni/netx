@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -804,4 +805,10 @@ func WithMeasurementRoot(
 	return context.WithValue(
 		ctx, measurementRootContextKey{}, root,
 	)
+}
+
+func init() {
+	log.Printf("⚠️⚠️⚠️⚠️ netx is not maintained anymore!")
+	log.Printf("⚠️⚠️⚠️⚠️ please import github.com/ooni/probe-engine/netx instead!")
+	time.Sleep(7*time.Second)
 }
