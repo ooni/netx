@@ -4,8 +4,8 @@
 // DialContext, and DialTLS. During its lifecycle this modified Dialer
 // will emit network level events on a channel.
 //
-// ⚠️: This package is deprecated. Use github.com/ooni/probe-engine/netx
-// as a drop-in replacement for this package.
+// ⚠️: This package is not maintained anymore. Use github.com/ooni/probe-engine/netx
+// as a drop-in replacement for github.com/ooni/netx.
 package netx
 
 import (
